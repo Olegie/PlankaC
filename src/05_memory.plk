@@ -1,0 +1,25 @@
+# PlankaMath memory plans.
+# Speicherplaene without hidden global state.
+#
+# A historical Plankalkuel plan is a function-like program. Therefore the
+# calculator memory value is passed as V0 and returned as R0.
+
+P80 memory_clear () => R0[:32.16]
+0[:32.16] => R0[:32.16]
+END
+
+P81 memory_store (V0[:32.16]) => R0[:32.16]
+V0[:32.16] => R0[:32.16]
+END
+
+P82 memory_add (V0[:32.16], V1[:32.16]) => R0[:32.16]
+add(V0[:32.16], V1[:32.16]) => R0[:32.16]
+END
+
+P83 memory_subtract (V0[:32.16], V1[:32.16]) => R0[:32.16]
+subtract(V0[:32.16], V1[:32.16]) => R0[:32.16]
+END
+
+P84 memory_recall (V0[:32.16]) => R0[:32.16]
+V0[:32.16] => R0[:32.16]
+END

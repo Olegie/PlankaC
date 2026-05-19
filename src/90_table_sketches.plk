@@ -1,0 +1,23 @@
+# Two-dimensional source sketches.
+# These sketches document how selected linear plans correspond to the older
+# table-like Plankalkuel notation.
+
+E10 add
+ | V + V => R
+V| 0   1    0
+S| 1.32.16 1.32.16 1.32.16
+
+E32 maximum, first transfer
+ | V => Z
+V| 0    1
+S| 1.32.16 1.32.16
+
+E32 maximum, guarded replacement
+ | Z < V => V => Z
+V| 1   1    1    1
+S| 1.32.16 1.32.16 1.32.16 1.32.16
+
+E80 memory_clear
+ | 0 => R
+V|      0
+S| 1.32.16

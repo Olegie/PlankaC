@@ -1,0 +1,20 @@
+# PlankaMath type and structure sheet.
+# Sprache: lineare Plankalkuel-Schreibweise.
+#
+# Historical rule used here:
+# - V variables are inputs.
+# - Z variables are intermediate values.
+# - R variables are result values.
+# - A structure marker is written at each variable/value use.
+
+P0 type_sheet () => R0[:1.1]
+1[:1.1] => R0[:1.1]
+END
+
+# Structure markers used in this calculator:
+#
+# [:1.1]    Ja-Nein-Wert, one-bit boolean.
+# [:32.0]   signed whole number.
+# [:32.16]  signed fixed-point calculator value.
+#
+# The marker is a compact linear replacement for the original S row.

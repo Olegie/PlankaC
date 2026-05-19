@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 220" role="img" aria-labelledby="title desc">
+  <title id="title">PlankaC</title>
+  <desc id="desc">Clean PlankaC wordmark with a notation divider.</desc>
+  <g font-family="Cascadia Mono, Consolas, Menlo, monospace" text-anchor="middle">
+    <text x="460" y="132" font-size="96" font-weight="700" letter-spacing="0" fill="#0b746f">Planka<tspan fill="#c79a20">|</tspan>C</text>
+    <text x="460" y="168" font-size="20" font-weight="600" letter-spacing="4" fill="#2f4642">LINEAR PLANKALKUEL RUNTIME IN C</text>
+  </g>
+</svg>
