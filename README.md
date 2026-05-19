@@ -1,0 +1,326 @@
+<p align="center">
+  <img src="docs/logo.svg" alt="PlankaC logo" width="560">
+</p>
+
+# PlankaC: Eine kleine Plankalkuel-Laufzeit in C
+
+[English README](README.en.md) | Lizenz: MIT
+
+PlankaC ist ein kleiner Parser, Interpreter, Bytecode-Schreiber,
+Bytecode-Runner, C-Backend-Emitter, native ASM-Backend und Einbettungs-API
+fuer eine lineare Plankalkuel-Notation. PlankaMath ist das mitgelieferte
+Beispielprojekt: ein Taschenrechner mit weiteren `.plk`-Plaenen fuer
+indizierte Werte, geschachtelte Felder, Listen, Paare, Mengen, Schleifen,
+Assertions und Schachstrukturen.
+
+## Inhalt
+
+| Pfad | Zweck |
+| --- | --- |
+| `src/` | `.plk`-Plaene in linearer Plankalkuel-Notation |
+| `examples/` | kleine Beispielsitzungen |
+| `tests/` | Selbsttests als `.plk`-Programme |
+| `c/` | PlankaC-Module, klassische C-Laufzeit, Konsolenstarter, Win32/Win64-GUI und Win16-GUI |
+| `asm/` | 8086-Hilfsroutine |
+| `docs/` | Syntax, Ausfuehrungsmodell, Geschichte, Bibliographie |
+
+Wichtige Dateien:
+
+| Datei | Zweck |
+| --- | --- |
+| `src/01_arithmetic.plk` | Grundrechenarten |
+| `src/02_order.plk` | Vergleiche, Minimum, Maximum |
+| `src/03_scientific.plk` | Quadrat, Potenz, Wurzel, Prozentrechnung |
+| `src/04_calculator.plk` | Rechnerablaeufe |
+| `src/05_memory.plk` | Speicherfunktionen |
+| `src/06_data_structures.plk` | indizierte Werte, Felder, Listen, Schleifen, Assertions |
+| `src/07_chess.plk` | einfache Schach-Praedikate als Strukturbeispiele |
+| `src/08_relations_sets.plk` | geschachtelte Records, Paare, Mengen und Schachrelationen |
+| `c/plankamath.c` | ausfuehrbare C-Abbildung der `.plk`-Prozeduren |
+| `c/plankac_*.c` | PlankaC-Parser, Laufzeit, Bytecode, API und CLI-Module |
+| `c/plankac.h` | PlankaC-API fuer C-Programme und die Windows-GUI |
+| `c/plankamath_cli.c` | Konsolenprogramm |
+| `c/windows_gui.c` | modernes Windows-GUI mit PlankaC-Anbindung |
+| `c/win16_gui.c` | echtes Win16-GUI fuer Windows 3.x |
+| `build-win16.bat` | Open-Watcom-Build fuer `build\win16\PlankaMath16.exe` |
+| `examples/c_api_demo.c` | kleines externes C-Programm mit PlankaC als Bibliothek |
+| `tests/plankac_conformance.c` | Conformance-Runner fuer Parser und Laufzeit |
+
+## Beispiel
+
+Eine einfache Addition in der Projekt-Notation:
+
+```text
+P10 add (V0[:32.16], V1[:32.16]) => R0[:32.16]
+(V0[:32.16] + V1[:32.16]) => R0[:32.16]
+END
+```
+
+Die klassische PlankaMath-C-Schicht verwendet dazu eine passende Funktion:
+
+```text
+P10 add             => pm_add
+P14 divide_checked  => pm_divide_checked
+P52 root_checked    => pm_root_checked
+P999 all_tests      => pm_all_tests
+```
+
+Der zentrale Pfad ist PlankaC: die Module lesen die `.plk`-Dateien, bauen eine
+Prozedurtabelle und fuehren das `.plk`-Profil des Projekts direkt aus.
+Unterstuetzt sind Zuweisungen, Guards, arithmetische Ausdruecke, indizierte
+Werte, Felder, Listen, Schleifen, Assertions, Prozeduraufrufe und mehrere
+Rueckgabewerte, etwa bei `divide_checked`.
+
+PlankaC kann ausserdem eine lesbare Bytecode-Datei erzeugen, wieder laden und
+ausfuehren. Fuer C- und native x86-64-ASM-Builds koennen daraus kleine
+generierte Runner entstehen:
+
+```text
+build\plankac.exe bytecode build\plankamath.pbc
+build\plankac.exe checkbc build\plankamath.pbc
+build\plankac.exe runbc build\plankamath.pbc set_session
+build\plankac.exe cgen build\plankac_generated.c
+build\plankac.exe asmgen build\plankac_asm_runtime.S
+```
+
+Mehr dazu steht in `docs/execution_model.md`.
+
+## Voraussetzungen
+
+Auf Windows brauchst du:
+
+```text
+PowerShell oder cmd
+einen C-Compiler im PATH
+```
+
+GCC oder MinGW reicht fuer die aktuelle Konsolen- und Windows-Version. Open
+Watcom ist interessant, wenn man mit aelteren Windows-Zielen experimentieren
+will.
+
+## Bauen
+
+PowerShell oeffnen:
+
+```powershell
+cd C:\Users\Admin\Downloads\PlankaMath
+New-Item -ItemType Directory -Force build
+```
+
+Einfacher Build:
+
+```powershell
+.\build.bat
+```
+
+Konsolenprogramm bauen:
+
+```powershell
+gcc -Wall -Wextra -std=c89 c\plankamath.c c\plankamath_cli.c -o build\plankamath_cli.exe -lm
+gcc -Wall -Wextra -std=c89 c\plankac_common.c c\plankac_source.c c\plankac_expr.c c\plankac_bytecode.c c\plankac_runtime.c c\plankac_cli.c -o build\plankac.exe -lm
+gcc -Wall -Wextra -std=c89 -c c\plankac_common.c -o build\plankac_common.o
+gcc -Wall -Wextra -std=c89 -c c\plankac_source.c -o build\plankac_source.o
+gcc -Wall -Wextra -std=c89 -c c\plankac_expr.c -o build\plankac_expr.o
+gcc -Wall -Wextra -std=c89 -c c\plankac_bytecode.c -o build\plankac_bytecode.o
+gcc -Wall -Wextra -std=c89 -c c\plankac_runtime.c -o build\plankac_runtime.o
+gcc -Wall -Wextra -std=c89 -c c\plankac_native_runtime.c -o build\plankac_native_runtime.o
+ar rcs build\libplankac.a build\plankac_common.o build\plankac_source.o build\plankac_expr.o build\plankac_bytecode.o build\plankac_runtime.o build\plankac_native_runtime.o
+gcc -Wall -Wextra -std=c89 examples\c_api_demo.c build\libplankac.a -o build\plankac_api_demo.exe -lm
+gcc -Wall -Wextra -std=c89 tests\plankac_conformance.c build\libplankac.a -o build\plankac_conformance.exe -lm
+```
+
+Windows-GUI bauen:
+
+```powershell
+gcc -Wall -Wextra -std=c89 c\plankac_common.c c\plankac_source.c c\plankac_expr.c c\plankac_bytecode.c c\plankac_runtime.c c\plankamath.c c\windows_gui.c -mwindows -o build\PlankaMath.exe -lm
+```
+
+Echtes Win16-GUI fuer Windows 3.x bauen:
+
+```bat
+build-win16.bat
+```
+
+Dafuer wird Open Watcom 1.9 oder Open Watcom V2 benoetigt. Der Build erzeugt
+`build\win16\PlankaMath16.exe`. Diese Ausgabe ist kein modernes Fenster im
+alten Aussehen, sondern ein Win16-Programm. Wegen der engen Win16-Speichergrenzen
+nutzt sie die kompakte PlankaMath-C-Abbildung der `.plk`-Rechnerprozeduren. Der
+vollstaendige PlankaC-Parser und die Backends bleiben der moderne Toolchain-Pfad.
+
+Wenn `gcc` nicht gefunden wird, muss ein C-Compiler separat installiert oder
+entpackt werden. Danach muss dessen `bin`-Ordner im `PATH` stehen.
+
+## Starten
+
+Quelltextzaehlung und Prozedurpruefung:
+
+```powershell
+.\build\plankamath_cli.exe compile
+```
+
+Erwartete Ausgabe:
+
+```text
+Compile OK: 14 files, 62 procedures
+```
+
+Demo ausfuehren:
+
+```powershell
+.\build\plankamath_cli.exe demo
+```
+
+Erwartete Ausgabe:
+
+```text
+30
+```
+
+Selbsttests ausfuehren:
+
+```powershell
+.\build\plankamath_cli.exe tests
+```
+
+Erwartete Ausgabe:
+
+```text
+1
+```
+
+Division-durch-null-Beispiel:
+
+```powershell
+.\build\plankamath_cli.exe guarded
+```
+
+Erwartete Ausgabe:
+
+```text
+0, 1
+```
+
+`.plk` direkt mit PlankaC ausfuehren:
+
+```powershell
+.\build\plankac.exe check
+.\build\plankac.exe run calculator_demo
+.\build\plankac.exe run divide_checked 84 0
+.\build\plankac.exe tests
+.\build\plankac.exe bytecode build\plankamath.pbc
+.\build\plankac.exe checkbc build\plankamath.pbc
+.\build\plankac.exe runbc build\plankamath.pbc set_session
+.\build\plankac.exe cgen build\plankac_generated.c
+.\build\plankac.exe asmgen build\plankac_asm_runtime.S
+```
+
+Erwartete Ausgabe:
+
+```text
+PlankaC OK: 14 files, 62 procedures
+R0=30
+R0=0 R1=1
+R0=1
+Bytecode written: build\plankamath.pbc
+Bytecode OK: 62 procedures
+R0=2
+C backend written: build\plankac_generated.c
+ASM runtime written: build\plankac_asm_runtime.S
+R0=2
+R0=0 R1=1
+R0=12
+R0=2
+R0=1
+```
+
+GUI starten:
+
+```powershell
+.\build\PlankaMath.exe
+```
+
+Die GUI laedt die `.plk`-Plaene ueber PlankaC. Die aeltere C-Laufzeit bleibt
+als Rueckfallpfad im Build.
+
+Win16-GUI unter Windows 3.x starten:
+
+```text
+build\win16\PlankaMath16.exe
+```
+
+Diese Ausgabe ist fuer eine Windows-3.x-/Win16-Umgebung gedacht.
+Auf Windows 10/11 x64 startet sie nicht per Doppelklick, weil 64-bit Windows
+keine Win16-Programme direkt ausfuehrt. Zum Testen auf einem modernen PC kann
+`otvdm/winevdm` verwendet werden:
+
+```bat
+run-win16-otvdm.bat
+```
+
+Das Skript sucht `otvdm` in `tools\otvdm`, `C:\OTVDM` oder im `PATH`.
+
+## PlankaC aus C benutzen
+
+PlankaC kann in ein anderes C-Programm eingebettet werden:
+
+```c
+#include "plankac.h"
+
+PLANKAC_CONTEXT *ctx;
+PLANKAC_RESULT result;
+double args[2];
+char err[256];
+
+ctx = plankac_create();
+plankac_context_load_default(ctx, err, sizeof(err));
+args[0] = 12.0;
+args[1] = 8.0;
+plankac_context_run(ctx, "add", args, 2, &result, err, sizeof(err));
+plankac_destroy(ctx);
+```
+
+Siehe [`docs/plankac_api.md`](docs/plankac_api.md).
+
+## Conformance
+
+Parser- und Laufzeitkanten werden hier geprueft:
+
+```powershell
+.\build\plankac_conformance.exe
+```
+
+Siehe [`docs/conformance.md`](docs/conformance.md) und
+[`docs/plankac_bytecode.md`](docs/plankac_bytecode.md). Die breitere
+Sprachabdeckung steht in [`docs/plankalkuel_coverage.md`](docs/plankalkuel_coverage.md).
+
+## Historische Grundlage
+
+PlankaC ist eine kleine Hommage an Konrad Zuses Plankalkuel. Die Notation und
+die Projektstruktur orientieren sich an den historischen Arbeiten zu
+Plankalkuel und an der spaeteren Aufarbeitung des Systems.
+
+Besonders wichtig sind Zuses Aufsatz von 1948, der Bericht *Der Plankalkuel*
+von 1972, die historische Analyse von W. K. Giloi aus dem Jahr 1997 und der
+technische Bericht von Rojas, Goektekin, Friedland, Krueger, Langmack und
+Kuniss aus dem Jahr 2000. Der Bericht von 2000 ist fuer dieses Projekt
+besonders nuetzlich, weil er Plankalkuel als implementierbare Sprache
+beschreibt und Beispiele in linearer Schreibweise diskutiert.
+
+Die vollstaendige Literaturliste steht in
+[`docs/bibliography.md`](docs/bibliography.md).
+
+Direkter Link zum technischen Bericht von 2000:
+
+https://web.archive.org/web/20060501175521/http://www.zib.de/zuse/Inhalt/Programme/Plankalkuel/Plankalkuel-Report/techreport.pdf
+
+Kurze Projektbezeichnung:
+
+```text
+PlankaC: Eine kleine Hommage an Konrad Zuses Plankalkuel
+```
+
+## Lizenz
+
+MIT. Siehe `LICENSE`. Die Datei enthaelt zusaetzliche Hinweise fuer PlankaC,
+PlankaMath, die `.plk`-Beispiele, die C-API, generierte Artefakte und
+historische Quellenangaben.

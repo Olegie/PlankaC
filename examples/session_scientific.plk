@@ -1,0 +1,7 @@
+# Scientific calculator session.
+
+P101 scientific_session () => R0[:32.16]
+power2(2[:32.16], 8[:32.0]) => Z1[:32.16]
+root_checked(81[:32.16]) => Z2[:32.16], Z3[:1.1]
+average2(Z1[:32.16], Z2[:32.16]) => R0[:32.16]
+END

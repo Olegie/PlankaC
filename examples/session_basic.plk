@@ -1,0 +1,8 @@
+# Basic calculator session.
+
+P100 basic_session () => R0[:32.16]
+add(12[:32.16], 8[:32.16]) => Z1[:32.16]
+subtract(12[:32.16], 8[:32.16]) => Z2[:32.16]
+multiply(Z1[:32.16], Z2[:32.16]) => Z3[:32.16]
+divide_checked(Z3[:32.16], 4[:32.16]) => R0[:32.16], Z4[:1.1]
+END

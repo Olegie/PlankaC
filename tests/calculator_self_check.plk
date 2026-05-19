@@ -1,0 +1,60 @@
+# PlankaMath self-checks written in Plankalkuel-style notation.
+# Each test returns R0[:1.1], where 1 means passed and 0 means failed.
+
+P900 test_add () => R0[:1.1]
+add(12[:32.16], 8[:32.16]) => Z1[:32.16]
+equal(Z1[:32.16], 20[:32.16]) => R0[:1.1]
+END
+
+P901 test_subtract () => R0[:1.1]
+subtract(12[:32.16], 8[:32.16]) => Z1[:32.16]
+equal(Z1[:32.16], 4[:32.16]) => R0[:1.1]
+END
+
+P902 test_multiply () => R0[:1.1]
+multiply(7[:32.16], 6[:32.16]) => Z1[:32.16]
+equal(Z1[:32.16], 42[:32.16]) => R0[:1.1]
+END
+
+P903 test_divide_checked () => R0[:1.1]
+divide_checked(84[:32.16], 2[:32.16]) => Z1[:32.16], Z2[:1.1]
+equal(Z1[:32.16], 42[:32.16]) => Z3[:1.1]
+equal_bool(Z2[:1.1], 0[:1.1]) => Z4[:1.1]
+(Z3[:1.1] & Z4[:1.1]) => R0[:1.1]
+END
+
+P904 test_maximum () => R0[:1.1]
+maximum(18[:32.16], 27[:32.16]) => Z1[:32.16]
+equal(Z1[:32.16], 27[:32.16]) => R0[:1.1]
+END
+
+P905 test_root_checked () => R0[:1.1]
+root_checked(81[:32.16]) => Z1[:32.16], Z2[:1.1]
+equal(Z1[:32.16], 9[:32.16]) => Z3[:1.1]
+equal_bool(Z2[:1.1], 0[:1.1]) => Z4[:1.1]
+(Z3[:1.1] & Z4[:1.1]) => R0[:1.1]
+END
+
+P906 test_division_by_zero_guard () => R0[:1.1]
+divide_checked(84[:32.16], 0[:32.16]) => Z1[:32.16], Z2[:1.1]
+equal_bool(Z2[:1.1], 1[:1.1]) => R0[:1.1]
+END
+
+P907 test_memory_add () => R0[:1.1]
+memory_clear() => Z1[:32.16]
+memory_add(Z1[:32.16], 20[:32.16]) => Z2[:32.16]
+memory_add(Z2[:32.16], 22[:32.16]) => Z3[:32.16]
+equal(Z3[:32.16], 42[:32.16]) => R0[:1.1]
+END
+
+P999 all_tests () => R0[:1.1]
+test_add() => Z1[:1.1]
+test_subtract() => Z2[:1.1]
+test_multiply() => Z3[:1.1]
+test_divide_checked() => Z4[:1.1]
+test_maximum() => Z5[:1.1]
+test_root_checked() => Z6[:1.1]
+test_division_by_zero_guard() => Z7[:1.1]
+test_memory_add() => Z8[:1.1]
+(Z1[:1.1] & Z2[:1.1] & Z3[:1.1] & Z4[:1.1] & Z5[:1.1] & Z6[:1.1] & Z7[:1.1] & Z8[:1.1]) => R0[:1.1]
+END

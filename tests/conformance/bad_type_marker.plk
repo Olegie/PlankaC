@@ -1,0 +1,3 @@
+P1 bad_type () => R0[:bad]
+1[:1.1] => R0[:bad]
+END

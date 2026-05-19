@@ -1,0 +1,5 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Plankalkuel source files used by PlankaC.
+*.plk text eol=lf linguist-language=Plankalkuel linguist-detectable=true

@@ -1,0 +1,5 @@
+# Guarded calculator session.
+
+P102 guarded_session () => R0[:32.16], R1[:1.1]
+divide_checked(100[:32.16], 0[:32.16]) => R0[:32.16], R1[:1.1]
+END
