@@ -1,0 +1,61 @@
+# Relation, set, nested-structure, and chess plans.
+# The examples are intentionally small, but each one is executable PlankaC.
+
+P130 nested_record_session () => R0[:32.16]
+3[:32.16] => Z30.point.x[:32.16]
+4[:32.16] => Z30.point.y[:32.16]
+(Z30.point.x[:32.16] * Z30.point.x[:32.16]) => Z1[:32.16]
+(Z30.point.y[:32.16] * Z30.point.y[:32.16]) => Z2[:32.16]
+(Z1[:32.16] + Z2[:32.16]) => R0[:32.16]
+END
+
+P131 set_session () => R0[:32.0]
+set_new() => Z1[:S32.0]
+set_add(Z1[:S32.0], 3[:32.0]) => Z1[:S32.0]
+set_add(Z1[:S32.0], 3[:32.0]) => Z1[:S32.0]
+set_add(Z1[:S32.0], 4[:32.0]) => Z1[:S32.0]
+set_size(Z1[:S32.0]) => R0[:32.0]
+END
+
+P132 set_logic_session () => R0[:1.1]
+set_new() => Z1[:S32.0]
+set_add(Z1[:S32.0], 5[:32.0]) => Z1[:S32.0]
+set_contains(Z1[:S32.0], 5[:32.0]) => Z2[:1.1]
+set_contains(Z1[:S32.0], 6[:32.0]) => Z3[:1.1]
+(Z2[:1.1] | Z3[:1.1]) => R0[:1.1]
+END
+
+P133 pair_relation_session () => R0[:32.0]
+list_new() => Z1[:L32.0]
+pair(1[:32.0], 2[:32.0]) => Z2[:P32.0]
+list_push(Z1[:L32.0], Z2[:P32.0]) => Z1[:L32.0]
+pair(1[:32.0], 3[:32.0]) => Z3[:P32.0]
+list_push(Z1[:L32.0], Z3[:P32.0]) => Z1[:L32.0]
+pair_list_count_first(Z1[:L32.0], 1[:32.0]) => R0[:32.0]
+END
+
+P134 two_dimensional_fuller () => R0[:32.16]
+ | Z + 1[:32.16] => R
+V| 4                0
+S| 32.16            32.16
+END
+
+P135 chess_piece_record () => R0[:32.0]
+4[:32.0] => Z40.white.king.file[:32.0]
+1[:32.0] => Z40.white.king.rank[:32.0]
+(Z40.white.king.file[:32.0] * 10[:32.0] + Z40.white.king.rank[:32.0]) => R0[:32.0]
+END
+
+P136 chess_attack_relation () => R0[:1.1]
+list_new() => Z1[:L32.0]
+pair(4[:32.0], 5[:32.0]) => Z2[:P32.0]
+list_push(Z1[:L32.0], Z2[:P32.0]) => Z1[:L32.0]
+pair_list_count_first(Z1[:L32.0], 4[:32.0]) => Z3[:32.0]
+(0[:32.0] < Z3[:32.0]) => R0[:1.1]
+END
+
+P137 logic_not_session () => R0[:1.1]
+set_new() => Z1[:S32.0]
+set_contains(Z1[:S32.0], 9[:32.0]) => Z2[:1.1]
+(!Z2[:1.1]) => R0[:1.1]
+END

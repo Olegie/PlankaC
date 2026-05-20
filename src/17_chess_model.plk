@@ -1,0 +1,55 @@
+# Fuller chess model profile.
+# Piece kind: 2 knight, 3 bishop, 4 rook, 5 queen, 6 king.
+# Piece color: 1 white, 2 black.
+
+P240 chess_board_setup_session () => R0[:32.0]
+chess_board_new() => Z1[:Q32.0]
+chess_square(5[:32.0], 1[:32.0]) => Z2[:32.0]
+chess_piece(6[:32.0], 1[:32.0]) => Z3[:32.0]
+chess_board_place(Z1[:Q32.0], Z2[:32.0], Z3[:32.0]) => Z1[:Q32.0]
+chess_board_piece(Z1[:Q32.0], Z2[:32.0]) => R0[:32.0]
+END
+
+P241 chess_rook_attack_map_full_session () => R0[:32.0]
+chess_rook_attack_map(4[:32.0], 4[:32.0]) => Z1[:L32.0]
+set_size(Z1[:L32.0]) => R0[:32.0]
+END
+
+P242 chess_bishop_attack_map_full_session () => R0[:32.0]
+chess_bishop_attack_map(4[:32.0], 4[:32.0]) => Z1[:L32.0]
+set_size(Z1[:L32.0]) => R0[:32.0]
+END
+
+P243 chess_knight_attack_map_full_session () => R0[:32.0]
+chess_knight_attack_map(4[:32.0], 4[:32.0]) => Z1[:L32.0]
+set_size(Z1[:L32.0]) => R0[:32.0]
+END
+
+P244 chess_queen_attack_map_full_session () => R0[:32.0]
+chess_queen_attack_map(4[:32.0], 4[:32.0]) => Z1[:L32.0]
+set_size(Z1[:L32.0]) => R0[:32.0]
+END
+
+P245 chess_piece_attacks_square_session () => R0[:32.0]
+chess_square(4[:32.0], 8[:32.0]) => Z1[:32.0]
+chess_piece_attacks_square(4[:32.0], 4[:32.0], 4[:32.0], Z1[:32.0]) => Z2[:1.1]
+chess_square(5[:32.0], 6[:32.0]) => Z3[:32.0]
+chess_piece_attacks_square(2[:32.0], 4[:32.0], 4[:32.0], Z3[:32.0]) => Z4[:1.1]
+(Z2[:1.1] + Z4[:1.1]) => R0[:32.0]
+END
+
+P246 chess_check_model_session () => R0[:1.1]
+chess_board_new() => Z1[:Q32.0]
+chess_square(4[:32.0], 4[:32.0]) => Z2[:32.0]
+chess_square(4[:32.0], 8[:32.0]) => Z3[:32.0]
+chess_piece(6[:32.0], 1[:32.0]) => Z4[:32.0]
+chess_piece(4[:32.0], 2[:32.0]) => Z5[:32.0]
+chess_board_place(Z1[:Q32.0], Z2[:32.0], Z4[:32.0]) => Z1[:Q32.0]
+chess_board_place(Z1[:Q32.0], Z3[:32.0], Z5[:32.0]) => Z1[:Q32.0]
+chess_piece_attacks_square(4[:32.0], 4[:32.0], 8[:32.0], Z2[:32.0]) => R0[:1.1]
+END
+
+P247 chess_king_zone_session () => R0[:32.0]
+chess_king_attack_map(5[:32.0], 5[:32.0]) => Z1[:L32.0]
+set_size(Z1[:L32.0]) => R0[:32.0]
+END

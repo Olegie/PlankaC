@@ -1,0 +1,98 @@
+MIT License
+
+Copyright (c) 2026 PlankaC contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+Additional PlankaC License Notes
+================================
+
+These notes do not replace or narrow the MIT License above. They explain how
+the license is intended to apply inside this repository.
+
+Project Scope
+-------------
+
+The MIT License applies to the PlankaC project files in this repository,
+including:
+
+- the PlankaC parser, source loader, runtime, bytecode writer, CLI, and public
+  C API under `c/`;
+- the bundled PlankaMath calculator and Windows GUI host;
+- the `.plk` source plans under `src/`, `examples/`, and `tests`;
+- the conformance fixtures and test runner;
+- the project documentation and build scripts;
+- small auxiliary source files such as the 8086 assembly note under `asm/`.
+
+Rights Granted
+--------------
+
+You may use PlankaC for personal, academic, research, open-source, or
+commercial work. You may copy it, modify it, build it, link it into your own C
+programs, publish modified versions, distribute source or binary builds, and
+use the `.plk` examples as a starting point for your own Plankalkuel-profile
+programs.
+
+Embedding And Reuse
+-------------------
+
+The public PlankaC API in `c/plankac.h` may be embedded in other C or C++
+programs under the same MIT terms. A host application may load the default
+`.plk` plans or its own source list. The license does not require your program
+to be open source, but any distributed copy of PlankaC code must keep the MIT
+copyright notice and permission notice.
+
+Source Plans And Examples
+-------------------------
+
+The `.plk` files in this repository are licensed as part of the project. You
+may study, copy, adapt, and redistribute them. If you publish a project based
+on these files, keep the license notice somewhere reasonable in the source
+distribution, documentation, or about/license screen.
+
+Generated Files
+---------------
+
+Bytecode files, binaries, object files, static libraries, and other build
+outputs generated from this repository may be used and distributed under the
+MIT terms, provided the required license notice is included when PlankaC code
+or a substantial portion of it is distributed.
+
+Source References
+-----------------
+
+The bibliography, names of cited works, and references to Konrad Zuse's
+Plankalkuel are provided for attribution and study. This license covers this
+repository's own code, documentation, and examples. It does not claim ownership
+over external texts, papers, names, or archived documents cited by the project.
+
+No Warranty
+-----------
+
+PlankaC is a compact implementation of a linear Plankalkuel profile. It is not
+provided with any warranty of completeness, correctness, fitness, safety,
+performance, or compatibility. Use it, extend it, and verify it for your own
+context.
+
+Names And Endorsement
+---------------------
+
+The names PlankaC and PlankaMath identify this project and its bundled
+calculator host. The MIT License lets you reuse the code, but it does not imply
+that modified versions are endorsed by the original project contributors.

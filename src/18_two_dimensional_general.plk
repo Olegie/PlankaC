@@ -1,0 +1,17 @@
+# Generalized executable two-dimensional table examples.
+
+P260 two_dimensional_swapped_rows_session () => R0[:32.16]
+1[:32.16] => Z1[:32.16]
+4[:32.16] => Z2[:32.16]
+ | A       +       B       =>      C
+S| 32.16           32.16           32.16
+V| 1               2               0
+END
+
+P261 two_dimensional_aligned_cells_session () => R0[:32.16]
+2[:32.16] => Z4[:32.16]
+3[:32.16] => Z5[:32.16]
+ |       A       *       B       =>      C
+V|       4               5               0
+S|       32.16           32.16           32.16
+END

@@ -1,0 +1,5 @@
+P1 bad_2d_missing_type () => R0[:32.16]
+ | A + A => A
+V| 1 2 3
+S| 32.16 32.16
+END

@@ -1,0 +1,35 @@
+# Complex-number plans for the historical value-model profile.
+# Complex values are represented by PlankaC runtime handles and typed with C.
+
+P140 complex_norm_session () => R0[:32.16]
+complex(3[:32.16], 4[:32.16]) => Z1[:C32.16]
+complex_norm2(Z1[:C32.16]) => R0[:32.16]
+END
+
+P141 complex_add_session () => R0[:32.16]
+complex(1[:32.16], 2[:32.16]) => Z1[:C32.16]
+complex(3[:32.16], 4[:32.16]) => Z2[:C32.16]
+complex_add(Z1[:C32.16], Z2[:C32.16]) => Z3[:C32.16]
+complex_real(Z3[:C32.16]) => Z4[:32.16]
+complex_imag(Z3[:C32.16]) => Z5[:32.16]
+(Z4[:32.16] * 10[:32.16] + Z5[:32.16]) => R0[:32.16]
+END
+
+P142 complex_mul_session () => R0[:32.16]
+complex(1[:32.16], 2[:32.16]) => Z1[:C32.16]
+complex(3[:32.16], 4[:32.16]) => Z2[:C32.16]
+complex_mul(Z1[:C32.16], Z2[:C32.16]) => Z3[:C32.16]
+complex_norm2(Z3[:C32.16]) => R0[:32.16]
+END
+
+P143 complex_conjugate_session () => R0[:32.16]
+complex(2[:32.16], -7[:32.16]) => Z1[:C32.16]
+complex_conj(Z1[:C32.16]) => Z2[:C32.16]
+complex_imag(Z2[:C32.16]) => R0[:32.16]
+END
+
+P144 complex_equal_session () => R0[:1.1]
+complex(5[:32.16], 6[:32.16]) => Z1[:C32.16]
+complex(5[:32.16], 6[:32.16]) => Z2[:C32.16]
+complex_equal(Z1[:C32.16], Z2[:C32.16]) => R0[:1.1]
+END

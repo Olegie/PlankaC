@@ -1,0 +1,17 @@
+# Executable two-dimensional table notation.
+
+P190 two_dimensional_original_session () => R0[:32.16]
+4[:32.16] => Z4[:32.16]
+ | A + 1[:32.16] => A
+V| 4               5
+S| 32.16           32.16
+R5[:32.16] => R0[:32.16]
+END
+
+P191 two_dimensional_symbolic_type_session () => R0[:32.16]
+8[:32.16] => Z4[:32.16]
+ | A + 1[:32.16] => A
+V| 4               5
+S| 1.32.16         1.32.16
+R5[:1.32.16] => R0[:32.16]
+END

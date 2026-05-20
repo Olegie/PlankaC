@@ -1,0 +1,25 @@
+# PlankaMath high-level calculator plans.
+# Zusammengesetzte Rechenplaene ohne moderne Host-Sprache.
+
+P70 calculator_demo () => R0[:32.16]
+add(40[:32.16], 2[:32.16]) => Z1[:32.16]
+multiply(Z1[:32.16], 3[:32.16]) => Z2[:32.16]
+subtract(Z2[:32.16], 6[:32.16]) => Z3[:32.16]
+divide_checked(Z3[:32.16], 4[:32.16]) => R0[:32.16], Z4[:1.1]
+END
+
+P71 chained_expression (V0[:32.16], V1[:32.16], V2[:32.16]) => R0[:32.16]
+add(V0[:32.16], V1[:32.16]) => Z1[:32.16]
+square(Z1[:32.16]) => Z2[:32.16]
+subtract(Z2[:32.16], V2[:32.16]) => R0[:32.16]
+END
+
+P72 guarded_division_demo (V0[:32.16], V1[:32.16]) => R0[:32.16], R1[:1.1]
+divide_checked(V0[:32.16], V1[:32.16]) => R0[:32.16], R1[:1.1]
+END
+
+P73 compare_and_average (V0[:32.16], V1[:32.16]) => R0[:32.16]
+minimum(V0[:32.16], V1[:32.16]) => Z1[:32.16]
+maximum(V0[:32.16], V1[:32.16]) => Z2[:32.16]
+average2(Z1[:32.16], Z2[:32.16]) => R0[:32.16]
+END

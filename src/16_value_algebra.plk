@@ -1,0 +1,69 @@
+# Historical value algebra profile for compound handles.
+
+P230 list_equal_session () => R0[:1.1]
+list_new() => Z1[:L32.0]
+list_push(Z1[:L32.0], 1[:32.0]) => Z1[:L32.0]
+list_push(Z1[:L32.0], 2[:32.0]) => Z1[:L32.0]
+list_new() => Z2[:L32.0]
+list_push(Z2[:L32.0], 1[:32.0]) => Z2[:L32.0]
+list_push(Z2[:L32.0], 2[:32.0]) => Z2[:L32.0]
+list_equal(Z1[:L32.0], Z2[:L32.0]) => R0[:1.1]
+END
+
+P231 set_equal_session () => R0[:1.1]
+set_new() => Z1[:S32.0]
+set_add(Z1[:S32.0], 2[:32.0]) => Z1[:S32.0]
+set_add(Z1[:S32.0], 1[:32.0]) => Z1[:S32.0]
+set_new() => Z2[:S32.0]
+set_add(Z2[:S32.0], 1[:32.0]) => Z2[:S32.0]
+set_add(Z2[:S32.0], 2[:32.0]) => Z2[:S32.0]
+set_equal(Z1[:S32.0], Z2[:S32.0]) => R0[:1.1]
+END
+
+P232 pair_equal_session () => R0[:1.1]
+pair(4[:32.0], 9[:32.0]) => Z1[:P32.0]
+pair(4[:32.0], 9[:32.0]) => Z2[:P32.0]
+pair_equal(Z1[:P32.0], Z2[:P32.0]) => R0[:1.1]
+END
+
+P233 record_merge_session () => R0[:32.0]
+record_new() => Z1[:Q32.0]
+record_set(Z1[:Q32.0], 1[:32.0], 10[:32.0]) => Z1[:Q32.0]
+record_set(Z1[:Q32.0], 2[:32.0], 20[:32.0]) => Z1[:Q32.0]
+record_new() => Z2[:Q32.0]
+record_set(Z2[:Q32.0], 2[:32.0], 25[:32.0]) => Z2[:Q32.0]
+record_set(Z2[:Q32.0], 3[:32.0], 30[:32.0]) => Z2[:Q32.0]
+record_merge(Z1[:Q32.0], Z2[:Q32.0]) => Z3[:Q32.0]
+record_get(Z3[:Q32.0], 1[:32.0]) => Z4[:32.0]
+record_get(Z3[:Q32.0], 2[:32.0]) => Z5[:32.0]
+record_get(Z3[:Q32.0], 3[:32.0]) => Z6[:32.0]
+(Z4[:32.0] + Z5[:32.0] + Z6[:32.0]) => R0[:32.0]
+END
+
+P234 record_equal_session () => R0[:1.1]
+record_new() => Z1[:Q32.0]
+record_set(Z1[:Q32.0], 1[:32.0], 7[:32.0]) => Z1[:Q32.0]
+record_new() => Z2[:Q32.0]
+record_set(Z2[:Q32.0], 1[:32.0], 7[:32.0]) => Z2[:Q32.0]
+record_equal(Z1[:Q32.0], Z2[:Q32.0]) => R0[:1.1]
+END
+
+P235 relation_inverse_session () => R0[:1.1]
+list_new() => Z1[:L32.0]
+pair(1[:32.0], 7[:32.0]) => Z2[:P32.0]
+list_push(Z1[:L32.0], Z2[:P32.0]) => Z1[:L32.0]
+relation_inverse(Z1[:L32.0]) => Z3[:L32.0]
+relation_has_pair(Z3[:L32.0], 7[:32.0], 1[:32.0]) => R0[:1.1]
+END
+
+P236 relation_image_session () => R0[:32.0]
+list_new() => Z1[:L32.0]
+pair(2[:32.0], 8[:32.0]) => Z2[:P32.0]
+list_push(Z1[:L32.0], Z2[:P32.0]) => Z1[:L32.0]
+pair(2[:32.0], 9[:32.0]) => Z3[:P32.0]
+list_push(Z1[:L32.0], Z3[:P32.0]) => Z1[:L32.0]
+pair(3[:32.0], 10[:32.0]) => Z4[:P32.0]
+list_push(Z1[:L32.0], Z4[:P32.0]) => Z1[:L32.0]
+relation_image(Z1[:L32.0], 2[:32.0]) => Z5[:L32.0]
+set_size(Z5[:L32.0]) => R0[:32.0]
+END

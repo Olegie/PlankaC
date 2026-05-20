@@ -1,0 +1,9 @@
+# Calculator memory session.
+
+P103 memory_session () => R0[:32.16]
+memory_clear() => Z1[:32.16]
+memory_add(Z1[:32.16], 25[:32.16]) => Z2[:32.16]
+memory_add(Z2[:32.16], 17[:32.16]) => Z3[:32.16]
+memory_subtract(Z3[:32.16], 2[:32.16]) => Z4[:32.16]
+memory_recall(Z4[:32.16]) => R0[:32.16]
+END

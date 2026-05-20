@@ -1,0 +1,36 @@
+# Handle-backed structured values.
+# Q markers identify record handles in the executable value model.
+
+P160 record_handle_session () => R0[:32.0]
+record_new() => Z1[:Q32.0]
+record_set(Z1[:Q32.0], 1[:32.0], 6[:32.0]) => Z1[:Q32.0]
+record_set(Z1[:Q32.0], 2[:32.0], 4[:32.0]) => Z1[:Q32.0]
+record_get(Z1[:Q32.0], 1[:32.0]) => Z2[:32.0]
+record_get(Z1[:Q32.0], 2[:32.0]) => Z3[:32.0]
+(Z2[:32.0] * 10[:32.0] + Z3[:32.0]) => R0[:32.0]
+END
+
+P161 record_make_piece () => R0[:Q32.0]
+record_new() => Z1[:Q32.0]
+record_set(Z1[:Q32.0], 1[:32.0], 6[:32.0]) => Z1[:Q32.0]
+record_set(Z1[:Q32.0], 2[:32.0], 1[:32.0]) => Z1[:Q32.0]
+record_set(Z1[:Q32.0], 3[:32.0], 4[:32.0]) => Z1[:Q32.0]
+record_set(Z1[:Q32.0], 4[:32.0], 1[:32.0]) => Z1[:Q32.0]
+Z1[:Q32.0] => R0[:Q32.0]
+END
+
+P162 record_child_heap_session () => R0[:32.0]
+record_make_piece() => Z1[:Q32.0]
+record_get(Z1[:Q32.0], 1[:32.0]) => Z2[:32.0]
+record_get(Z1[:Q32.0], 3[:32.0]) => Z3[:32.0]
+(Z2[:32.0] * 10[:32.0] + Z3[:32.0]) => R0[:32.0]
+END
+
+P163 record_shape_session () => R0[:32.0]
+record_new() => Z1[:Q32.0]
+record_set(Z1[:Q32.0], 10[:32.0], 1[:1.1]) => Z1[:Q32.0]
+record_set(Z1[:Q32.0], 11[:32.0], 2[:32.0]) => Z1[:Q32.0]
+record_has(Z1[:Q32.0], 10[:32.0]) => Z2[:1.1]
+record_size(Z1[:Q32.0]) => Z3[:32.0]
+(Z2[:1.1] + Z3[:32.0]) => R0[:32.0]
+END

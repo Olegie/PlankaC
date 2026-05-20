@@ -1,0 +1,47 @@
+# PlankaMath data structure and control-flow plans.
+# These plans exercise indexed values, record fields, lists, loops,
+# assertions, and an executable two-dimensional row.
+
+P110 indexed_sum () => R0[:32.16]
+10[:32.16] => Z10[0][:32.16]
+20[:32.16] => Z10[1][:32.16]
+(Z10[0][:32.16] + Z10[1][:32.16]) => R0[:32.16]
+END
+
+P111 record_sum () => R0[:32.16]
+3[:32.16] => Z20.x[:32.16]
+4[:32.16] => Z20.y[:32.16]
+(Z20.x[:32.16] + Z20.y[:32.16]) => R0[:32.16]
+END
+
+P112 loop_multiply (V0[:32.16], V1[:32.0]) => R0[:32.16]
+0[:32.16] => R0[:32.16]
+LOOP V1[:32.0] => (R0[:32.16] + V0[:32.16]) => R0[:32.16]
+END
+
+P113 list_session () => R0[:32.16]
+list_new() => Z1[:L32.0]
+list_push(Z1[:L32.0], 7[:32.16]) => Z1[:L32.0]
+list_push(Z1[:L32.0], 8[:32.16]) => Z1[:L32.0]
+list_get(Z1[:L32.0], 0[:32.0]) => Z2[:32.16]
+list_len(Z1[:L32.0]) => Z3[:32.0]
+(Z2[:32.16] + Z3[:32.0]) => R0[:32.16]
+END
+
+P114 assertion_session () => R0[:1.1]
+1[:1.1] => R0[:1.1]
+ASSERT (R0[:1.1] = 1[:1.1])
+END
+
+P115 two_dimensional_add () => R0[:32.16]
+ | (2[:32.16] + 3[:32.16]) => R0[:32.16]
+V|                                 0
+S| 1.32.16 1.32.16              1.32.16
+END
+
+P116 type_model_session () => R0[:32.16]
+1[:1.1] => Z1[:1.1]
+7[:32.0] => Z2[:32.0]
+(2.5[:32.16] + Z2[:32.0]) => R0[:32.16]
+ASSERT (Z1[:1.1] = 1[:1.1])
+END

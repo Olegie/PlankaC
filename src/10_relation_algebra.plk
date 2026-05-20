@@ -1,0 +1,67 @@
+# Executable set and relation algebra plans.
+# Relations are represented as lists of pair handles.
+
+P150 set_difference_session () => R0[:32.0]
+set_new() => Z1[:S32.0]
+set_add(Z1[:S32.0], 1[:32.0]) => Z1[:S32.0]
+set_add(Z1[:S32.0], 2[:32.0]) => Z1[:S32.0]
+set_add(Z1[:S32.0], 3[:32.0]) => Z1[:S32.0]
+set_new() => Z2[:S32.0]
+set_add(Z2[:S32.0], 2[:32.0]) => Z2[:S32.0]
+set_difference(Z1[:S32.0], Z2[:S32.0]) => Z3[:S32.0]
+set_size(Z3[:S32.0]) => R0[:32.0]
+END
+
+P151 set_subset_session () => R0[:1.1]
+set_new() => Z1[:S32.0]
+set_add(Z1[:S32.0], 1[:32.0]) => Z1[:S32.0]
+set_add(Z1[:S32.0], 2[:32.0]) => Z1[:S32.0]
+set_new() => Z2[:S32.0]
+set_add(Z2[:S32.0], 1[:32.0]) => Z2[:S32.0]
+set_add(Z2[:S32.0], 2[:32.0]) => Z2[:S32.0]
+set_add(Z2[:S32.0], 3[:32.0]) => Z2[:S32.0]
+set_subset(Z1[:S32.0], Z2[:S32.0]) => R0[:1.1]
+END
+
+P152 relation_domain_session () => R0[:32.0]
+list_new() => Z1[:L32.0]
+pair(1[:32.0], 2[:32.0]) => Z2[:P32.0]
+list_push(Z1[:L32.0], Z2[:P32.0]) => Z1[:L32.0]
+pair(1[:32.0], 3[:32.0]) => Z3[:P32.0]
+list_push(Z1[:L32.0], Z3[:P32.0]) => Z1[:L32.0]
+pair(4[:32.0], 2[:32.0]) => Z4[:P32.0]
+list_push(Z1[:L32.0], Z4[:P32.0]) => Z1[:L32.0]
+relation_domain(Z1[:L32.0]) => Z5[:L32.0]
+set_size(Z5[:L32.0]) => R0[:32.0]
+END
+
+P153 relation_range_session () => R0[:32.0]
+list_new() => Z1[:L32.0]
+pair(1[:32.0], 2[:32.0]) => Z2[:P32.0]
+list_push(Z1[:L32.0], Z2[:P32.0]) => Z1[:L32.0]
+pair(1[:32.0], 3[:32.0]) => Z3[:P32.0]
+list_push(Z1[:L32.0], Z3[:P32.0]) => Z1[:L32.0]
+pair(4[:32.0], 2[:32.0]) => Z4[:P32.0]
+list_push(Z1[:L32.0], Z4[:P32.0]) => Z1[:L32.0]
+relation_range(Z1[:L32.0]) => Z5[:L32.0]
+set_size(Z5[:L32.0]) => R0[:32.0]
+END
+
+P154 relation_has_pair_session () => R0[:1.1]
+list_new() => Z1[:L32.0]
+pair(7[:32.0], 8[:32.0]) => Z2[:P32.0]
+list_push(Z1[:L32.0], Z2[:P32.0]) => Z1[:L32.0]
+relation_has_pair(Z1[:L32.0], 7[:32.0], 8[:32.0]) => R0[:1.1]
+END
+
+P155 relation_make_pair_list () => R0[:L32.0]
+list_new() => Z1[:L32.0]
+pair(9[:32.0], 10[:32.0]) => Z2[:P32.0]
+list_push(Z1[:L32.0], Z2[:P32.0]) => Z1[:L32.0]
+Z1[:L32.0] => R0[:L32.0]
+END
+
+P156 relation_child_heap_session () => R0[:1.1]
+relation_make_pair_list() => Z1[:L32.0]
+relation_has_pair(Z1[:L32.0], 9[:32.0], 10[:32.0]) => R0[:1.1]
+END

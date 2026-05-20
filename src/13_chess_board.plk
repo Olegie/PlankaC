@@ -1,0 +1,32 @@
+# Board-level chess structures inspired by Plankalkuel examples.
+
+P180 chess_square (V0[:32.0], V1[:32.0]) => R0[:32.0]
+(V0[:32.0] * 10[:32.0] + V1[:32.0]) => R0[:32.0]
+END
+
+P181 chess_piece_struct_session () => R0[:32.0]
+record_make_piece() => Z1[:Q32.0]
+record_get(Z1[:Q32.0], 2[:32.0]) => Z2[:32.0]
+record_get(Z1[:Q32.0], 1[:32.0]) => Z3[:32.0]
+record_get(Z1[:Q32.0], 3[:32.0]) => Z4[:32.0]
+record_get(Z1[:Q32.0], 4[:32.0]) => Z5[:32.0]
+(Z2[:32.0] * 1000[:32.0] + Z3[:32.0] * 100[:32.0] + Z4[:32.0] * 10[:32.0] + Z5[:32.0]) => R0[:32.0]
+END
+
+P182 chess_rook_attack_map_session () => R0[:1.1]
+list_new() => Z1[:L32.0]
+chess_square(4[:32.0], 4[:32.0]) => Z2[:32.0]
+chess_square(4[:32.0], 8[:32.0]) => Z3[:32.0]
+pair(Z2[:32.0], Z3[:32.0]) => Z4[:P32.0]
+list_push(Z1[:L32.0], Z4[:P32.0]) => Z1[:L32.0]
+relation_has_pair(Z1[:L32.0], Z2[:32.0], Z3[:32.0]) => R0[:1.1]
+END
+
+P183 chess_check_session () => R0[:1.1]
+list_new() => Z1[:L32.0]
+chess_square(4[:32.0], 4[:32.0]) => Z2[:32.0]
+chess_square(4[:32.0], 8[:32.0]) => Z3[:32.0]
+pair(Z2[:32.0], Z3[:32.0]) => Z4[:P32.0]
+list_push(Z1[:L32.0], Z4[:P32.0]) => Z1[:L32.0]
+relation_has_pair(Z1[:L32.0], Z2[:32.0], Z3[:32.0]) => R0[:1.1]
+END

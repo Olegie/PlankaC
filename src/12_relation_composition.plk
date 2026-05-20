@@ -1,0 +1,39 @@
+# Richer list, set, and relation algebra.
+
+P170 cartesian_product_session () => R0[:32.0]
+set_new() => Z1[:S32.0]
+set_add(Z1[:S32.0], 1[:32.0]) => Z1[:S32.0]
+set_add(Z1[:S32.0], 2[:32.0]) => Z1[:S32.0]
+set_new() => Z2[:S32.0]
+set_add(Z2[:S32.0], 7[:32.0]) => Z2[:S32.0]
+set_add(Z2[:S32.0], 8[:32.0]) => Z2[:S32.0]
+set_cartesian(Z1[:S32.0], Z2[:S32.0]) => Z3[:L32.0]
+set_size(Z3[:L32.0]) => R0[:32.0]
+END
+
+P171 relation_compose_session () => R0[:32.0]
+list_new() => Z1[:L32.0]
+pair(1[:32.0], 2[:32.0]) => Z2[:P32.0]
+list_push(Z1[:L32.0], Z2[:P32.0]) => Z1[:L32.0]
+pair(2[:32.0], 3[:32.0]) => Z3[:P32.0]
+list_push(Z1[:L32.0], Z3[:P32.0]) => Z1[:L32.0]
+list_new() => Z4[:L32.0]
+pair(2[:32.0], 9[:32.0]) => Z5[:P32.0]
+list_push(Z4[:L32.0], Z5[:P32.0]) => Z4[:L32.0]
+pair(3[:32.0], 10[:32.0]) => Z6[:P32.0]
+list_push(Z4[:L32.0], Z6[:P32.0]) => Z4[:L32.0]
+relation_compose(Z1[:L32.0], Z4[:L32.0]) => Z7[:L32.0]
+set_size(Z7[:L32.0]) => Z8[:32.0]
+relation_has_pair(Z7[:L32.0], 1[:32.0], 9[:32.0]) => Z9[:1.1]
+(Z8[:32.0] + Z9[:1.1]) => R0[:32.0]
+END
+
+P172 set_quantifier_session () => R0[:32.0]
+set_new() => Z1[:S32.0]
+set_add(Z1[:S32.0], 1[:32.0]) => Z1[:S32.0]
+set_add(Z1[:S32.0], 2[:32.0]) => Z1[:S32.0]
+set_add(Z1[:S32.0], 3[:32.0]) => Z1[:S32.0]
+set_forall_less(Z1[:S32.0], 4[:32.0]) => Z2[:1.1]
+set_exists_greater(Z1[:S32.0], 2[:32.0]) => Z3[:1.1]
+(Z2[:1.1] + Z3[:1.1]) => R0[:32.0]
+END

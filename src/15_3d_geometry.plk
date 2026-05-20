@@ -1,0 +1,111 @@
+# PlankaC 3D extension profile.
+# This is a modern extension layer: vector, matrix, transform, and projection
+# helpers written as executable .plk plans over PlankaC primitive values.
+
+P200 vec3_make_session () => R0[:32.16]
+vec3(1[:32.16], 2[:32.16], 3[:32.16]) => Z1[:VEC32.16]
+vec3_x(Z1[:VEC32.16]) => Z2[:32.16]
+vec3_y(Z1[:VEC32.16]) => Z3[:32.16]
+vec3_z(Z1[:VEC32.16]) => Z4[:32.16]
+(Z2[:32.16] * 100[:32.16] + Z3[:32.16] * 10[:32.16] + Z4[:32.16]) => R0[:32.16]
+END
+
+P201 vec3_add_dot_session () => R0[:32.16]
+vec3(1[:32.16], 2[:32.16], 3[:32.16]) => Z1[:VEC32.16]
+vec3(4[:32.16], 5[:32.16], 6[:32.16]) => Z2[:VEC32.16]
+vec3_add(Z1[:VEC32.16], Z2[:VEC32.16]) => Z3[:VEC32.16]
+vec3_x(Z3[:VEC32.16]) => Z4[:32.16]
+vec3_y(Z3[:VEC32.16]) => Z5[:32.16]
+vec3_z(Z3[:VEC32.16]) => Z6[:32.16]
+vec3_dot(Z1[:VEC32.16], Z2[:VEC32.16]) => Z7[:32.16]
+(Z4[:32.16] + Z5[:32.16] + Z6[:32.16] + Z7[:32.16]) => R0[:32.16]
+END
+
+P202 vec3_cross_session () => R0[:32.16]
+vec3(1[:32.16], 0[:32.16], 0[:32.16]) => Z1[:VEC32.16]
+vec3(0[:32.16], 1[:32.16], 0[:32.16]) => Z2[:VEC32.16]
+vec3_cross(Z1[:VEC32.16], Z2[:VEC32.16]) => Z3[:VEC32.16]
+vec3_z(Z3[:VEC32.16]) => R0[:32.16]
+END
+
+P203 vec3_normalize_session () => R0[:32.16]
+vec3(0[:32.16], 3[:32.16], 4[:32.16]) => Z1[:VEC32.16]
+vec3_normalize(Z1[:VEC32.16]) => Z2[:VEC32.16]
+vec3_len2(Z2[:VEC32.16]) => R0[:32.16]
+END
+
+P204 mat4_translate_session () => R0[:32.16]
+mat4_translate(10[:32.16], 20[:32.16], 30[:32.16]) => Z1[:MAT32.16]
+vec3(1[:32.16], 2[:32.16], 3[:32.16]) => Z2[:VEC32.16]
+mat4_transform_point(Z1[:MAT32.16], Z2[:VEC32.16]) => Z3[:VEC32.16]
+vec3_x(Z3[:VEC32.16]) => Z4[:32.16]
+vec3_y(Z3[:VEC32.16]) => Z5[:32.16]
+vec3_z(Z3[:VEC32.16]) => Z6[:32.16]
+(Z4[:32.16] * 10000[:32.16] + Z5[:32.16] * 100[:32.16] + Z6[:32.16]) => R0[:32.16]
+END
+
+P205 mat4_scale_session () => R0[:32.16]
+mat4_scale(2[:32.16], 3[:32.16], 4[:32.16]) => Z1[:MAT32.16]
+vec3(1[:32.16], 2[:32.16], 3[:32.16]) => Z2[:VEC32.16]
+mat4_transform_point(Z1[:MAT32.16], Z2[:VEC32.16]) => Z3[:VEC32.16]
+vec3_x(Z3[:VEC32.16]) => Z4[:32.16]
+vec3_y(Z3[:VEC32.16]) => Z5[:32.16]
+vec3_z(Z3[:VEC32.16]) => Z6[:32.16]
+(Z4[:32.16] * 1000[:32.16] + Z5[:32.16] * 100[:32.16] + Z6[:32.16]) => R0[:32.16]
+END
+
+P206 mat4_chain_session () => R0[:32.16]
+mat4_translate(5[:32.16], 0[:32.16], 0[:32.16]) => Z1[:MAT32.16]
+mat4_scale(2[:32.16], 2[:32.16], 2[:32.16]) => Z2[:MAT32.16]
+mat4_mul(Z1[:MAT32.16], Z2[:MAT32.16]) => Z3[:MAT32.16]
+vec3(1[:32.16], 1[:32.16], 1[:32.16]) => Z4[:VEC32.16]
+mat4_transform_point(Z3[:MAT32.16], Z4[:VEC32.16]) => Z5[:VEC32.16]
+vec3_x(Z5[:VEC32.16]) => Z6[:32.16]
+vec3_y(Z5[:VEC32.16]) => Z7[:32.16]
+vec3_z(Z5[:VEC32.16]) => Z8[:32.16]
+(Z6[:32.16] * 100[:32.16] + Z7[:32.16] * 10[:32.16] + Z8[:32.16]) => R0[:32.16]
+END
+
+P207 perspective_project_session () => R0[:32.16]
+vec3(4[:32.16], 2[:32.16], 2[:32.16]) => Z1[:VEC32.16]
+perspective_project(Z1[:VEC32.16], 10[:32.16]) => Z2[:VEC32.16]
+vec3_x(Z2[:VEC32.16]) => Z3[:32.16]
+vec3_y(Z2[:VEC32.16]) => Z4[:32.16]
+(Z3[:32.16] * 10[:32.16] + Z4[:32.16]) => R0[:32.16]
+END
+
+P208 triangle_normal_session () => R0[:32.16]
+vec3(0[:32.16], 0[:32.16], 0[:32.16]) => Z1[:VEC32.16]
+vec3(1[:32.16], 0[:32.16], 0[:32.16]) => Z2[:VEC32.16]
+vec3(0[:32.16], 1[:32.16], 0[:32.16]) => Z3[:VEC32.16]
+vec3_sub(Z2[:VEC32.16], Z1[:VEC32.16]) => Z4[:VEC32.16]
+vec3_sub(Z3[:VEC32.16], Z1[:VEC32.16]) => Z5[:VEC32.16]
+vec3_cross(Z4[:VEC32.16], Z5[:VEC32.16]) => Z6[:VEC32.16]
+vec3_normalize(Z6[:VEC32.16]) => Z7[:VEC32.16]
+vec3_len2(Z7[:VEC32.16]) => R0[:32.16]
+END
+
+P209 three_d_pipeline_session () => R0[:32.16]
+mat4_translate(0[:32.16], 0[:32.16], 8[:32.16]) => Z1[:MAT32.16]
+mat4_scale(2[:32.16], 2[:32.16], 2[:32.16]) => Z2[:MAT32.16]
+mat4_mul(Z1[:MAT32.16], Z2[:MAT32.16]) => Z3[:MAT32.16]
+vec3(1[:32.16], 1[:32.16], 1[:32.16]) => Z4[:VEC32.16]
+mat4_transform_point(Z3[:MAT32.16], Z4[:VEC32.16]) => Z5[:VEC32.16]
+perspective_project(Z5[:VEC32.16], 5[:32.16]) => Z6[:VEC32.16]
+vec3_x(Z6[:VEC32.16]) => Z7[:32.16]
+vec3_y(Z6[:VEC32.16]) => Z8[:32.16]
+vec3_z(Z6[:VEC32.16]) => Z9[:32.16]
+(Z7[:32.16] * 100[:32.16] + Z8[:32.16] * 10[:32.16] + Z9[:32.16]) => R0[:32.16]
+END
+
+P210 make_engine_point () => R0[:VEC32.16]
+vec3(9[:32.16], 8[:32.16], 7[:32.16]) => R0[:VEC32.16]
+END
+
+P211 vec3_child_heap_session () => R0[:32.16]
+make_engine_point() => Z1[:VEC32.16]
+vec3_x(Z1[:VEC32.16]) => Z2[:32.16]
+vec3_y(Z1[:VEC32.16]) => Z3[:32.16]
+vec3_z(Z1[:VEC32.16]) => Z4[:32.16]
+(Z2[:32.16] + Z3[:32.16] + Z4[:32.16]) => R0[:32.16]
+END
