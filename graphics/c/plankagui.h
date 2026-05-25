@@ -26,6 +26,15 @@ typedef struct PMG_SCENE {
     PLANKAC_CONTEXT *ctx;
 } PMG_SCENE;
 
+typedef struct PMG_RENDER_STATE {
+    char display[32];
+    char status[80];
+    char log1[80];
+    char log2[80];
+    char log3[80];
+    int active_button;
+} PMG_RENDER_STATE;
+
 int pmg_scene_open(PMG_SCENE *scene, char *err, unsigned err_size);
 void pmg_scene_close(PMG_SCENE *scene);
 int pmg_scene_run(PMG_SCENE *scene, const char *name,
@@ -39,6 +48,8 @@ int pmg_scene_rect(PMG_SCENE *scene, const char *name,
 int pmg_scene_style(PMG_SCENE *scene, int style, PMG_RGB *rgb,
     char *err, unsigned err_size);
 int pmg_scene_button_id(PMG_SCENE *scene, int row, int col,
+    int *id, char *err, unsigned err_size);
+int pmg_scene_button_at(PMG_SCENE *scene, int x, int y,
     int *id, char *err, unsigned err_size);
 int pmg_scene_checksum(PMG_SCENE *scene, int *checksum,
     char *err, unsigned err_size);
@@ -59,6 +70,9 @@ void pmg_draw_text_center(PMG_IMAGE *img, PMG_RECT rect,
 
 int pmg_render_scene(PMG_SCENE *scene, PMG_IMAGE *img,
     char *err, unsigned err_size);
+void pmg_render_state_default(PMG_RENDER_STATE *state);
+int pmg_render_scene_with_state(PMG_SCENE *scene, PMG_IMAGE *img,
+    const PMG_RENDER_STATE *state, char *err, unsigned err_size);
 int pmg_write_png(const char *path, PMG_IMAGE *img,
     char *err, unsigned err_size);
 

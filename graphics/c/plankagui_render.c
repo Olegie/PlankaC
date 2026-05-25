@@ -3,7 +3,7 @@
 #include "plankagui.h"
 
 static const char *const PMG_BUTTON_LABELS[] = {
-    "7", "8", "9", "/", "SQRT",
+    "7", "8", "9", "/", "ROOT",
     "4", "5", "6", "*", "X^2",
     "1", "2", "3", "-", "+/-",
     "0", ".", "BACK", "+", "="
@@ -18,11 +18,25 @@ static const char *const PMG_PROC_LABELS[] = {
     "P3050 GUI_SCENE_CHECKSUM"
 };
 
-int pmg_render_scene(PMG_SCENE *scene, PMG_IMAGE *img,
-    char *err, unsigned err_size)
+void pmg_render_state_default(PMG_RENDER_STATE *state)
+{
+    if (state == 0) {
+        return;
+    }
+    strcpy(state->display, "42");
+    strcpy(state->status, "STATUS: SCENE PROCEDURES LOADED");
+    strcpy(state->log1, "PLANKAGUI GRAPHICS RUNTIME");
+    strcpy(state->log2, "SOURCE: PLANKAGUI.PLK");
+    strcpy(state->log3, "HOST: EVALUATED PROCEDURES");
+    state->active_button = -1;
+}
+
+int pmg_render_scene_with_state(PMG_SCENE *scene, PMG_IMAGE *img,
+    const PMG_RENDER_STATE *state, char *err, unsigned err_size)
 {
     PMG_RECT rect;
     PMG_RECT row_rect;
+    PMG_RENDER_STATE default_state;
     PMG_RGB bg;
     PMG_RGB title;
     PMG_RGB white;
@@ -35,6 +49,11 @@ int pmg_render_scene(PMG_SCENE *scene, PMG_IMAGE *img,
     int row;
     int col;
     int i;
+
+    if (state == 0) {
+        pmg_render_state_default(&default_state);
+        state = &default_state;
+    }
 
     if (!pmg_scene_style(scene, 0, &bg, err, err_size)
             || !pmg_scene_style(scene, 1, &title, err, err_size)
@@ -69,14 +88,16 @@ int pmg_render_scene(PMG_SCENE *scene, PMG_IMAGE *img,
     }
     pmg_panel(img, rect, white, border);
     pmg_draw_text(img, rect.x + 8, rect.y + 10,
-        "STATUS: SCENE PROCEDURES LOADED", 1, ok);
+        state->status, 1, ok);
 
     if (!pmg_scene_rect(scene, "gui_display_rect", 0, 0, &rect,
             err, err_size)) {
         return 0;
     }
     pmg_panel(img, rect, white, border);
-    pmg_draw_text(img, rect.x + rect.w - 42, rect.y + 8, "42", 2, text);
+    pmg_draw_text(img, rect.x + rect.w - 8
+        - pmg_text_width(state->display, 2), rect.y + 8,
+        state->display, 2, text);
 
     if (!pmg_scene_rect(scene, "gui_procedure_list_rect", 0, 0, &rect,
             err, err_size)) {
@@ -146,10 +167,11 @@ int pmg_render_scene(PMG_SCENE *scene, PMG_IMAGE *img,
             if (id < 0 || id >= 20) {
                 return 0;
             }
-            pmg_panel(img, rect, button, border);
+            pmg_panel(img, rect,
+                id == state->active_button ? accent : button, border);
             scale = strlen(PMG_BUTTON_LABELS[id]) > 2 ? 1 : 2;
             pmg_draw_text_center(img, rect, PMG_BUTTON_LABELS[id],
-                scale, text);
+                scale, id == state->active_button ? white : text);
         }
     }
 
@@ -159,10 +181,19 @@ int pmg_render_scene(PMG_SCENE *scene, PMG_IMAGE *img,
     }
     pmg_panel(img, rect, white, border);
     pmg_draw_text(img, rect.x + 8, rect.y + 12,
-        "PLANKAGUI GRAPHICS RUNTIME", 1, text);
+        state->log1, 1, text);
     pmg_draw_text(img, rect.x + 8, rect.y + 31,
-        "SOURCE: PLANKAGUI.PLK", 1, text);
+        state->log2, 1, text);
     pmg_draw_text(img, rect.x + 8, rect.y + 50,
-        "HOST: EVALUATED PROCEDURES", 1, text);
+        state->log3, 1, text);
     return 1;
+}
+
+int pmg_render_scene(PMG_SCENE *scene, PMG_IMAGE *img,
+    char *err, unsigned err_size)
+{
+    PMG_RENDER_STATE state;
+
+    pmg_render_state_default(&state);
+    return pmg_render_scene_with_state(scene, img, &state, err, err_size);
 }

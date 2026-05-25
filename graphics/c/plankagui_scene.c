@@ -4,11 +4,17 @@
 #include "plankagui.h"
 
 static const char *const PMG_SOURCES_ROOT[] = {
+    "src/00_types.plk",
+    "src/01_arithmetic.plk",
+    "src/03_scientific.plk",
     "graphics/src/plankagui.plk",
     0
 };
 
 static const char *const PMG_SOURCES_BUILD[] = {
+    "../src/00_types.plk",
+    "../src/01_arithmetic.plk",
+    "../src/03_scientific.plk",
     "../graphics/src/plankagui.plk",
     0
 };
@@ -160,6 +166,33 @@ int pmg_scene_button_id(PMG_SCENE *scene, int row, int col,
         return 0;
     }
     *id = (int)result.value[0];
+    return 1;
+}
+
+int pmg_scene_button_at(PMG_SCENE *scene, int x, int y,
+    int *id, char *err, unsigned err_size)
+{
+    PMG_RECT rect;
+    double args[2];
+    int row;
+    int col;
+
+    for (row = 0; row < 4; ++row) {
+        for (col = 0; col < 5; ++col) {
+            args[0] = (double)row;
+            args[1] = (double)col;
+            if (!pmg_scene_rect(scene, "gui_button_rect", args, 2,
+                    &rect, err, err_size)) {
+                return 0;
+            }
+            if (x >= rect.x && x < rect.x + rect.w
+                    && y >= rect.y && y < rect.y + rect.h) {
+                return pmg_scene_button_id(scene, row, col, id,
+                    err, err_size);
+            }
+        }
+    }
+    *id = -1;
     return 1;
 }
 

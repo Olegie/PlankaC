@@ -37,6 +37,11 @@ Run only the renderer:
 build\PlankaGUI.exe
 ```
 
+The window is interactive. Keypad hit-testing uses the button rectangles
+returned by `gui_button_rect`, and calculator operations call `.plk`
+procedures through PlankaC. Resize keeps the scene aspect ratio and maps mouse
+coordinates back into the original Plankalkuel-defined scene.
+
 Export the reference image:
 
 ```bat

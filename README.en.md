@@ -71,6 +71,10 @@ into small modules for loading, rasterization, bitmap text, export, and scene
 composition. The PNG file is only the README/test reference image; the
 interface itself is described by Plankalkuel procedures.
 `build\PlankaGUI.exe` opens the scene as a Windows window.
+The window is clickable and scales the rendered scene on resize while keeping
+the scene aspect ratio. Button hits are resolved through the button rectangles
+defined in `.plk`; calculator operations run through PlankaC procedures such
+as `add`, `multiply`, `divide_checked`, `square`, and `root_checked`.
 
 <p align="center">
   <img src="graphics/examples/plankagui.png" alt="PlankaGUI rendered interface" width="640">

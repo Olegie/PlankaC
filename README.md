@@ -74,6 +74,11 @@ C-Code ist in kleine Module fuer Laden, Rasterung, Schrift, Export und
 Szenenaufbau getrennt. Die PNG-Datei ist nur das Referenzbild fuer README und
 Tests; die Oberflaeche selbst wird durch Plankalkuel-Prozeduren beschrieben.
 `build\PlankaGUI.exe` oeffnet die Szene als Windows-Fenster.
+Das Fenster ist klickbar und skaliert die gerenderte Szene bei Groessenaenderung
+mit festem Seitenverhaeltnis. Tastendruecke werden ueber die in `.plk`
+definierten Button-Rechtecke erkannt; Rechenoperationen laufen ueber PlankaC-
+Prozeduren wie `add`, `multiply`, `divide_checked`, `square` und
+`root_checked`.
 
 <p align="center">
   <img src="graphics/examples/plankagui.png" alt="PlankaGUI rendered interface" width="640">
