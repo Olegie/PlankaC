@@ -22,6 +22,7 @@ Assertions und Schachstrukturen.
 | `examples/` | kleine Beispielsitzungen |
 | `tests/` | Selbsttests als `.plk`-Programme |
 | `c/` | PlankaC-Module, klassische C-Laufzeit, Konsolenstarter, DOS-Runner, Win32/Win64-GUI und Win16-GUI |
+| `graphics/` | PlankaGUI: grafische Oberflaechen aus `.plk`-Prozeduren |
 | `asm/` | 8086-Hilfsroutine |
 | `docs/` | Syntax, Ausfuehrungsmodell, Infografik, Quellenbasis, Bibliographie |
 
@@ -55,12 +56,27 @@ Wichtige Dateien:
 | `c/backends/` | Bytecode, C-Backend, x86-64-ASM und 8086/DOS-ASM |
 | `c/targets/` | CLI-, DOS-, Win16- und Windows-GUI-Hosts |
 | `c/legacy/plankamath.c` | kompakte Rueckfall-Laufzeit |
+| `graphics/src/plankagui.plk` | Fenster-, Button-, Listen- und Farb-Prozeduren fuer grafische Ausgabe |
+| `graphics/c/` | modulare PlankaGUI-Lade-, Raster-, Schrift-, Export- und Render-Schicht |
 | `build-dos.bat` | Open-Watcom-Build fuer `build\dos\PMDOS.EXE` |
 | `build-win16.bat` | Open-Watcom-Build fuer `build\win16\PlankaMath16.exe` |
 | `examples/c_api_demo.c` | kleines externes C-Programm mit PlankaC als Bibliothek |
 | `tests/plankac_conformance.c` | Conformance-Runner fuer Parser und Laufzeit |
 
 Siehe auch `docs/infographic.md` fuer eine kurze visuelle Projektkarte.
+
+## PlankaGUI
+
+PlankaGUI beschreibt ein kompaktes Rechnerfenster in `.plk`: Canvas,
+Fensterrahmen, Statuszeile, Anzeige, Prozedurliste, Argumentfelder,
+Tastenraster und Farbpalette kommen aus ausfuehrbaren PlankaC-Prozeduren. Der
+C-Code ist in kleine Module fuer Laden, Rasterung, Schrift, Export und
+Szenenaufbau getrennt. Die PNG-Datei ist nur das Referenzbild fuer README und
+Tests; die Oberflaeche selbst wird durch Plankalkuel-Prozeduren beschrieben.
+
+<p align="center">
+  <img src="graphics/examples/plankagui.png" alt="PlankaGUI rendered interface" width="640">
+</p>
 
 ## Beispiel
 

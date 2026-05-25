@@ -19,6 +19,7 @@ assertions, and chess structures.
 | `examples/` | small `.plk` sessions |
 | `tests/` | self-check programs |
 | `c/` | PlankaC modules, classic C runtime, console runner, DOS runner, Win32/Win64 GUI, and Win16 GUI |
+| `graphics/` | PlankaGUI: graphical interfaces from `.plk` procedures |
 | `asm/` | 8086 helper routine |
 | `docs/` | syntax, execution model, infographic, source basis, bibliography |
 
@@ -52,12 +53,27 @@ Important files:
 | `c/backends/` | bytecode, C backend, x86-64 ASM, and 8086/DOS ASM |
 | `c/targets/` | CLI, DOS, Win16, and Windows GUI hosts |
 | `c/legacy/plankamath.c` | compact fallback runtime |
+| `graphics/src/plankagui.plk` | window, button, list, and palette procedures for graphical output |
+| `graphics/c/` | modular PlankaGUI loader, raster, font, export, and render layer |
 | `build-dos.bat` | Open Watcom build for `build\dos\PMDOS.EXE` |
 | `build-win16.bat` | Open Watcom build for `build\win16\PlankaMath16.exe` |
 | `examples/c_api_demo.c` | small external C program using PlankaC as a library |
 | `tests/plankac_conformance.c` | parser/runtime conformance runner |
 
 See `docs/infographic.md` for a short visual map of the project.
+
+## PlankaGUI
+
+PlankaGUI describes a compact calculator window in `.plk`: canvas, window
+frame, status row, display, procedure list, argument fields, keypad grid, and
+palette are returned by executable PlankaC procedures. The C code is split
+into small modules for loading, rasterization, bitmap text, export, and scene
+composition. The PNG file is only the README/test reference image; the
+interface itself is described by Plankalkuel procedures.
+
+<p align="center">
+  <img src="graphics/examples/plankagui.png" alt="PlankaGUI rendered interface" width="640">
+</p>
 
 ## Example
 

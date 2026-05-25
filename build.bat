@@ -23,6 +23,7 @@ set PLANKAC_INC=-Ic\include -Ic\internal
 set PLANKAC_LIB_SOURCES=c\core\plankac_common.c c\types\plankac_types.c c\notation\plankac_2d.c c\analyzer\plankac_analyzer.c c\core\plankac_source.c c\core\plankac_expr.c c\backends\plankac_bytecode.c c\backends\plankac_asm8086.c c\core\plankac_runtime.c
 set PLANKAC_NATIVE_SOURCE=c\backends\plankac_native_runtime.c
 set PLANKAC_CLI_SOURCES=%PLANKAC_LIB_SOURCES% c\tools\plankac_cli.c
+set PLANKAGUI_SOURCES=graphics\c\plankagui_main.c graphics\c\plankagui_scene.c graphics\c\plankagui_raster.c graphics\c\plankagui_font.c graphics\c\plankagui_png.c graphics\c\plankagui_render.c
 
 echo Building console runner...
 gcc -Wall -Wextra -std=c89 %PLANKAC_INC% c\legacy\plankamath.c c\targets\plankamath_cli.c -o build\plankamath_cli.exe -lm
@@ -63,6 +64,10 @@ if errorlevel 1 exit /b 1
 
 echo Building PlankaC conformance tests...
 gcc -Wall -Wextra -std=c89 %PLANKAC_INC% tests\plankac_conformance.c build\libplankac.a -o build\plankac_conformance.exe -lm
+if errorlevel 1 exit /b 1
+
+echo Building PlankaGUI renderer...
+gcc -Wall -Wextra -std=c89 %PLANKAC_INC% -Igraphics\c %PLANKAGUI_SOURCES% build\libplankac.a -o build\plankagui.exe -lm
 if errorlevel 1 exit /b 1
 
 echo Building Windows GUI...
@@ -171,6 +176,9 @@ build\plankac_api_demo.exe
 if errorlevel 1 exit /b 1
 
 build\plankac_conformance.exe
+if errorlevel 1 exit /b 1
+
+build\plankagui.exe graphics\examples\plankagui.png
 if errorlevel 1 exit /b 1
 
 echo Done.
