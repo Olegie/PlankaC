@@ -70,6 +70,7 @@ palette are returned by executable PlankaC procedures. The C code is split
 into small modules for loading, rasterization, bitmap text, export, and scene
 composition. The PNG file is only the README/test reference image; the
 interface itself is described by Plankalkuel procedures.
+`build\PlankaGUI.exe` opens the scene as a Windows window.
 
 <p align="center">
   <img src="graphics/examples/plankagui.png" alt="PlankaGUI rendered interface" width="640">

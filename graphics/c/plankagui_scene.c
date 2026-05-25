@@ -3,8 +3,13 @@
 
 #include "plankagui.h"
 
-static const char *const PMG_SOURCES[] = {
+static const char *const PMG_SOURCES_ROOT[] = {
     "graphics/src/plankagui.plk",
+    0
+};
+
+static const char *const PMG_SOURCES_BUILD[] = {
+    "../graphics/src/plankagui.plk",
     0
 };
 
@@ -18,22 +23,42 @@ static void pmg_set_error(char *err, unsigned err_size, const char *text)
 
 int pmg_scene_open(PMG_SCENE *scene, char *err, unsigned err_size)
 {
+    char first_err[256];
+
     if (scene == 0) {
         pmg_set_error(err, err_size, "missing scene");
         return 0;
     }
+    if (err != 0 && err_size > 0) {
+        err[0] = '\0';
+    }
+    first_err[0] = '\0';
     scene->ctx = plankac_create();
     if (scene->ctx == 0) {
         pmg_set_error(err, err_size, "cannot allocate PlankaC context");
         return 0;
     }
-    if (!plankac_context_load_sources(scene->ctx, PMG_SOURCES,
+    if (plankac_context_load_sources(scene->ctx, PMG_SOURCES_ROOT,
+            first_err, sizeof(first_err))) {
+        return 1;
+    }
+    if (plankac_context_load_sources(scene->ctx, PMG_SOURCES_BUILD,
             err, err_size)) {
+        return 1;
+    }
+    if (err != 0 && err_size > 0 && err[0] == '\0') {
+        strncpy(err, first_err, err_size - 1);
+        err[err_size - 1] = '\0';
+    }
+    if (err != 0 && err_size > 0 && err[0] == '\0') {
+        pmg_set_error(err, err_size,
+            "missing graphics/src/plankagui.plk");
+    }
+    if (scene->ctx != 0) {
         plankac_destroy(scene->ctx);
         scene->ctx = 0;
-        return 0;
     }
-    return 1;
+    return 0;
 }
 
 void pmg_scene_close(PMG_SCENE *scene)

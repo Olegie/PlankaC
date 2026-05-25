@@ -34,7 +34,13 @@ build.bat
 Run only the renderer:
 
 ```bat
-build\plankagui.exe graphics\examples\plankagui.png
+build\PlankaGUI.exe
+```
+
+Export the reference image:
+
+```bat
+build\plankagui_export.exe graphics\examples\plankagui.png
 ```
 
 Reference output:

@@ -73,6 +73,7 @@ Tastenraster und Farbpalette kommen aus ausfuehrbaren PlankaC-Prozeduren. Der
 C-Code ist in kleine Module fuer Laden, Rasterung, Schrift, Export und
 Szenenaufbau getrennt. Die PNG-Datei ist nur das Referenzbild fuer README und
 Tests; die Oberflaeche selbst wird durch Plankalkuel-Prozeduren beschrieben.
+`build\PlankaGUI.exe` oeffnet die Szene als Windows-Fenster.
 
 <p align="center">
   <img src="graphics/examples/plankagui.png" alt="PlankaGUI rendered interface" width="640">
