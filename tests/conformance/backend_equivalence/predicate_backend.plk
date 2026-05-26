@@ -1,0 +1,9 @@
+P1 predicate_backend_equivalence () => R0[:32.0]
+list_new() => Z0[:L32.0]
+list_push(Z0[:L32.0], 1[:32.0]) => Z0[:L32.0]
+list_push(Z0[:L32.0], 4[:32.0]) => Z0[:L32.0]
+list_push(Z0[:L32.0], 7[:32.0]) => Z0[:L32.0]
+SELECT Z0[:L32.0] > 3[:32.0] => Z1[:L32.0]
+COUNT Z1[:L32.0] = 7[:32.0] => Z2[:32.0]
+list_len(Z1[:L32.0]) + Z2[:32.0] => R0[:32.0]
+END

@@ -13,6 +13,17 @@ static int plc_validate_type_markers(const char *line, char *err,
     return plc_validate_type_markers_in_line(line, err, err_size);
 }
 
+static void plc_strip_comment_keep_left(char *text)
+{
+    char *hash;
+
+    hash = strchr(text, '#');
+    if (hash != 0) {
+        *hash = '\0';
+    }
+    plc_rtrim(text);
+}
+
 static int plc_add_type_decl(PLC_TYPE_DECL *decls, int *count,
     const char *key, const char *type, char *err, unsigned err_size)
 {
@@ -50,7 +61,7 @@ static int plc_scan_typed_refs(const char *line, PLC_TYPE_DECL *decls,
         char type[PLC_MAX_TYPE_TEXT];
         unsigned n;
 
-        if ((*p != 'V' && *p != 'Z' && *p != 'R')
+        if ((*p != 'V' && *p != 'C' && *p != 'Z' && *p != 'R')
                 || !isdigit((unsigned char)p[1])) {
             ++p;
             continue;
@@ -66,7 +77,7 @@ static int plc_scan_typed_refs(const char *line, PLC_TYPE_DECL *decls,
             ++p;
         }
         p = plc_skip_space(p);
-        if (*p == '[' && p[1] != ':') {
+        while (*p == '[' && p[1] != ':') {
             const char *start;
 
             start = p;
@@ -76,6 +87,14 @@ static int plc_scan_typed_refs(const char *line, PLC_TYPE_DECL *decls,
                 ++p;
             }
             p = plc_skip_space(p);
+            if (*p == ',') {
+                ++p;
+                p = plc_skip_space(p);
+                while (isdigit((unsigned char)*p)) {
+                    ++p;
+                }
+                p = plc_skip_space(p);
+            }
             if (*p != ']') {
                 plc_set_error(err, err_size, "bad indexed reference");
                 return 0;
@@ -85,6 +104,7 @@ static int plc_scan_typed_refs(const char *line, PLC_TYPE_DECL *decls,
                 key[n++] = *start;
                 ++start;
             }
+            p = plc_skip_space(p);
         }
         p = plc_skip_space(p);
         while (*p == '.') {
@@ -289,6 +309,11 @@ static int plc_check_call_types(const PLC_PROGRAM *program,
     int target_part;
     int i;
     const PLC_PROC *callee;
+    const PLC_NATIVE_PROC *native_callee;
+    int callee_argc;
+    int callee_results;
+    char (*callee_arg_types)[PLC_MAX_TYPE_TEXT];
+    char (*callee_result_types)[PLC_MAX_TYPE_TEXT];
 
     if (!plc_split_arrows(stmt_text, parts, &part_count)) {
         return 1;
@@ -307,7 +332,26 @@ static int plc_check_call_types(const PLC_PROGRAM *program,
         return 1;
     }
     callee = plc_find_proc(program, name);
-    if (callee == 0) {
+    native_callee = 0;
+    if (callee != 0) {
+        callee_argc = callee->argc;
+        callee_results = callee->results;
+        callee_arg_types = (char (*)[PLC_MAX_TYPE_TEXT])callee->arg_types;
+        callee_result_types =
+            (char (*)[PLC_MAX_TYPE_TEXT])callee->result_types;
+    } else {
+        native_callee = plc_find_native(program, name);
+        if (native_callee == 0) {
+            return 1;
+        }
+        callee_argc = native_callee->argc;
+        callee_results = native_callee->results;
+        callee_arg_types =
+            (char (*)[PLC_MAX_TYPE_TEXT])native_callee->arg_types;
+        callee_result_types =
+            (char (*)[PLC_MAX_TYPE_TEXT])native_callee->result_types;
+    }
+    if (callee == 0 && native_callee == 0) {
         return 1;
     }
     if (!plc_collect_arg_types(args_text, arg_types, &arg_count)
@@ -316,21 +360,22 @@ static int plc_check_call_types(const PLC_PROGRAM *program,
         plc_set_error(err, err_size, "bad call type list");
         return 0;
     }
-    if (arg_count != callee->argc || target_count != callee->results) {
+    if (arg_count != callee_argc || target_count != callee_results) {
         return 1;
     }
     for (i = 0; i < arg_count; ++i) {
-        if (arg_types[i][0] != '\0' && callee->arg_types[i][0] != '\0'
+        if (arg_types[i][0] != '\0' && callee_arg_types[i][0] != '\0'
                 && !plc_type_markers_compatible(arg_types[i],
-                    callee->arg_types[i])) {
+                    callee_arg_types[i])) {
             plc_set_error(err, err_size, "procedure argument type mismatch");
             return 0;
         }
     }
     for (i = 0; i < target_count; ++i) {
-        if (target_types[i][0] != '\0' && callee->result_types[i][0] != '\0'
+        if (target_types[i][0] != '\0'
+                && callee_result_types[i][0] != '\0'
                 && !plc_type_markers_compatible(target_types[i],
-                    callee->result_types[i])) {
+                    callee_result_types[i])) {
             plc_set_error(err, err_size, "procedure result type mismatch");
             return 0;
         }
@@ -522,8 +567,23 @@ int plc_load_sources(PLC_PROGRAM *program, const char *const *sources,
     PLC_PROC *current;
     PLC_TYPE_DECL type_decls[PLC_MAX_TYPE_DECLS];
     int type_decl_count;
+    PLC_NATIVE_PROC native_copy[PLANKAC_MAX_NATIVE];
+    int native_count;
+    int native_i;
 
+    native_count = 0;
+    if (program != 0 && program->native_count > 0
+            && program->native_count <= PLANKAC_MAX_NATIVE) {
+        native_count = program->native_count;
+        for (native_i = 0; native_i < native_count; ++native_i) {
+            native_copy[native_i] = program->natives[native_i];
+        }
+    }
     memset(program, 0, sizeof(*program));
+    for (native_i = 0; native_i < native_count; ++native_i) {
+        program->natives[native_i] = native_copy[native_i];
+    }
+    program->native_count = native_count;
     in_proc = 0;
     current = 0;
     type_decl_count = 0;
@@ -590,6 +650,12 @@ int plc_load_sources(PLC_PROGRAM *program, const char *const *sources,
                         return 0;
                     }
                 }
+                if (plc_find_native(program, proc.name) != 0) {
+                    sprintf(err, "%s:%d duplicate native/procedure: %s",
+                        sources[file_index], line_no, proc.name);
+                    fclose(fp);
+                    return 0;
+                }
                 if (program->proc_count >= PLC_MAX_PROCS) {
                     sprintf(err, "too many procedures");
                     fclose(fp);
@@ -621,6 +687,88 @@ int plc_load_sources(PLC_PROGRAM *program, const char *const *sources,
                 }
                 in_proc = 0;
                 current = 0;
+                continue;
+            }
+            if (in_proc && strcmp(line, "PAGE") == 0) {
+                char page_rows[PLC_MAX_STMTS][PLC_MAX_LINE];
+                char page_stmts[PLC_MAX_STMTS][PLC_MAX_LINE];
+                int page_row_count;
+                int page_stmt_count;
+                int page_start_line;
+                int closed;
+                int ps;
+
+                page_row_count = 0;
+                page_stmt_count = 0;
+                page_start_line = line_no;
+                closed = 0;
+                while (fgets(line, sizeof(line), fp) != 0) {
+                    char trimmed[PLC_MAX_LINE];
+
+                    ++line_no;
+                    plc_strip_comment_keep_left(line);
+                    strncpy(trimmed, line, sizeof(trimmed) - 1);
+                    trimmed[sizeof(trimmed) - 1] = '\0';
+                    plc_trim_in_place(trimmed);
+                    if (strcmp(trimmed, "ENDPAGE") == 0) {
+                        closed = 1;
+                        break;
+                    }
+                    if (page_row_count >= PLC_MAX_STMTS) {
+                        sprintf(err, "%s:%d too many PAGE rows",
+                            sources[file_index], line_no);
+                        fclose(fp);
+                        return 0;
+                    }
+                    strncpy(page_rows[page_row_count], line,
+                        PLC_MAX_LINE - 1);
+                    page_rows[page_row_count][PLC_MAX_LINE - 1] = '\0';
+                    ++page_row_count;
+                }
+                if (!closed) {
+                    sprintf(err, "%s:%d PAGE without ENDPAGE",
+                        sources[file_index], page_start_line);
+                    fclose(fp);
+                    return 0;
+                }
+                if (!plc_expand_2d_page(page_rows, page_row_count,
+                        page_stmts, &page_stmt_count, PLC_MAX_STMTS,
+                        err, err_size)) {
+                    char prefix[160];
+
+                    sprintf(prefix, "%s:%d ",
+                        sources[file_index], page_start_line);
+                    plc_prefix_error(err, err_size, prefix);
+                    fclose(fp);
+                    return 0;
+                }
+                for (ps = 0; ps < page_stmt_count; ++ps) {
+                    if (!plc_validate_type_markers(page_stmts[ps],
+                            err, err_size)
+                            || !plc_scan_typed_refs(page_stmts[ps],
+                                type_decls, &type_decl_count,
+                                err, err_size)) {
+                        char prefix[160];
+
+                        sprintf(prefix, "%s:%d ",
+                            sources[file_index], page_start_line);
+                        plc_prefix_error(err, err_size, prefix);
+                        fclose(fp);
+                        return 0;
+                    }
+                    if (current->stmt_count >= PLC_MAX_STMTS) {
+                        sprintf(err, "%s:%d too many statements in %s",
+                            sources[file_index], page_start_line,
+                            current->name);
+                        fclose(fp);
+                        return 0;
+                    }
+                    strcpy(current->stmts[current->stmt_count].text,
+                        page_stmts[ps]);
+                    current->stmts[current->stmt_count].line_no =
+                        page_start_line;
+                    ++current->stmt_count;
+                }
                 continue;
             }
             if (in_proc && (strncmp(line, "V|", 2) == 0
@@ -740,6 +888,14 @@ int plc_load_sources(PLC_PROGRAM *program, const char *const *sources,
     }
     if (!plc_analyze_program(program, err, err_size)) {
         return 0;
+    }
+    {
+        static PLC_IR_PROGRAM ir;
+
+        if (!plc_ir_build_program(program, &ir, err, err_size)
+                || !plc_ir_validate_program(&ir, err, err_size)) {
+            return 0;
+        }
     }
     return 1;
 }
@@ -945,14 +1101,63 @@ static int plc_parse_bytecode_statement(PLC_PROC *proc, const char *line,
         }
         return plc_bytecode_stmt(proc, line_no, stmt, err, err_size);
     }
-    if (strncmp(p, "ASSERT", 6) == 0 && isspace((unsigned char)p[6])) {
-        p += 6;
+    if (strncmp(p, "CONST", 5) == 0 && isspace((unsigned char)p[5])) {
+        p += 5;
+        if (!plc_read_bytecode_quoted(&p, target, sizeof(target))) {
+            plc_set_error(err, err_size, "bad CONST target");
+            return 0;
+        }
+        p = plc_skip_space(p);
+        if (*p != '=') {
+            plc_set_error(err, err_size, "bad CONST bytecode");
+            return 0;
+        }
+        ++p;
         if (!plc_read_bytecode_quoted(&p, expr, sizeof(expr))) {
-            plc_set_error(err, err_size, "bad ASSERT bytecode");
+            plc_set_error(err, err_size, "bad CONST expression");
             return 0;
         }
         stmt[0] = '\0';
-        if (!plc_stmt_append(stmt, sizeof(stmt), "ASSERT ", err, err_size)
+        if (!plc_stmt_append(stmt, sizeof(stmt), "CONST ", err, err_size)
+                || !plc_stmt_append(stmt, sizeof(stmt), target, err, err_size)
+                || !plc_stmt_append(stmt, sizeof(stmt), " = ",
+                    err, err_size)
+                || !plc_stmt_append(stmt, sizeof(stmt), expr,
+                    err, err_size)) {
+            return 0;
+        }
+        return plc_bytecode_stmt(proc, line_no, stmt, err, err_size);
+    }
+    if ((strncmp(p, "ASSERT", 6) == 0 && isspace((unsigned char)p[6]))
+            || (strncmp(p, "REQUIRE", 7) == 0
+                && isspace((unsigned char)p[7]))
+            || (strncmp(p, "ENSURE", 6) == 0
+                && isspace((unsigned char)p[6]))
+            || (strncmp(p, "STOPIF", 6) == 0
+                && isspace((unsigned char)p[6]))) {
+        char keyword[16];
+        int keyword_len;
+
+        keyword_len = 6;
+        strcpy(keyword, "ASSERT");
+        if (strncmp(p, "REQUIRE", 7) == 0) {
+            keyword_len = 7;
+            strcpy(keyword, "REQUIRE");
+        } else if (strncmp(p, "ENSURE", 6) == 0) {
+            keyword_len = 6;
+            strcpy(keyword, "ENSURE");
+        } else if (strncmp(p, "STOPIF", 6) == 0) {
+            keyword_len = 6;
+            strcpy(keyword, "STOPIF");
+        }
+        p += keyword_len;
+        if (!plc_read_bytecode_quoted(&p, expr, sizeof(expr))) {
+            plc_set_error(err, err_size, "bad predicate bytecode");
+            return 0;
+        }
+        stmt[0] = '\0';
+        if (!plc_stmt_append(stmt, sizeof(stmt), keyword, err, err_size)
+                || !plc_stmt_append(stmt, sizeof(stmt), " ", err, err_size)
                 || !plc_stmt_append(stmt, sizeof(stmt), expr,
                     err, err_size)) {
             return 0;
@@ -1058,8 +1263,23 @@ int plc_load_bytecode(PLC_PROGRAM *program, const char *path,
     PLC_PROC *current;
     char line[PLC_MAX_LINE];
     int line_no;
+    PLC_NATIVE_PROC native_copy[PLANKAC_MAX_NATIVE];
+    int native_count;
+    int native_i;
 
+    native_count = 0;
+    if (program != 0 && program->native_count > 0
+            && program->native_count <= PLANKAC_MAX_NATIVE) {
+        native_count = program->native_count;
+        for (native_i = 0; native_i < native_count; ++native_i) {
+            native_copy[native_i] = program->natives[native_i];
+        }
+    }
     memset(program, 0, sizeof(*program));
+    for (native_i = 0; native_i < native_count; ++native_i) {
+        program->natives[native_i] = native_copy[native_i];
+    }
+    program->native_count = native_count;
     fp = fopen(path, "r");
     if (fp == 0) {
         sprintf(err, "cannot open bytecode input: %s", path);
@@ -1090,12 +1310,27 @@ int plc_load_bytecode_text(PLC_PROGRAM *program, const char *text,
     PLC_PROC *current;
     char line[PLC_MAX_LINE];
     int line_no;
+    PLC_NATIVE_PROC native_copy[PLANKAC_MAX_NATIVE];
+    int native_count;
+    int native_i;
 
     if (text == 0) {
         plc_set_error(err, err_size, "missing bytecode text");
         return 0;
     }
+    native_count = 0;
+    if (program != 0 && program->native_count > 0
+            && program->native_count <= PLANKAC_MAX_NATIVE) {
+        native_count = program->native_count;
+        for (native_i = 0; native_i < native_count; ++native_i) {
+            native_copy[native_i] = program->natives[native_i];
+        }
+    }
     memset(program, 0, sizeof(*program));
+    for (native_i = 0; native_i < native_count; ++native_i) {
+        program->natives[native_i] = native_copy[native_i];
+    }
+    program->native_count = native_count;
     current = 0;
     line_no = 0;
     while (*text != '\0') {

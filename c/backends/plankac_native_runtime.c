@@ -4,7 +4,7 @@
 #include <string.h>
 
 #define PLC_NATIVE_MAX_VARS 64
-#define PLC_NATIVE_MAX_INDEX 32
+#define PLC_NATIVE_MAX_INDEX 256
 #define PLC_NATIVE_MAX_FIELDS 64
 #define PLC_NATIVE_MAX_FIELD_NAME 64
 #define PLC_NATIVE_MAX_LISTS 32
@@ -19,12 +19,15 @@
 typedef struct PLC_NATIVE_FRAME {
     struct PLC_NATIVE_FRAME *heap_owner;
     double v[PLC_NATIVE_MAX_VARS];
+    double c[PLC_NATIVE_MAX_VARS];
     double z[PLC_NATIVE_MAX_VARS];
     double r[PLC_NATIVE_MAX_VARS];
     double va[PLC_NATIVE_MAX_VARS][PLC_NATIVE_MAX_INDEX];
+    double ca[PLC_NATIVE_MAX_VARS][PLC_NATIVE_MAX_INDEX];
     double za[PLC_NATIVE_MAX_VARS][PLC_NATIVE_MAX_INDEX];
     double ra[PLC_NATIVE_MAX_VARS][PLC_NATIVE_MAX_INDEX];
     double vf[PLC_NATIVE_MAX_VARS][PLC_NATIVE_MAX_FIELDS];
+    double cf[PLC_NATIVE_MAX_VARS][PLC_NATIVE_MAX_FIELDS];
     double zf[PLC_NATIVE_MAX_VARS][PLC_NATIVE_MAX_FIELDS];
     double rf[PLC_NATIVE_MAX_VARS][PLC_NATIVE_MAX_FIELDS];
     char field_names[PLC_NATIVE_MAX_FIELDS][PLC_NATIVE_MAX_FIELD_NAME];
@@ -119,6 +122,9 @@ double plc_native_get(void *opaque, int bank, int index,
         if (bank == 'V') {
             return frame->vf[index][field_index];
         }
+        if (bank == 'C') {
+            return frame->cf[index][field_index];
+        }
         if (bank == 'Z') {
             return frame->zf[index][field_index];
         }
@@ -131,6 +137,9 @@ double plc_native_get(void *opaque, int bank, int index,
         if (bank == 'V') {
             return frame->va[index][subscript];
         }
+        if (bank == 'C') {
+            return frame->ca[index][subscript];
+        }
         if (bank == 'Z') {
             return frame->za[index][subscript];
         }
@@ -138,6 +147,9 @@ double plc_native_get(void *opaque, int bank, int index,
     }
     if (bank == 'V') {
         return frame->v[index];
+    }
+    if (bank == 'C') {
+        return frame->c[index];
     }
     if (bank == 'Z') {
         return frame->z[index];
@@ -165,6 +177,8 @@ void plc_native_set(void *opaque, int bank, int index,
         }
         if (bank == 'V') {
             frame->vf[index][field_index] = actual;
+        } else if (bank == 'C') {
+            frame->cf[index][field_index] = actual;
         } else if (bank == 'Z') {
             frame->zf[index][field_index] = actual;
         } else {
@@ -178,6 +192,8 @@ void plc_native_set(void *opaque, int bank, int index,
         }
         if (bank == 'V') {
             frame->va[index][subscript] = actual;
+        } else if (bank == 'C') {
+            frame->ca[index][subscript] = actual;
         } else if (bank == 'Z') {
             frame->za[index][subscript] = actual;
         } else {
@@ -187,6 +203,8 @@ void plc_native_set(void *opaque, int bank, int index,
     }
     if (bank == 'V') {
         frame->v[index] = actual;
+    } else if (bank == 'C') {
+        frame->c[index] = actual;
     } else if (bank == 'Z') {
         frame->z[index] = actual;
     } else {

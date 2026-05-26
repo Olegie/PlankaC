@@ -1,7 +1,7 @@
 # PlankaMath type and structure sheet.
 # Sprache: lineare Plankalkuel-Schreibweise.
 #
-# Historical rule used here:
+# Source rule used here:
 # - V variables are inputs.
 # - Z variables are intermediate values.
 # - R variables are result values.

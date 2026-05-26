@@ -86,4 +86,4 @@ or a different windowing backend, still belongs in C because it is outside the
 numeric/value model of the current language profile.
 
 The engineering direction is to keep moving project-specific behavior into
-`.plk` procedures while keeping C small, generic, and reusable.
+`.plk` procedures while keeping C compact, generic, and reusable.

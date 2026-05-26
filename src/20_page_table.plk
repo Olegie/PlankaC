@@ -1,0 +1,88 @@
+# Page/table, predicate syntax, bit value and board-model sessions.
+
+P290 page_table_session () => R0[:32.16]
+2[:32.16] => Z1[:32.16]
+3[:32.16] => Z2[:32.16]
+5[:32.16] => Z3[:32.16]
+6[:32.16] => Z4[:32.16]
+PAGE
+V|1   2    0
+S|32.16 32.16 32.16
+|A + B => R
+|C * D => R
+S|32.16 32.16 32.16
+V|3   4    0
+ENDPAGE
+END
+
+P291 predicate_syntax_session () => R0[:32.0]
+list_new() => Z0[:L32.0]
+list_push(Z0[:L32.0], 2[:32.0]) => Z0[:L32.0]
+list_push(Z0[:L32.0], 5[:32.0]) => Z0[:L32.0]
+list_push(Z0[:L32.0], 5[:32.0]) => Z0[:L32.0]
+list_push(Z0[:L32.0], 9[:32.0]) => Z0[:L32.0]
+SELECT Z0[:L32.0] > 4[:32.0] => Z1[:L32.0]
+COUNT Z0[:L32.0] = 5[:32.0] => Z2[:32.0]
+EXISTS Z0[:L32.0] = 9[:32.0] => Z3[:1.1]
+FORALL Z1[:L32.0] > 4[:32.0] => Z4[:1.1]
+list_len(Z1[:L32.0]) + Z2[:32.0] + Z3[:1.1] + Z4[:1.1] => R0[:32.0]
+END
+
+P292 chess_full_legal_session () => R0[:1.1]
+chess_board_new() => Z0[:Q32.0]
+chess_square(5[:32.0], 1[:32.0]) => Z1[:32.0]
+chess_square(5[:32.0], 8[:32.0]) => Z2[:32.0]
+chess_square(1[:32.0], 1[:32.0]) => Z3[:32.0]
+chess_square(1[:32.0], 8[:32.0]) => Z4[:32.0]
+chess_piece(6[:32.0], 1[:32.0]) => Z5[:32.0]
+chess_piece(6[:32.0], 2[:32.0]) => Z6[:32.0]
+chess_piece(4[:32.0], 1[:32.0]) => Z7[:32.0]
+chess_board_place(Z0[:Q32.0], Z1[:32.0], Z5[:32.0]) => Z0[:Q32.0]
+chess_board_place(Z0[:Q32.0], Z2[:32.0], Z6[:32.0]) => Z0[:Q32.0]
+chess_board_place(Z0[:Q32.0], Z3[:32.0], Z7[:32.0]) => Z0[:Q32.0]
+chess_legal_move(Z0[:Q32.0], Z3[:32.0], Z4[:32.0]) => R0[:1.1]
+END
+
+P293 chess_material_search_session () => R0[:32.0]
+chess_board_new() => Z0[:Q32.0]
+chess_square(5[:32.0], 1[:32.0]) => Z1[:32.0]
+chess_square(5[:32.0], 8[:32.0]) => Z2[:32.0]
+chess_square(4[:32.0], 1[:32.0]) => Z3[:32.0]
+chess_square(1[:32.0], 1[:32.0]) => Z4[:32.0]
+chess_square(1[:32.0], 8[:32.0]) => Z5[:32.0]
+chess_piece(6[:32.0], 1[:32.0]) => Z6[:32.0]
+chess_piece(6[:32.0], 2[:32.0]) => Z7[:32.0]
+chess_piece(5[:32.0], 1[:32.0]) => Z8[:32.0]
+chess_piece(4[:32.0], 1[:32.0]) => Z9[:32.0]
+chess_piece(4[:32.0], 2[:32.0]) => Z10[:32.0]
+chess_board_place(Z0[:Q32.0], Z1[:32.0], Z6[:32.0]) => Z0[:Q32.0]
+chess_board_place(Z0[:Q32.0], Z2[:32.0], Z7[:32.0]) => Z0[:Q32.0]
+chess_board_place(Z0[:Q32.0], Z3[:32.0], Z8[:32.0]) => Z0[:Q32.0]
+chess_board_place(Z0[:Q32.0], Z4[:32.0], Z9[:32.0]) => Z0[:Q32.0]
+chess_board_place(Z0[:Q32.0], Z5[:32.0], Z10[:32.0]) => Z0[:Q32.0]
+chess_material_score(Z0[:Q32.0], 1[:32.0]) => Z11[:32.0]
+chess_best_capture_score(Z0[:Q32.0], 1[:32.0]) => Z12[:32.0]
+Z11[:32.0] + Z12[:32.0] => R0[:32.0]
+END
+
+P294 chess_checkmate_session () => R0[:1.1]
+chess_board_new() => Z0[:Q32.0]
+chess_square(8[:32.0], 1[:32.0]) => Z1[:32.0]
+chess_square(7[:32.0], 2[:32.0]) => Z2[:32.0]
+chess_square(6[:32.0], 3[:32.0]) => Z3[:32.0]
+chess_piece(6[:32.0], 1[:32.0]) => Z4[:32.0]
+chess_piece(5[:32.0], 2[:32.0]) => Z5[:32.0]
+chess_piece(6[:32.0], 2[:32.0]) => Z6[:32.0]
+chess_board_place(Z0[:Q32.0], Z1[:32.0], Z4[:32.0]) => Z0[:Q32.0]
+chess_board_place(Z0[:Q32.0], Z2[:32.0], Z5[:32.0]) => Z0[:Q32.0]
+chess_board_place(Z0[:Q32.0], Z3[:32.0], Z6[:32.0]) => Z0[:Q32.0]
+chess_checkmate(Z0[:Q32.0], 1[:32.0]) => R0[:1.1]
+END
+
+P295 bit_native_storage_session () => R0[:32.16]
+bits_pack4(1[:1.1], 1[:1.1], 0[:1.1], 1[:1.1]) => Z0[:32.0]
+bits_get(Z0[:32.0], 2[:32.0]) => Z1[:1.1]
+fixed_add(1.25[:32.16], 2.25[:32.16], 2[:32.0]) => Z2[:32.16]
+fixed_div_checked(7[:32.16], 2[:32.16], 1[:32.0]) => Z3[:32.16], Z4[:1.1]
+Z0[:32.0] + Z1[:1.1] + Z2[:32.16] + Z3[:32.16] + Z4[:1.1] => R0[:32.16]
+END

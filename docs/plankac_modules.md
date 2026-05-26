@@ -1,7 +1,10 @@
 # PlankaC Modules
 
-PlankaC is split into small C modules so the library can grow without turning
+PlankaC is split into focused C modules so the library can grow without turning
 the interpreter into one large source file.
+
+See `docs/index.md` for the complete documentation map and
+`docs/architecture.md` for the layer boundaries and dependency direction.
 
 | File | Role |
 | --- | --- |
@@ -14,8 +17,16 @@ the interpreter into one large source file.
 | `c/core/plankac_runtime.c` | interpreter, public API implementation, value handles, lists, pairs, sets, relations, and complex values |
 | `c/types/plankac_types.c` | structure marker parser, type families, and compatibility rules |
 | `c/notation/plankac_2d.c` | executable two-dimensional table row expansion |
+| `c/notation/plankac_document.c` | PAGE row/cell document model and validation with row/column diagnostics |
+| `c/notation/plankac_page.c` | `PAGE`/`ENDPAGE` parser for several spatially bound executable rows |
 | `c/analyzer/plankac_analyzer.c` | static checks after source loading, including type marker and call compatibility checks |
+| `c/analyzer/plankac_schema.c` | structural schema inference for list/set elements, pairs, and record fields |
+| `c/values/plankac_bits.c` | bit packing and raw fixed-point helper operations |
+| `c/values/plankac_value.c` | active tagged PLC value storage for banks, fixed values, bits, and handles |
+| `c/models/plankac_chess_model.c` | board-level chess legality, legal move count, castling path, promotion, en passant, stalemate, signatures, check, mate, material, and capture search |
+| `c/ir/plankac_ir.c` | typed IR construction, validation, and readable IR emission |
 | `c/backends/plankac_bytecode.c` | textual bytecode emission, generated C backend emission, and native x86-64 ASM backend emission |
+| `c/backends/plankac_lowering.c` | typed backend lowering report for C, x86-64 ASM, and 8086 paths |
 | `c/backends/plankac_asm8086.c` | MASM/TASM-style 8086/DOS source emission |
 | `c/backends/plankac_native_runtime.c` | native backend helper runtime for generated ASM code |
 | `c/tools/plankac_cli.c` | command-line interface |
@@ -27,7 +38,12 @@ the interpreter into one large source file.
 | `c/legacy/plankamath.c` | compact fallback runtime mirror |
 
 Library builds use `c/core`, `c/types`, `c/notation`, `c/analyzer`,
-`c/backends`, `c/include`, and `c/internal`.
+`c/values`, `c/models`, `c/ir`, `c/backends`, `c/include`, and
+`c/internal`.
+
+Embedding examples are kept under `examples/`: `c_api_demo.c` shows C calling
+PlankaC procedures, and `c_abi_demo.c` with `host_abi.plk` shows `.plk`
+calling a registered C function through the public ABI.
 
 Command-line builds add `c/tools/plankac_cli.c`. GUI, Win16, and DOS targets
 live under `c/targets` and link only the pieces they need.

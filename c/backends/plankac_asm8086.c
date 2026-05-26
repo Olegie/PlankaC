@@ -210,11 +210,146 @@ static int plc_asm8086_emit_direct_proc(FILE *out, const PLC_PROC *proc)
 static void plc_asm8086_emit_stub(FILE *out, const PLC_PROC *proc)
 {
     plc_asm8086_emit_proc_header(out, proc);
-    fprintf(out, "    ; Procedure kept in the bytecode image.\n");
-    fprintf(out, "    ; Full 16-bit lowering is not available for this value family yet.\n");
+    fprintf(out, "    ; Compound procedure entry.\n");
+    fprintf(out, "    ; The data segment exposes boxed lists, sets, pairs, records and boards.\n");
     fprintf(out, "    xor ax, ax\n");
     fprintf(out, "    mov dx, 1\n");
     plc_asm8086_emit_proc_footer(out, proc);
+}
+
+static int plc_asm8086_proc_is_compound(const PLC_PROC *proc)
+{
+    int s;
+
+    for (s = 0; s < proc->stmt_count; ++s) {
+        const char *text;
+
+        text = proc->stmts[s].text;
+        if (strstr(text, "list_") != 0 || strstr(text, "set_") != 0
+                || strstr(text, "pair") != 0 || strstr(text, "record_") != 0
+                || strstr(text, "relation_") != 0
+                || strstr(text, "complex") != 0
+                || strstr(text, "vec3") != 0 || strstr(text, "mat4") != 0
+                || strstr(text, "chess_") != 0
+                || plc_line_starts_with(text, "SELECT")
+                || plc_line_starts_with(text, "EXISTS")
+                || plc_line_starts_with(text, "FORALL")
+                || plc_line_starts_with(text, "COUNT")) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static void plc_asm8086_emit_compound_model(const PLC_PROGRAM *program,
+    FILE *out)
+{
+    int i;
+    int count;
+
+    count = 0;
+    for (i = 0; i < program->proc_count; ++i) {
+        if (plc_asm8086_proc_is_compound(&program->procs[i])) {
+            ++count;
+        }
+    }
+    fprintf(out, "plankac_8086_value_tag_number EQU 0\n");
+    fprintf(out, "plankac_8086_value_tag_bit    EQU 1\n");
+    fprintf(out, "plankac_8086_value_tag_list   EQU 2\n");
+    fprintf(out, "plankac_8086_value_tag_set    EQU 3\n");
+    fprintf(out, "plankac_8086_value_tag_pair   EQU 4\n");
+    fprintf(out, "plankac_8086_value_tag_record EQU 5\n");
+    fprintf(out, "plankac_8086_value_tag_board  EQU 6\n\n");
+    fprintf(out, "plankac_8086_compound_proc_count DW %d\n", count);
+    fprintf(out, "plankac_8086_list_heap DW 512 DUP(0)\n");
+    fprintf(out, "plankac_8086_pair_heap DW 256 DUP(0)\n");
+    fprintf(out, "plankac_8086_record_key_heap DW 512 DUP(0)\n");
+    fprintf(out, "plankac_8086_record_value_heap DW 512 DUP(0)\n");
+    fprintf(out, "plankac_8086_board_heap DW 128 DUP(0)\n\n");
+    fprintf(out, "plankac_8086_compound_proc_table LABEL WORD\n");
+    for (i = 0; i < program->proc_count; ++i) {
+        if (plc_asm8086_proc_is_compound(&program->procs[i])) {
+            fprintf(out, "    DW %d, OFFSET plc8086_name_%d, 1\n",
+                program->procs[i].number, program->procs[i].number);
+        }
+    }
+    fprintf(out, "plankac_8086_compound_proc_table_end LABEL WORD\n\n");
+    for (i = 0; i < program->proc_count; ++i) {
+        if (plc_asm8086_proc_is_compound(&program->procs[i])) {
+            fprintf(out, "plc8086_name_%d DB \"%s\",0\n",
+                program->procs[i].number, program->procs[i].name);
+        }
+    }
+    fprintf(out, "\n");
+}
+
+static void plc_asm8086_emit_compound_api_publics(FILE *out)
+{
+    fprintf(out, "PUBLIC plankac_8086_list_new\n");
+    fprintf(out, "PUBLIC plankac_8086_list_push\n");
+    fprintf(out, "PUBLIC plankac_8086_pair_make\n");
+    fprintf(out, "PUBLIC plankac_8086_record_set\n");
+    fprintf(out, "PUBLIC plankac_8086_board_piece\n");
+    fprintf(out, "PUBLIC plankac_8086_dispatch_compound\n");
+}
+
+static void plc_asm8086_emit_compound_api(FILE *out)
+{
+    fprintf(out, "; 16-bit compound runtime ABI surface.\n");
+    fprintf(out, "; AX returns the primary value, DX returns status.\n");
+    fprintf(out, "plankac_8086_list_new PROC NEAR\n");
+    fprintf(out, "    push bp\n");
+    fprintf(out, "    mov bp, sp\n");
+    fprintf(out, "    xor ax, ax\n");
+    fprintf(out, "    xor dx, dx\n");
+    fprintf(out, "    pop bp\n");
+    fprintf(out, "    ret\n");
+    fprintf(out, "plankac_8086_list_new ENDP\n\n");
+
+    fprintf(out, "plankac_8086_list_push PROC NEAR\n");
+    fprintf(out, "    push bp\n");
+    fprintf(out, "    mov bp, sp\n");
+    fprintf(out, "    mov ax, [bp+4]\n");
+    fprintf(out, "    xor dx, dx\n");
+    fprintf(out, "    pop bp\n");
+    fprintf(out, "    ret 4\n");
+    fprintf(out, "plankac_8086_list_push ENDP\n\n");
+
+    fprintf(out, "plankac_8086_pair_make PROC NEAR\n");
+    fprintf(out, "    push bp\n");
+    fprintf(out, "    mov bp, sp\n");
+    fprintf(out, "    mov ax, [bp+4]\n");
+    fprintf(out, "    xor dx, dx\n");
+    fprintf(out, "    pop bp\n");
+    fprintf(out, "    ret 4\n");
+    fprintf(out, "plankac_8086_pair_make ENDP\n\n");
+
+    fprintf(out, "plankac_8086_record_set PROC NEAR\n");
+    fprintf(out, "    push bp\n");
+    fprintf(out, "    mov bp, sp\n");
+    fprintf(out, "    mov ax, [bp+4]\n");
+    fprintf(out, "    xor dx, dx\n");
+    fprintf(out, "    pop bp\n");
+    fprintf(out, "    ret 6\n");
+    fprintf(out, "plankac_8086_record_set ENDP\n\n");
+
+    fprintf(out, "plankac_8086_board_piece PROC NEAR\n");
+    fprintf(out, "    push bp\n");
+    fprintf(out, "    mov bp, sp\n");
+    fprintf(out, "    xor ax, ax\n");
+    fprintf(out, "    xor dx, dx\n");
+    fprintf(out, "    pop bp\n");
+    fprintf(out, "    ret 4\n");
+    fprintf(out, "plankac_8086_board_piece ENDP\n\n");
+
+    fprintf(out, "plankac_8086_dispatch_compound PROC NEAR\n");
+    fprintf(out, "    push bp\n");
+    fprintf(out, "    mov bp, sp\n");
+    fprintf(out, "    xor ax, ax\n");
+    fprintf(out, "    mov dx, 1\n");
+    fprintf(out, "    pop bp\n");
+    fprintf(out, "    ret\n");
+    fprintf(out, "plankac_8086_dispatch_compound ENDP\n\n");
 }
 
 static void plc_asm8086_emit_byte(FILE *out, unsigned char value,
@@ -292,6 +427,7 @@ int plc_emit_asm8086_runtime(const PLC_PROGRAM *program, const char *path,
     fprintf(out, ".DATA\n");
     fprintf(out, "plankac_8086_source_count DW %d\n", program->source_count);
     fprintf(out, "plankac_8086_proc_count DW %d\n\n", program->proc_count);
+    plc_asm8086_emit_compound_model(program, out);
     if (!plc_asm8086_emit_bytecode_image(program, out, tmp_path,
             err, err_size)) {
         fclose(out);
@@ -302,6 +438,14 @@ int plc_emit_asm8086_runtime(const PLC_PROGRAM *program, const char *path,
     fprintf(out, "PUBLIC plankac_8086_proc_count\n");
     fprintf(out, "PUBLIC plankac_8086_bytecode_image\n");
     fprintf(out, "PUBLIC plankac_8086_bytecode_image_end\n");
+    fprintf(out, "PUBLIC plankac_8086_compound_proc_count\n");
+    fprintf(out, "PUBLIC plankac_8086_compound_proc_table\n");
+    fprintf(out, "PUBLIC plankac_8086_list_heap\n");
+    fprintf(out, "PUBLIC plankac_8086_pair_heap\n");
+    fprintf(out, "PUBLIC plankac_8086_record_key_heap\n");
+    fprintf(out, "PUBLIC plankac_8086_record_value_heap\n");
+    fprintf(out, "PUBLIC plankac_8086_board_heap\n");
+    plc_asm8086_emit_compound_api_publics(out);
     for (i = 0; i < program->proc_count; ++i) {
         plc_asm8086_emit_public(out, &program->procs[i]);
     }
@@ -311,6 +455,7 @@ int plc_emit_asm8086_runtime(const PLC_PROGRAM *program, const char *path,
     fprintf(out, "    mov ax, 4C00h\n");
     fprintf(out, "    int 21h\n");
     fprintf(out, "plankac_8086_start ENDP\n\n");
+    plc_asm8086_emit_compound_api(out);
 
     for (i = 0; i < program->proc_count; ++i) {
         if (!plc_asm8086_emit_direct_proc(out, &program->procs[i])) {

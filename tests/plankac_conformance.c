@@ -15,6 +15,24 @@ static int nearly(double a, double b)
     return d < 0.000001;
 }
 
+static int native_mad(void *user_data, const double *args, int argc,
+    PLANKAC_RESULT *result, char *err, unsigned err_size)
+{
+    double offset;
+
+    if (argc != 2 || result == 0) {
+        if (err != 0 && err_size > 0) {
+            sprintf(err, "native_mad expects two arguments");
+        }
+        return PLANKAC_ERR;
+    }
+    offset = user_data != 0 ? *((double *)user_data) : 0.0;
+    result->count = 2;
+    result->value[0] = args[0] * args[1] + offset;
+    result->value[1] = 0.0;
+    return PLANKAC_OK;
+}
+
 static int expect_load_ok(const char *name, const char *path)
 {
     PLANKAC_CONTEXT *ctx;
@@ -121,6 +139,37 @@ static int expect_run_edge(void)
 
     printf("OK   run_edge_cases\n");
     plankac_destroy(ctx);
+    return 1;
+}
+
+static int expect_run_file_result(const char *name, const char *path,
+    const char *proc, double expected)
+{
+    PLANKAC_CONTEXT *ctx;
+    PLANKAC_RESULT result;
+    const char *sources[2];
+    char err[256];
+    int ok;
+
+    ctx = plankac_create();
+    if (ctx == 0) {
+        printf("FAIL %s: no context\n", name);
+        return 0;
+    }
+    sources[0] = path;
+    sources[1] = 0;
+    if (!plankac_context_load_sources(ctx, sources, err, sizeof(err))) {
+        printf("FAIL %s load: %s\n", name, err);
+        plankac_destroy(ctx);
+        return 0;
+    }
+    ok = plankac_context_run(ctx, proc, 0, 0, &result, err, sizeof(err));
+    plankac_destroy(ctx);
+    if (!ok || result.count <= 0 || !nearly(result.value[0], expected)) {
+        printf("FAIL %s run: %s\n", name, err);
+        return 0;
+    }
+    printf("OK   %s\n", name);
     return 1;
 }
 
@@ -631,6 +680,247 @@ static int expect_extended_features(void)
         return 0;
     }
 
+    ok = plankac_context_run(ctx, "c_bank_session", 0, 0,
+        &result, err, sizeof(err));
+    if (!ok || !nearly(result.value[0], 42.0)) {
+        printf("FAIL c_bank_session\n");
+        plankac_destroy(ctx);
+        return 0;
+    }
+
+    ok = plankac_context_run(ctx, "c_array_session", 0, 0,
+        &result, err, sizeof(err));
+    if (!ok || !nearly(result.value[0], 18.0)) {
+        printf("FAIL c_array_session\n");
+        plankac_destroy(ctx);
+        return 0;
+    }
+
+    ok = plankac_context_run(ctx, "multidim_array_session", 0, 0,
+        &result, err, sizeof(err));
+    if (!ok || !nearly(result.value[0], 42.0)) {
+        printf("FAIL multidim_array_session\n");
+        plankac_destroy(ctx);
+        return 0;
+    }
+
+    ok = plankac_context_run(ctx, "bit_fixed_session", 0, 0,
+        &result, err, sizeof(err));
+    if (!ok || !nearly(result.value[0], 14.0)) {
+        printf("FAIL bit_fixed_session\n");
+        plankac_destroy(ctx);
+        return 0;
+    }
+
+    ok = plankac_context_run(ctx, "exception_session", 0, 0,
+        &result, err, sizeof(err));
+    if (!ok || result.count != 2 || !nearly(result.value[0], 0.0)
+            || !nearly(result.value[1], 1.0)) {
+        printf("FAIL exception_session\n");
+        plankac_destroy(ctx);
+        return 0;
+    }
+
+    ok = plankac_context_run(ctx, "stop_contract_session", 0, 0,
+        &result, err, sizeof(err));
+    if (!ok || !nearly(result.value[0], 1.0)) {
+        printf("FAIL stop_contract_session\n");
+        plankac_destroy(ctx);
+        return 0;
+    }
+
+    ok = plankac_context_run(ctx, "predicate_select_session", 0, 0,
+        &result, err, sizeof(err));
+    if (!ok || !nearly(result.value[0], 7.0)) {
+        printf("FAIL predicate_select_session\n");
+        plankac_destroy(ctx);
+        return 0;
+    }
+
+    ok = plankac_context_run(ctx, "list_pair_session", 0, 0,
+        &result, err, sizeof(err));
+    if (!ok || !nearly(result.value[0], 7.0)) {
+        printf("FAIL list_pair_session\n");
+        plankac_destroy(ctx);
+        return 0;
+    }
+
+    ok = plankac_context_run(ctx, "relation_select_session", 0, 0,
+        &result, err, sizeof(err));
+    if (!ok || !nearly(result.value[0], 2.0)) {
+        printf("FAIL relation_select_session\n");
+        plankac_destroy(ctx);
+        return 0;
+    }
+
+    ok = plankac_context_run(ctx, "record_path_session", 0, 0,
+        &result, err, sizeof(err));
+    if (!ok || !nearly(result.value[0], 44.0)) {
+        printf("FAIL record_path_session\n");
+        plankac_destroy(ctx);
+        return 0;
+    }
+
+    ok = plankac_context_run(ctx, "chess_legal_move_session", 0, 0,
+        &result, err, sizeof(err));
+    if (!ok || !nearly(result.value[0], 1.0)) {
+        printf("FAIL chess_legal_move_session\n");
+        plankac_destroy(ctx);
+        return 0;
+    }
+
+    ok = plankac_context_run(ctx, "chess_side_check_session", 0, 0,
+        &result, err, sizeof(err));
+    if (!ok || !nearly(result.value[0], 1.0)) {
+        printf("FAIL chess_side_check_session\n");
+        plankac_destroy(ctx);
+        return 0;
+    }
+
+    ok = plankac_context_run(ctx, "chess_board_move_session", 0, 0,
+        &result, err, sizeof(err));
+    if (!ok || !nearly(result.value[0], 41.0)) {
+        printf("FAIL chess_board_move_session\n");
+        plankac_destroy(ctx);
+        return 0;
+    }
+
+    ok = plankac_context_run(ctx, "page_table_session", 0, 0,
+        &result, err, sizeof(err));
+    if (!ok || !nearly(result.value[0], 30.0)) {
+        printf("FAIL page_table_session: %s\n", err);
+        plankac_destroy(ctx);
+        return 0;
+    }
+
+    ok = plankac_context_run(ctx, "predicate_syntax_session", 0, 0,
+        &result, err, sizeof(err));
+    if (!ok || !nearly(result.value[0], 7.0)) {
+        printf("FAIL predicate_syntax_session: %s\n", err);
+        plankac_destroy(ctx);
+        return 0;
+    }
+
+    ok = plankac_context_run(ctx, "chess_full_legal_session", 0, 0,
+        &result, err, sizeof(err));
+    if (!ok || !nearly(result.value[0], 1.0)) {
+        printf("FAIL chess_full_legal_session: %s\n", err);
+        plankac_destroy(ctx);
+        return 0;
+    }
+
+    ok = plankac_context_run(ctx, "chess_material_search_session", 0, 0,
+        &result, err, sizeof(err));
+    if (!ok || !nearly(result.value[0], 19.0)) {
+        printf("FAIL chess_material_search_session: %s\n", err);
+        plankac_destroy(ctx);
+        return 0;
+    }
+
+    ok = plankac_context_run(ctx, "chess_checkmate_session", 0, 0,
+        &result, err, sizeof(err));
+    if (!ok || !nearly(result.value[0], 1.0)) {
+        printf("FAIL chess_checkmate_session: %s\n", err);
+        plankac_destroy(ctx);
+        return 0;
+    }
+
+    ok = plankac_context_run(ctx, "bit_native_storage_session", 0, 0,
+        &result, err, sizeof(err));
+    if (!ok || !nearly(result.value[0], 21.0)) {
+        printf("FAIL bit_native_storage_session: %s\n", err);
+        plankac_destroy(ctx);
+        return 0;
+    }
+
+    ok = plankac_context_run(ctx, "chess_legal_move_count_session", 0, 0,
+        &result, err, sizeof(err));
+    if (!ok || !nearly(result.value[0], 1.0)) {
+        printf("FAIL chess_legal_move_count_session: %s\n", err);
+        plankac_destroy(ctx);
+        return 0;
+    }
+
+    ok = plankac_context_run(ctx, "chess_promotion_session", 0, 0,
+        &result, err, sizeof(err));
+    if (!ok || !nearly(result.value[0], 1.0)) {
+        printf("FAIL chess_promotion_session: %s\n", err);
+        plankac_destroy(ctx);
+        return 0;
+    }
+
+    ok = plankac_context_run(ctx, "chess_castle_path_session", 0, 0,
+        &result, err, sizeof(err));
+    if (!ok || !nearly(result.value[0], 1.0)) {
+        printf("FAIL chess_castle_path_session: %s\n", err);
+        plankac_destroy(ctx);
+        return 0;
+    }
+
+    ok = plankac_context_run(ctx, "chess_position_signature_session", 0, 0,
+        &result, err, sizeof(err));
+    if (!ok || !nearly(result.value[0], 1.0)) {
+        printf("FAIL chess_position_signature_session: %s\n", err);
+        plankac_destroy(ctx);
+        return 0;
+    }
+
+    ok = plankac_context_run(ctx, "relation_range_selection_session", 0, 0,
+        &result, err, sizeof(err));
+    if (!ok || !nearly(result.value[0], 1.0)) {
+        printf("FAIL relation_range_selection_session: %s\n", err);
+        plankac_destroy(ctx);
+        return 0;
+    }
+
+    ok = plankac_context_run(ctx, "relation_quantifier_session", 0, 0,
+        &result, err, sizeof(err));
+    if (!ok || !nearly(result.value[0], 1.0)) {
+        printf("FAIL relation_quantifier_session: %s\n", err);
+        plankac_destroy(ctx);
+        return 0;
+    }
+
+    ok = plankac_context_run(ctx, "relation_signature_session", 0, 0,
+        &result, err, sizeof(err));
+    if (!ok || !nearly(result.value[0], 1.0)) {
+        printf("FAIL relation_signature_session: %s\n", err);
+        plankac_destroy(ctx);
+        return 0;
+    }
+
+    ok = plankac_context_run(ctx, "chess_en_passant_session", 0, 0,
+        &result, err, sizeof(err));
+    if (!ok || !nearly(result.value[0], 1.0)) {
+        printf("FAIL chess_en_passant_session: %s\n", err);
+        plankac_destroy(ctx);
+        return 0;
+    }
+
+    ok = plankac_context_run(ctx, "chess_stalemate_session", 0, 0,
+        &result, err, sizeof(err));
+    if (!ok || !nearly(result.value[0], 1.0)) {
+        printf("FAIL chess_stalemate_session: %s\n", err);
+        plankac_destroy(ctx);
+        return 0;
+    }
+
+    ok = plankac_context_run(ctx, "chess_fen_signature_session", 0, 0,
+        &result, err, sizeof(err));
+    if (!ok || !nearly(result.value[0], 1.0)) {
+        printf("FAIL chess_fen_signature_session: %s\n", err);
+        plankac_destroy(ctx);
+        return 0;
+    }
+
+    ok = plankac_context_run(ctx, "chess_history_session", 0, 0,
+        &result, err, sizeof(err));
+    if (!ok || !nearly(result.value[0], 1.0)) {
+        printf("FAIL chess_history_session: %s\n", err);
+        plankac_destroy(ctx);
+        return 0;
+    }
+
     printf("OK   extended_features\n");
     plankac_destroy(ctx);
     return 1;
@@ -662,6 +952,64 @@ static int expect_bytecode_runner(void)
         return 0;
     }
     printf("OK   bytecode_runner\n");
+    plankac_destroy(ctx);
+    return 1;
+}
+
+static int expect_native_bridge(void)
+{
+    PLANKAC_CONTEXT *ctx;
+    PLANKAC_RESULT result;
+    PLANKAC_NATIVE_INFO info;
+    const char *sources[2];
+    const char *arg_types[2];
+    const char *result_types[2];
+    double offset;
+    double args[2];
+    char err[256];
+    int ok;
+
+    ctx = plankac_create();
+    if (ctx == 0) {
+        printf("FAIL native_bridge: no context\n");
+        return 0;
+    }
+    arg_types[0] = "[:32.16]";
+    arg_types[1] = "[:32.16]";
+    result_types[0] = "[:32.16]";
+    result_types[1] = "[:1.1]";
+    offset = 6.0;
+    if (!plankac_context_register_native(ctx, "host_mad", 2, 2,
+            arg_types, result_types, native_mad, &offset,
+            err, sizeof(err))) {
+        printf("FAIL native_bridge register: %s\n", err);
+        plankac_destroy(ctx);
+        return 0;
+    }
+    sources[0] = "examples/host_abi.plk";
+    sources[1] = 0;
+    if (!plankac_context_load_sources(ctx, sources, err, sizeof(err))) {
+        printf("FAIL native_bridge load: %s\n", err);
+        plankac_destroy(ctx);
+        return 0;
+    }
+    if (plankac_context_native_count(ctx) != 1
+            || !plankac_context_find_native(ctx, "host_mad", &info)) {
+        printf("FAIL native_bridge metadata\n");
+        plankac_destroy(ctx);
+        return 0;
+    }
+    args[0] = 6.0;
+    args[1] = 6.0;
+    ok = plankac_context_run(ctx, "host_bridge", args, 2,
+        &result, err, sizeof(err));
+    if (!ok || result.count != 2 || !nearly(result.value[0], 42.0)
+            || !nearly(result.value[1], 0.0)) {
+        printf("FAIL native_bridge run: %s\n", err);
+        plankac_destroy(ctx);
+        return 0;
+    }
+    printf("OK   native_bridge\n");
     plankac_destroy(ctx);
     return 1;
 }
@@ -709,6 +1057,18 @@ int main(void)
     ok = 1;
     ok = expect_load_ok("load_valid_edge",
             "tests/conformance/valid_edge.plk") && ok;
+    ok = expect_run_file_result("valid_page_table_document",
+            "tests/conformance/valid/page_table_document.plk",
+            "page_table_document", 5.0) && ok;
+    ok = expect_run_file_result("runtime_tagged_fixed",
+            "tests/conformance/runtime/tagged_fixed_runtime.plk",
+            "tagged_fixed_runtime", 4.0) && ok;
+    ok = expect_run_file_result("backend_predicate_equivalence",
+            "tests/conformance/backend_equivalence/predicate_backend.plk",
+            "predicate_backend_equivalence", 3.0) && ok;
+    ok = expect_run_file_result("zuse_linear_assignment_table",
+            "tests/conformance/zuse_examples/linear_assignment_table.plk",
+            "zuse_linear_assignment_table", 5.0) && ok;
     ok = expect_run_edge() && ok;
     ok = expect_load_fail("missing_end",
             "tests/conformance/bad_missing_end.plk",
@@ -740,6 +1100,9 @@ int main(void)
     ok = expect_load_fail("bad_2d_missing_type",
             "tests/conformance/bad_2d_missing_type.plk",
             "bad two-dimensional row") && ok;
+    ok = expect_load_fail("bad_page_without_type",
+            "tests/conformance/invalid/bad_page_without_type.plk",
+            "missing V| or S| row") && ok;
     ok = expect_load_fail("bad_recursion",
             "tests/conformance/bad_recursion.plk",
             "recursive procedure rejected") && ok;
@@ -749,6 +1112,15 @@ int main(void)
     ok = expect_load_fail("bad_interproc_type",
             "tests/conformance/bad_interproc_type.plk",
             "procedure argument type mismatch") && ok;
+    ok = expect_load_fail("bad_const_target",
+            "tests/conformance/bad_const_target.plk",
+            "CONST expects C-bank target") && ok;
+    ok = expect_load_fail("bad_schema_list_mismatch",
+            "tests/conformance/bad_schema_list_mismatch.plk",
+            "list element schema mismatch") && ok;
+    ok = expect_load_fail("bad_schema_record_mismatch",
+            "tests/conformance/bad_schema_record_mismatch.plk",
+            "record field schema mismatch") && ok;
     ok = expect_run_fail("bad_statement",
             "tests/conformance/bad_statement.plk",
             "bad_statement",
@@ -761,7 +1133,16 @@ int main(void)
             "tests/conformance/bad_assertion.plk",
             "bad_assertion",
             "assertion failed") && ok;
+    ok = expect_run_fail("bad_requirement",
+            "tests/conformance/bad_require_contract.plk",
+            "bad_requirement",
+            "contract requirement failed") && ok;
+    ok = expect_run_fail("bad_divide_zero",
+            "tests/conformance/bad_divide_zero.plk",
+            "bad_divide_zero",
+            "divide by zero") && ok;
     ok = expect_extended_features() && ok;
+    ok = expect_native_bridge() && ok;
     ok = expect_bytecode_runner() && ok;
 
     if (!ok) {

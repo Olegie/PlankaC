@@ -1,0 +1,40 @@
+# Game-state chess sessions.
+
+P330 chess_en_passant_session () => R0[:1.1]
+chess_square(5[:32.0], 5[:32.0]) => Z0[:32.0]
+chess_square(4[:32.0], 6[:32.0]) => Z1[:32.0]
+chess_square(4[:32.0], 7[:32.0]) => Z2[:32.0]
+chess_square(4[:32.0], 5[:32.0]) => Z3[:32.0]
+chess_en_passant_possible(Z0[:32.0], Z1[:32.0], Z2[:32.0], Z3[:32.0], 1[:32.0]) => R0[:1.1]
+END
+
+P331 chess_stalemate_session () => R0[:1.1]
+chess_board_new() => Z0[:Q32.0]
+chess_square(8[:32.0], 8[:32.0]) => Z1[:32.0]
+chess_square(6[:32.0], 7[:32.0]) => Z2[:32.0]
+chess_square(7[:32.0], 6[:32.0]) => Z3[:32.0]
+chess_piece(6[:32.0], 2[:32.0]) => Z4[:32.0]
+chess_piece(6[:32.0], 1[:32.0]) => Z5[:32.0]
+chess_piece(5[:32.0], 1[:32.0]) => Z6[:32.0]
+chess_board_place(Z0[:Q32.0], Z1[:32.0], Z4[:32.0]) => Z0[:Q32.0]
+chess_board_place(Z0[:Q32.0], Z2[:32.0], Z5[:32.0]) => Z0[:Q32.0]
+chess_board_place(Z0[:Q32.0], Z3[:32.0], Z6[:32.0]) => Z0[:Q32.0]
+chess_stalemate(Z0[:Q32.0], 2[:32.0]) => R0[:1.1]
+END
+
+P332 chess_fen_signature_session () => R0[:1.1]
+chess_board_new() => Z0[:Q32.0]
+chess_square(5[:32.0], 1[:32.0]) => Z1[:32.0]
+chess_piece(6[:32.0], 1[:32.0]) => Z2[:32.0]
+chess_board_place(Z0[:Q32.0], Z1[:32.0], Z2[:32.0]) => Z0[:Q32.0]
+chess_fen_signature(Z0[:Q32.0], 1[:32.0], 15[:32.0], 0[:32.0]) => Z3[:32.0]
+(0[:32.0] < Z3[:32.0]) => R0[:1.1]
+END
+
+P333 chess_history_session () => R0[:1.1]
+list_new() => Z0[:L32.0]
+list_push(Z0[:L32.0], 5254[:32.0]) => Z0[:L32.0]
+list_push(Z0[:L32.0], 5755[:32.0]) => Z0[:L32.0]
+list_len(Z0[:L32.0]) => Z1[:32.0]
+(Z1[:32.0] = 2[:32.0]) => R0[:1.1]
+END

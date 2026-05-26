@@ -1,4 +1,4 @@
-# Complex-number plans for the historical value-model profile.
+# Complex-number plans for the value-model profile.
 # Complex values are represented by PlankaC runtime handles and typed with C.
 
 P140 complex_norm_session () => R0[:32.16]

@@ -1,0 +1,45 @@
+# Game-level chess sessions.
+
+P300 chess_legal_move_count_session () => R0[:1.1]
+chess_board_new() => Z0[:Q32.0]
+chess_square(5[:32.0], 1[:32.0]) => Z1[:32.0]
+chess_square(5[:32.0], 8[:32.0]) => Z2[:32.0]
+chess_square(1[:32.0], 1[:32.0]) => Z3[:32.0]
+chess_piece(6[:32.0], 1[:32.0]) => Z4[:32.0]
+chess_piece(6[:32.0], 2[:32.0]) => Z5[:32.0]
+chess_piece(4[:32.0], 1[:32.0]) => Z6[:32.0]
+chess_board_place(Z0[:Q32.0], Z1[:32.0], Z4[:32.0]) => Z0[:Q32.0]
+chess_board_place(Z0[:Q32.0], Z2[:32.0], Z5[:32.0]) => Z0[:Q32.0]
+chess_board_place(Z0[:Q32.0], Z3[:32.0], Z6[:32.0]) => Z0[:Q32.0]
+chess_legal_move_count(Z0[:Q32.0], 1[:32.0]) => Z7[:32.0]
+(0[:32.0] < Z7[:32.0]) => R0[:1.1]
+END
+
+P301 chess_promotion_session () => R0[:1.1]
+chess_square(1[:32.0], 7[:32.0]) => Z0[:32.0]
+chess_square(1[:32.0], 8[:32.0]) => Z1[:32.0]
+chess_pawn_promotes(Z0[:32.0], Z1[:32.0], 1[:32.0]) => R0[:1.1]
+END
+
+P302 chess_castle_path_session () => R0[:1.1]
+chess_board_new() => Z0[:Q32.0]
+chess_square(5[:32.0], 1[:32.0]) => Z1[:32.0]
+chess_square(8[:32.0], 1[:32.0]) => Z2[:32.0]
+chess_square(5[:32.0], 8[:32.0]) => Z3[:32.0]
+chess_piece(6[:32.0], 1[:32.0]) => Z4[:32.0]
+chess_piece(4[:32.0], 1[:32.0]) => Z5[:32.0]
+chess_piece(6[:32.0], 2[:32.0]) => Z6[:32.0]
+chess_board_place(Z0[:Q32.0], Z1[:32.0], Z4[:32.0]) => Z0[:Q32.0]
+chess_board_place(Z0[:Q32.0], Z2[:32.0], Z5[:32.0]) => Z0[:Q32.0]
+chess_board_place(Z0[:Q32.0], Z3[:32.0], Z6[:32.0]) => Z0[:Q32.0]
+chess_can_castle_path(Z0[:Q32.0], 1[:32.0], Z1[:32.0], Z2[:32.0]) => R0[:1.1]
+END
+
+P303 chess_position_signature_session () => R0[:1.1]
+chess_board_new() => Z0[:Q32.0]
+chess_square(5[:32.0], 1[:32.0]) => Z1[:32.0]
+chess_piece(6[:32.0], 1[:32.0]) => Z2[:32.0]
+chess_board_place(Z0[:Q32.0], Z1[:32.0], Z2[:32.0]) => Z0[:Q32.0]
+chess_position_signature(Z0[:Q32.0]) => Z3[:32.0]
+(0[:32.0] < Z3[:32.0]) => R0[:1.1]
+END

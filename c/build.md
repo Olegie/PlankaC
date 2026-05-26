@@ -8,9 +8,12 @@ c/include/   public headers
 c/internal/  private PlankaC declarations
 c/core/      source loader, parser, interpreter, public API
 c/types/     structure marker and type-family handling
-c/notation/  executable two-dimensional table notation
-c/analyzer/  static program checks
-c/backends/  bytecode, C backend, x86-64 ASM, 8086/DOS ASM, helper runtime
+c/notation/  executable two-dimensional table notation and PAGE documents
+c/analyzer/  static program checks and structural schema checks
+c/values/    bit, fixed-point, and tagged value helpers
+c/models/    chess board/game model helpers
+c/ir/        typed IR builder and emitter
+c/backends/  bytecode, lowering reports, C backend, x86-64 ASM, 8086/DOS ASM, helper runtime
 c/targets/   CLI, DOS, Win16, and modern Windows hosts
 c/legacy/    compact PlankaMath fallback runtime
 ```
@@ -29,23 +32,28 @@ On Windows, the normal build is:
 build.bat
 ```
 
-It builds the modern console tools, the static `libplankac.a`, the API demo,
+It builds the modern console tools, the static `libplankac.a`, the API demos,
 the conformance runner, the modern Windows GUI, bytecode output, generated C,
 generated native x86-64 ASM, and generated 8086/DOS ASM source.
+It also verifies the compiler pipeline through generated IR, generated C,
+generated x86-64 ASM, and linked native executables.
 
 Current smoke-test output includes:
 
 ```text
-Compile OK: 14 files, 62 procedures
-PlankaC OK: 24 files, 116 procedures
-Bytecode OK: 116 procedures
+PlankaC OK: 29 files, 148 procedures
+Bytecode OK: 148 procedures
+host_bridge(6, 6) -> R0=42 R1=0
+Compiler pipeline OK
+native-c: build\plankac_native_c.exe
+native-asm: build\plankac_native_asm.exe
 ASM runtime written: build\plankac_asm_runtime.S
 8086 ASM written: build\plankac_8086.asm
 CONFORMANCE OK
 ```
 
-The first line is the compact legacy PlankaMath runtime. The PlankaC line is
-the active `.plk` toolchain profile.
+The compact PlankaMath runner is built as a fallback target. The PlankaC line
+is the active `.plk` toolchain profile.
 
 ## Static Library
 
@@ -57,13 +65,22 @@ gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/core/plankac_source.c -
 gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/core/plankac_expr.c -o build/plankac_expr.o
 gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/types/plankac_types.c -o build/plankac_types.o
 gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/notation/plankac_2d.c -o build/plankac_2d.o
+gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/notation/plankac_document.c -o build/plankac_document.o
+gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/notation/plankac_page.c -o build/plankac_page.o
 gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/analyzer/plankac_analyzer.c -o build/plankac_analyzer.o
+gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/analyzer/plankac_schema.c -o build/plankac_schema.o
+gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/values/plankac_bits.c -o build/plankac_bits.o
+gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/values/plankac_value.c -o build/plankac_value.o
+gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/models/plankac_chess_model.c -o build/plankac_chess_model.o
+gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/ir/plankac_ir.c -o build/plankac_ir.o
+gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/backends/plankac_lowering.c -o build/plankac_lowering.o
 gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/backends/plankac_bytecode.c -o build/plankac_bytecode.o
 gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/backends/plankac_asm8086.c -o build/plankac_asm8086.o
 gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/core/plankac_runtime.c -o build/plankac_runtime.o
 gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/backends/plankac_native_runtime.c -o build/plankac_native_runtime.o
-ar rcs build/libplankac.a build/plankac_common.o build/plankac_source.o build/plankac_expr.o build/plankac_types.o build/plankac_2d.o build/plankac_analyzer.o build/plankac_bytecode.o build/plankac_asm8086.o build/plankac_runtime.o build/plankac_native_runtime.o
+ar rcs build/libplankac.a build/plankac_common.o build/plankac_types.o build/plankac_2d.o build/plankac_document.o build/plankac_page.o build/plankac_analyzer.o build/plankac_schema.o build/plankac_bits.o build/plankac_value.o build/plankac_chess_model.o build/plankac_ir.o build/plankac_lowering.o build/plankac_source.o build/plankac_expr.o build/plankac_bytecode.o build/plankac_asm8086.o build/plankac_runtime.o build/plankac_native_runtime.o
 gcc -Wall -Wextra -std=c89 -Ic/include examples/c_api_demo.c build/libplankac.a -o build/plankac_api_demo.exe -lm
+gcc -Wall -Wextra -std=c89 -Ic/include examples/c_abi_demo.c build/libplankac.a -o build/plankac_abi_demo.exe -lm
 ```
 
 The API is declared in `c/include/plankac.h`.

@@ -88,8 +88,11 @@ static int plc_analyzer_builtin_family(const char *name)
 {
     if (strcmp(name, "chess_board_new") == 0
             || strcmp(name, "chess_board_place") == 0
+            || strcmp(name, "chess_board_move") == 0
+            || strcmp(name, "chess_apply_move") == 0
             || strcmp(name, "record_new") == 0
             || strcmp(name, "record_set") == 0
+            || strcmp(name, "record_set_path2") == 0
             || strcmp(name, "record_merge") == 0) {
         return PLC_TYPE_FAMILY_RECORD;
     }
@@ -110,10 +113,28 @@ static int plc_analyzer_builtin_family(const char *name)
             || strcmp(name, "pair_right") == 0
             || strcmp(name, "pair_list_count_first") == 0
             || strcmp(name, "record_get") == 0
+            || strcmp(name, "record_get_path2") == 0
             || strcmp(name, "record_size") == 0
             || strcmp(name, "complex_real") == 0
             || strcmp(name, "complex_imag") == 0
             || strcmp(name, "complex_norm2") == 0
+            || strcmp(name, "bit") == 0
+            || strcmp(name, "bits_pack4") == 0
+            || strcmp(name, "fixed_quantize") == 0
+            || strcmp(name, "fixed_add") == 0
+            || strcmp(name, "fixed_mul") == 0
+            || strcmp(name, "fixed_div_checked") == 0
+            || strcmp(name, "arith_divide_checked") == 0
+            || strcmp(name, "raise_exception") == 0
+            || strcmp(name, "exception_code") == 0
+            || strcmp(name, "exception_clear") == 0
+            || strcmp(name, "list_count_equal") == 0
+            || strcmp(name, "chess_material_score") == 0
+            || strcmp(name, "chess_best_capture_score") == 0
+            || strcmp(name, "chess_fen_signature") == 0
+            || strcmp(name, "relation_signature") == 0
+            || strcmp(name, "pair_left_list_len") == 0
+            || strcmp(name, "pair_right_list_len") == 0
             || strcmp(name, "vec3_x") == 0
             || strcmp(name, "vec3_y") == 0
             || strcmp(name, "vec3_z") == 0
@@ -122,6 +143,8 @@ static int plc_analyzer_builtin_family(const char *name)
             || strcmp(name, "perspective_project_x") == 0
             || strcmp(name, "chess_square") == 0
             || strcmp(name, "chess_piece") == 0
+            || strcmp(name, "chess_piece_kind") == 0
+            || strcmp(name, "chess_piece_side") == 0
             || strcmp(name, "chess_board_piece") == 0) {
         return PLC_TYPE_FAMILY_NUMERIC;
     }
@@ -130,18 +153,43 @@ static int plc_analyzer_builtin_family(const char *name)
             || strcmp(name, "set_exists_greater") == 0
             || strcmp(name, "set_forall_less") == 0
             || strcmp(name, "relation_has_pair") == 0
+            || strcmp(name, "relation_exists_range_equal") == 0
+            || strcmp(name, "relation_forall_domain_greater") == 0
             || strcmp(name, "chess_piece_attacks_square") == 0
             || strcmp(name, "list_equal") == 0
             || strcmp(name, "pair_equal") == 0
             || strcmp(name, "record_equal") == 0
             || strcmp(name, "record_has") == 0
+            || strcmp(name, "record_has_path2") == 0
+            || strcmp(name, "record_shape_equal") == 0
             || strcmp(name, "complex_equal") == 0) {
+        return PLC_TYPE_FAMILY_BOOLEAN;
+    }
+    if (strcmp(name, "bit_not") == 0
+            || strcmp(name, "bit_and") == 0
+            || strcmp(name, "bit_or") == 0
+            || strcmp(name, "bit_xor") == 0
+            || strcmp(name, "bits_get") == 0
+            || strcmp(name, "exception_raised") == 0
+            || strcmp(name, "list_exists_equal") == 0
+            || strcmp(name, "list_forall_greater") == 0
+            || strcmp(name, "chess_legal_rook_move") == 0
+            || strcmp(name, "chess_legal_move") == 0
+            || strcmp(name, "chess_side_in_check") == 0
+            || strcmp(name, "chess_checkmate_simple") == 0
+            || strcmp(name, "chess_checkmate") == 0
+            || strcmp(name, "chess_stalemate") == 0
+            || strcmp(name, "chess_en_passant_possible") == 0) {
         return PLC_TYPE_FAMILY_BOOLEAN;
     }
     if (strcmp(name, "list_new") == 0 || strcmp(name, "list_push") == 0
             || strcmp(name, "list_concat") == 0
+            || strcmp(name, "list_select_greater") == 0
+            || strcmp(name, "list_zip_pairs") == 0
             || strcmp(name, "relation_domain") == 0
             || strcmp(name, "relation_range") == 0
+            || strcmp(name, "relation_select_domain") == 0
+            || strcmp(name, "relation_select_range") == 0
             || strcmp(name, "relation_inverse") == 0
             || strcmp(name, "relation_image") == 0
             || strcmp(name, "set_cartesian") == 0
@@ -155,6 +203,9 @@ static int plc_analyzer_builtin_family(const char *name)
         return PLC_TYPE_FAMILY_SET;
     }
     if (strcmp(name, "pair") == 0) {
+        return PLC_TYPE_FAMILY_PAIR;
+    }
+    if (strcmp(name, "list_pair") == 0) {
         return PLC_TYPE_FAMILY_PAIR;
     }
     if (strcmp(name, "complex") == 0 || strcmp(name, "complex_add") == 0
@@ -189,6 +240,16 @@ static int plc_analyzer_expr_family(const PLC_PROGRAM *program,
     const PLC_PROC *proc;
     int i;
 
+    if (plc_line_starts_with(expr, "SELECT")) {
+        return PLC_TYPE_FAMILY_LIST;
+    }
+    if (plc_line_starts_with(expr, "EXISTS")
+            || plc_line_starts_with(expr, "FORALL")) {
+        return PLC_TYPE_FAMILY_BOOLEAN;
+    }
+    if (plc_line_starts_with(expr, "COUNT")) {
+        return PLC_TYPE_FAMILY_NUMERIC;
+    }
     if (plc_is_top_call(expr, name, sizeof(name), args, sizeof(args))) {
         proc = plc_find_proc(program, name);
         if (proc != 0 && proc->results > 0) {
@@ -242,12 +303,41 @@ static int plc_analyze_statement_value_types(const PLC_PROGRAM *program,
 
     (void)err_size;
 
-    if (plc_line_starts_with(stmt->text, "ASSERT")) {
+    if (plc_line_starts_with(stmt->text, "ASSERT")
+            || plc_line_starts_with(stmt->text, "REQUIRE")
+            || plc_line_starts_with(stmt->text, "ENSURE")
+            || plc_line_starts_with(stmt->text, "STOPIF")) {
+        const char *keyword;
+        int keyword_len;
+
+        keyword = "ASSERT";
+        keyword_len = 6;
+        if (plc_line_starts_with(stmt->text, "REQUIRE")) {
+            keyword = "REQUIRE";
+            keyword_len = 7;
+        } else if (plc_line_starts_with(stmt->text, "ENSURE")) {
+            keyword = "ENSURE";
+            keyword_len = 6;
+        } else if (plc_line_starts_with(stmt->text, "STOPIF")) {
+            keyword = "STOPIF";
+            keyword_len = 6;
+        }
         source_family = plc_analyzer_expr_family(program,
-            plc_skip_space(plc_skip_space(stmt->text) + 6));
+            plc_skip_space(plc_skip_space(stmt->text) + keyword_len));
         if (source_family != PLC_TYPE_FAMILY_UNKNOWN
                 && source_family != PLC_TYPE_FAMILY_BOOLEAN) {
-            sprintf(err, "P%d %s line %d: ASSERT expects boolean expression",
+            sprintf(err, "P%d %s line %d: %s expects boolean expression",
+                proc->number, proc->name, stmt->line_no, keyword);
+            return 0;
+        }
+        return 1;
+    }
+    if (plc_line_starts_with(stmt->text, "CONST")) {
+        const char *body;
+
+        body = plc_skip_space(plc_skip_space(stmt->text) + 5);
+        if (*body != 'C') {
+            sprintf(err, "P%d %s line %d: CONST expects C-bank target",
                 proc->number, proc->name, stmt->line_no);
             return 0;
         }
@@ -376,6 +466,9 @@ int plc_analyze_program(const PLC_PROGRAM *program,
                 }
             }
         }
+    }
+    if (!plc_analyze_structural_schemas(program, err, err_size)) {
+        return 0;
     }
     return 1;
 }

@@ -5,12 +5,13 @@ static double plc_parse_expr(PLC_PARSER *parser, int *ok);
 static int plc_parse_ref(const char **pp, PLC_REF *ref)
 {
     const char *p;
+    const char *marker_end;
     char *endptr;
     int field_len;
 
     p = plc_skip_space(*pp);
     memset(ref, 0, sizeof(*ref));
-    if (*p != 'V' && *p != 'Z' && *p != 'R') {
+    if (*p != 'V' && *p != 'C' && *p != 'Z' && *p != 'R') {
         return 0;
     }
     ref->bank = *p;
@@ -20,19 +21,47 @@ static int plc_parse_ref(const char **pp, PLC_REF *ref)
     }
     ref->index = (int)strtol(p, &endptr, 10);
     p = plc_skip_space(endptr);
-    if (*p == '[' && p[1] != ':') {
+    while (*p == '[' && p[1] != ':') {
+        int value;
+
+        if (ref->subscript_count >= 2) {
+            return 0;
+        }
         ++p;
         p = plc_skip_space(p);
         if (!isdigit((unsigned char)*p)) {
             return 0;
         }
+        value = (int)strtol(p, &endptr, 10);
         ref->has_subscript = 1;
-        ref->subscript = (int)strtol(p, &endptr, 10);
+        ref->subscripts[ref->subscript_count] = value;
+        ++ref->subscript_count;
         p = plc_skip_space(endptr);
+        if (*p == ',') {
+            ++p;
+            p = plc_skip_space(p);
+            if (!isdigit((unsigned char)*p) || ref->subscript_count >= 2) {
+                return 0;
+            }
+            value = (int)strtol(p, &endptr, 10);
+            ref->subscripts[ref->subscript_count] = value;
+            ++ref->subscript_count;
+            p = plc_skip_space(endptr);
+        }
         if (*p != ']') {
             return 0;
         }
         ++p;
+    }
+    if (ref->has_subscript) {
+        if (ref->subscript_count == 1) {
+            ref->subscript = ref->subscripts[0];
+        } else if (ref->subscript_count == 2) {
+            ref->subscript = ref->subscripts[0] * PLC_ARRAY_DIM
+                + ref->subscripts[1];
+        } else {
+            return 0;
+        }
     }
     p = plc_skip_space(p);
     if (*p == '.') {
@@ -56,6 +85,15 @@ static int plc_parse_ref(const char **pp, PLC_REF *ref)
         }
         ref->field[field_len] = '\0';
         ref->has_field = 1;
+    }
+    p = plc_skip_space(p);
+    if (p[0] == '[' && p[1] == ':') {
+        marker_end = strchr(p, ']');
+        if (marker_end == 0) {
+            return 0;
+        }
+        plc_copy_range(ref->type_marker, sizeof(ref->type_marker),
+            p, marker_end + 1);
     }
     p = plc_skip_type_marker(p);
     *pp = p;
@@ -91,6 +129,7 @@ static double plc_get_ref(PLC_FRAME *frame, PLC_REF ref, int *ok,
     char *err, unsigned err_size)
 {
     int field;
+    PLC_TAGGED_VALUE tagged;
 
     if (ref.index < 0 || ref.index >= PLC_MAX_VARS) {
         plc_set_error(err, err_size, "variable index out of range");
@@ -103,8 +142,14 @@ static double plc_get_ref(PLC_FRAME *frame, PLC_REF ref, int *ok,
             *ok = 0;
             return 0.0;
         }
+        if (plc_frame_load_tagged(frame, &ref, &tagged)) {
+            return plc_tagged_to_double(&tagged);
+        }
         if (ref.bank == 'V') {
             return frame->va[ref.index][ref.subscript];
+        }
+        if (ref.bank == 'C') {
+            return frame->ca[ref.index][ref.subscript];
         }
         if (ref.bank == 'Z') {
             return frame->za[ref.index][ref.subscript];
@@ -117,16 +162,28 @@ static double plc_get_ref(PLC_FRAME *frame, PLC_REF ref, int *ok,
             *ok = 0;
             return 0.0;
         }
+        if (plc_frame_load_tagged(frame, &ref, &tagged)) {
+            return plc_tagged_to_double(&tagged);
+        }
         if (ref.bank == 'V') {
             return frame->vf[ref.index][field];
+        }
+        if (ref.bank == 'C') {
+            return frame->cf[ref.index][field];
         }
         if (ref.bank == 'Z') {
             return frame->zf[ref.index][field];
         }
         return frame->rf[ref.index][field];
     }
+    if (plc_frame_load_tagged(frame, &ref, &tagged)) {
+        return plc_tagged_to_double(&tagged);
+    }
     if (ref.bank == 'V') {
         return frame->v[ref.index];
+    }
+    if (ref.bank == 'C') {
+        return frame->c[ref.index];
     }
     if (ref.bank == 'Z') {
         return frame->z[ref.index];
@@ -143,6 +200,10 @@ static int plc_set_ref(PLC_FRAME *frame, PLC_REF ref, double value,
         plc_set_error(err, err_size, "variable index out of range");
         return 0;
     }
+    if (ref.bank == 'C') {
+        plc_set_error(err, err_size, "C bank is constant");
+        return 0;
+    }
     if (ref.has_subscript) {
         if (ref.subscript < 0 || ref.subscript >= PLC_MAX_INDEX) {
             plc_set_error(err, err_size, "array index out of range");
@@ -155,7 +216,8 @@ static int plc_set_ref(PLC_FRAME *frame, PLC_REF ref, double value,
         } else {
             frame->ra[ref.index][ref.subscript] = value;
         }
-        return 1;
+        return plc_frame_store_tagged(frame, &ref, value, ref.type_marker,
+            err, err_size);
     }
     if (ref.has_field) {
         field = plc_field_index(frame, ref.field, 1, err, err_size);
@@ -169,7 +231,8 @@ static int plc_set_ref(PLC_FRAME *frame, PLC_REF ref, double value,
         } else {
             frame->rf[ref.index][field] = value;
         }
-        return 1;
+        return plc_frame_store_tagged(frame, &ref, value, ref.type_marker,
+            err, err_size);
     }
     if (ref.bank == 'V') {
         frame->v[ref.index] = value;
@@ -178,7 +241,44 @@ static int plc_set_ref(PLC_FRAME *frame, PLC_REF ref, double value,
     } else {
         frame->r[ref.index] = value;
     }
-    return 1;
+    return plc_frame_store_tagged(frame, &ref, value, ref.type_marker,
+        err, err_size);
+}
+
+static int plc_set_const_ref(PLC_FRAME *frame, PLC_REF ref, double value,
+    char *err, unsigned err_size)
+{
+    int field;
+
+    if (ref.bank != 'C') {
+        plc_set_error(err, err_size, "CONST target must use C bank");
+        return 0;
+    }
+    if (ref.index < 0 || ref.index >= PLC_MAX_VARS) {
+        plc_set_error(err, err_size, "constant index out of range");
+        return 0;
+    }
+    if (ref.has_subscript) {
+        if (ref.subscript < 0 || ref.subscript >= PLC_MAX_INDEX) {
+            plc_set_error(err, err_size, "constant array index out of range");
+            return 0;
+        }
+        frame->ca[ref.index][ref.subscript] = value;
+        return plc_frame_store_tagged(frame, &ref, value, ref.type_marker,
+            err, err_size);
+    }
+    if (ref.has_field) {
+        field = plc_field_index(frame, ref.field, 1, err, err_size);
+        if (field < 0) {
+            return 0;
+        }
+        frame->cf[ref.index][field] = value;
+        return plc_frame_store_tagged(frame, &ref, value, ref.type_marker,
+            err, err_size);
+    }
+    frame->c[ref.index] = value;
+    return plc_frame_store_tagged(frame, &ref, value, ref.type_marker,
+        err, err_size);
 }
 
 static void plc_parser_skip(PLC_PARSER *parser)
@@ -277,7 +377,8 @@ static double plc_parse_primary(PLC_PARSER *parser, int *ok)
         return value;
     }
 
-    if (*parser->p == 'V' || *parser->p == 'Z' || *parser->p == 'R') {
+    if (*parser->p == 'V' || *parser->p == 'C'
+            || *parser->p == 'Z' || *parser->p == 'R') {
         const char *p;
 
         p = parser->p;
@@ -391,8 +492,20 @@ static double plc_parse_mul(PLC_PARSER *parser, int *ok)
         if (op == '*') {
             left = left * right;
         } else if (op == '/') {
+            if (fabs(right) < 0.0000001) {
+                plc_set_error(parser->err, parser->err_size,
+                    "arithmetic exception: divide by zero");
+                *ok = 0;
+                return 0.0;
+            }
             left = left / right;
         } else {
+            if (fabs(right) < 0.0000001) {
+                plc_set_error(parser->err, parser->err_size,
+                    "arithmetic exception: modulo by zero");
+                *ok = 0;
+                return 0.0;
+            }
             left = fmod(left, right);
         }
         plc_parser_skip(parser);
@@ -660,6 +773,97 @@ int plc_eval_args_text(const PLC_PROGRAM *program, PLC_FRAME *frame,
     return 1;
 }
 
+static int plc_predicate_starts_with(const char *text, const char *keyword,
+    const char **body)
+{
+    unsigned n;
+
+    text = plc_skip_space(text);
+    n = (unsigned)strlen(keyword);
+    if (strncmp(text, keyword, n) != 0) {
+        return 0;
+    }
+    if (text[n] != '\0' && !isspace((unsigned char)text[n])) {
+        return 0;
+    }
+    if (body != 0) {
+        *body = plc_skip_space(text + n);
+    }
+    return 1;
+}
+
+static const char *plc_predicate_find_operator(const char *text, char op)
+{
+    int paren_depth;
+    int bracket_depth;
+
+    paren_depth = 0;
+    bracket_depth = 0;
+    while (*text != '\0') {
+        if (*text == '(') {
+            ++paren_depth;
+        } else if (*text == ')' && paren_depth > 0) {
+            --paren_depth;
+        } else if (*text == '[') {
+            ++bracket_depth;
+        } else if (*text == ']' && bracket_depth > 0) {
+            --bracket_depth;
+        } else if (*text == op && paren_depth == 0 && bracket_depth == 0) {
+            return text;
+        }
+        ++text;
+    }
+    return 0;
+}
+
+static int plc_eval_predicate_text(const PLC_PROGRAM *program,
+    PLC_FRAME *frame, int depth, const char *text, PLC_VALUES *out,
+    char *err, unsigned err_size)
+{
+    const char *body;
+    const char *op;
+    const char *call_name;
+    char left_text[PLC_MAX_LINE];
+    char right_text[PLC_MAX_LINE];
+    double args[2];
+
+    call_name = 0;
+    body = 0;
+    op = 0;
+    if (plc_predicate_starts_with(text, "SELECT", &body)) {
+        op = plc_predicate_find_operator(body, '>');
+        call_name = "list_select_greater";
+    } else if (plc_predicate_starts_with(text, "FORALL", &body)) {
+        op = plc_predicate_find_operator(body, '>');
+        call_name = "list_forall_greater";
+    } else if (plc_predicate_starts_with(text, "EXISTS", &body)) {
+        op = plc_predicate_find_operator(body, '=');
+        call_name = "list_exists_equal";
+    } else if (plc_predicate_starts_with(text, "COUNT", &body)) {
+        op = plc_predicate_find_operator(body, '=');
+        call_name = "list_count_equal";
+    } else {
+        return -1;
+    }
+    if (op == 0) {
+        plc_set_error(err, err_size, "bad predicate expression");
+        return 0;
+    }
+    plc_copy_range(left_text, sizeof(left_text), body, op);
+    plc_trim_in_place(left_text);
+    strncpy(right_text, op + 1, sizeof(right_text) - 1);
+    right_text[sizeof(right_text) - 1] = '\0';
+    plc_trim_in_place(right_text);
+    if (!plc_eval_expr_text(program, frame, depth, left_text,
+            &args[0], err, err_size)
+            || !plc_eval_expr_text(program, frame, depth, right_text,
+                &args[1], err, err_size)) {
+        return 0;
+    }
+    return plc_call_proc(program, frame, call_name, args, 2, out,
+        depth + 1, err, err_size);
+}
+
 int plc_eval_value_text(const PLC_PROGRAM *program, PLC_FRAME *frame,
     int depth, const char *text, PLC_VALUES *out,
     char *err, unsigned err_size)
@@ -669,7 +873,13 @@ int plc_eval_value_text(const PLC_PROGRAM *program, PLC_FRAME *frame,
     double args[PLC_MAX_ARGS];
     int argc;
     double value;
+    int predicate_result;
 
+    predicate_result = plc_eval_predicate_text(program, frame, depth, text,
+        out, err, err_size);
+    if (predicate_result >= 0) {
+        return predicate_result;
+    }
     if (plc_is_top_call(text, name, sizeof(name), args_text, sizeof(args_text))) {
         if (!plc_eval_args_text(program, frame, depth, args_text,
                 args, &argc, err, err_size)) {
@@ -685,6 +895,25 @@ int plc_eval_value_text(const PLC_PROGRAM *program, PLC_FRAME *frame,
     out->count = 1;
     out->value[0] = value;
     return 1;
+}
+
+int plc_assign_const_text(PLC_FRAME *frame, const char *text,
+    double value, char *err, unsigned err_size)
+{
+    const char *p;
+    PLC_REF ref;
+
+    p = text;
+    if (!plc_parse_ref(&p, &ref)) {
+        plc_set_error(err, err_size, "bad constant reference");
+        return 0;
+    }
+    p = plc_skip_space(p);
+    if (*p != '\0') {
+        plc_set_error(err, err_size, "unexpected text after constant reference");
+        return 0;
+    }
+    return plc_set_const_ref(frame, ref, value, err, err_size);
 }
 
 int plc_assign_targets(PLC_FRAME *frame, const char *text,

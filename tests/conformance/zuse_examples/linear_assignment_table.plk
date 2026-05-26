@@ -1,0 +1,9 @@
+P1 zuse_linear_assignment_table () => R0[:32.16]
+4[:32.16] => Z4[:32.16]
+PAGE
+ | A + 1 => A
+V| 4        5
+S| 32.16    32.16
+ENDPAGE
+R5[:32.16] => R0[:32.16]
+END

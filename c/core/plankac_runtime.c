@@ -20,6 +20,11 @@ const char *PLC_SOURCES[] = {
     "src/16_value_algebra.plk",
     "src/17_chess_model.plk",
     "src/18_two_dimensional_general.plk",
+    "src/19_language_closure.plk",
+    "src/20_page_table.plk",
+    "src/21_chess_game.plk",
+    "src/22_predicate_schema.plk",
+    "src/23_chess_complete.plk",
     "examples/session_basic.plk",
     "examples/session_guarded.plk",
     "examples/session_memory.plk",
@@ -30,6 +35,100 @@ const char *PLC_SOURCES[] = {
 
 PLC_PROGRAM g_plankac_program;
 int g_plankac_loaded = 0;
+
+const PLC_NATIVE_PROC *plc_find_native(const PLC_PROGRAM *program,
+    const char *name)
+{
+    int i;
+
+    if (program == 0 || name == 0) {
+        return 0;
+    }
+    for (i = 0; i < program->native_count; ++i) {
+        if (strcmp(program->natives[i].name, name) == 0) {
+            return &program->natives[i];
+        }
+    }
+    return 0;
+}
+
+int plc_register_native(PLC_PROGRAM *program, const char *name,
+    int argc, int results, const char *const *arg_types,
+    const char *const *result_types, PLANKAC_NATIVE_FN fn, void *user_data,
+    char *err, unsigned err_size)
+{
+    PLC_NATIVE_PROC *native_proc;
+    PLC_TYPE_SPEC type_spec;
+    int i;
+
+    if (program == 0) {
+        plc_set_error(err, err_size, "missing program");
+        return 0;
+    }
+    if (name == 0 || name[0] == '\0') {
+        plc_set_error(err, err_size, "missing native function name");
+        return 0;
+    }
+    if (strlen(name) >= PLC_MAX_NAME) {
+        plc_set_error(err, err_size, "native function name is too long");
+        return 0;
+    }
+    if (fn == 0) {
+        plc_set_error(err, err_size, "missing native function pointer");
+        return 0;
+    }
+    if (argc < 0 || argc > PLANKAC_MAX_ARGS
+            || results < 0 || results > PLANKAC_MAX_RESULTS) {
+        plc_set_error(err, err_size, "bad native function arity");
+        return 0;
+    }
+    if (plc_find_proc(program, name) != 0 || plc_find_native(program, name) != 0) {
+        plc_set_error(err, err_size, "duplicate native function");
+        return 0;
+    }
+    if (program->native_count >= PLANKAC_MAX_NATIVE) {
+        plc_set_error(err, err_size, "too many native functions");
+        return 0;
+    }
+    native_proc = &program->natives[program->native_count];
+    memset(native_proc, 0, sizeof(*native_proc));
+    strncpy(native_proc->name, name, PLC_MAX_NAME - 1);
+    native_proc->name[PLC_MAX_NAME - 1] = '\0';
+    native_proc->argc = argc;
+    native_proc->results = results;
+    native_proc->fn = fn;
+    native_proc->user_data = user_data;
+    for (i = 0; i < argc; ++i) {
+        if (arg_types != 0 && arg_types[i] != 0 && arg_types[i][0] != '\0') {
+            if (!plc_parse_type_marker_text(arg_types[i], &type_spec,
+                    err, err_size)) {
+                plc_prefix_error(err, err_size, "native argument ");
+                memset(native_proc, 0, sizeof(*native_proc));
+                return 0;
+            }
+            strncpy(native_proc->arg_types[i], arg_types[i],
+                PLC_MAX_TYPE_TEXT - 1);
+            native_proc->arg_types[i][PLC_MAX_TYPE_TEXT - 1] = '\0';
+        }
+    }
+    for (i = 0; i < results; ++i) {
+        if (result_types != 0 && result_types[i] != 0
+                && result_types[i][0] != '\0') {
+            if (!plc_parse_type_marker_text(result_types[i], &type_spec,
+                    err, err_size)) {
+                plc_prefix_error(err, err_size, "native result ");
+                memset(native_proc, 0, sizeof(*native_proc));
+                return 0;
+            }
+            strncpy(native_proc->result_types[i], result_types[i],
+                PLC_MAX_TYPE_TEXT - 1);
+            native_proc->result_types[i][PLC_MAX_TYPE_TEXT - 1] = '\0';
+        }
+    }
+    ++program->native_count;
+    plc_copy_error(err, err_size, "");
+    return 1;
+}
 
 static PLC_FRAME *plc_heap_frame(PLC_FRAME *frame)
 {
@@ -380,6 +479,50 @@ static int plc_chess_attack_map(PLC_FRAME *frame, int piece_kind,
     return list_id;
 }
 
+static int plc_chess_piece_kind_code(int piece)
+{
+    return piece / 10;
+}
+
+static int plc_chess_piece_side_code(int piece)
+{
+    return piece % 10;
+}
+
+static int plc_chess_board_get_piece(PLC_FRAME *frame, int board_id,
+    int square, int *piece, char *err, unsigned err_size)
+{
+    int slot;
+
+    frame = plc_heap_frame(frame);
+    if (!plc_record_valid(frame, board_id, err, err_size)) {
+        return 0;
+    }
+    slot = plc_record_find_key(frame, board_id, square);
+    *piece = slot >= 0 ? (int)frame->record_values[board_id][slot] : 0;
+    return 1;
+}
+
+static int plc_run_boolean_contract(const PLC_PROGRAM *program,
+    PLC_FRAME *frame, const PLC_STMT *stmt, int depth,
+    const char *keyword, const char *message,
+    char *err, unsigned err_size)
+{
+    const char *expr;
+    double guard;
+
+    expr = plc_skip_space(plc_skip_space(stmt->text) + strlen(keyword));
+    if (!plc_eval_expr_text(program, frame, depth, expr,
+            &guard, err, err_size)) {
+        return 0;
+    }
+    if (guard == 0.0) {
+        plc_set_error(err, err_size, message);
+        return 0;
+    }
+    return 1;
+}
+
 static int plc_run_statement(const PLC_PROGRAM *program, PLC_FRAME *frame,
     const PLC_PROC *proc, const PLC_STMT *stmt, int depth,
     char *err, unsigned err_size)
@@ -391,7 +534,41 @@ static int plc_run_statement(const PLC_PROGRAM *program, PLC_FRAME *frame,
     double loop_count;
     int i;
 
-    if (plc_line_starts_with(stmt->text, "ASSERT")) {
+    if (plc_line_starts_with(stmt->text, "CONST")) {
+        const char *body;
+        const char *eq;
+        char target[PLC_MAX_LINE];
+        char value_text[PLC_MAX_LINE];
+        double const_value;
+
+        body = plc_skip_space(plc_skip_space(stmt->text) + 5);
+        eq = strchr(body, '=');
+        if (eq == 0 || eq[1] == '>') {
+            plc_set_error(err, err_size, "CONST expects target = value");
+            return 0;
+        }
+        plc_copy_range(target, sizeof(target), body, eq);
+        plc_trim_in_place(target);
+        strncpy(value_text, eq + 1, sizeof(value_text) - 1);
+        value_text[sizeof(value_text) - 1] = '\0';
+        plc_trim_in_place(value_text);
+        if (!plc_eval_expr_text(program, frame, depth, value_text,
+                &const_value, err, err_size)) {
+            return 0;
+        }
+        return plc_assign_const_text(frame, target, const_value,
+            err, err_size);
+    }
+
+    if (plc_line_starts_with(stmt->text, "REQUIRE")) {
+        return plc_run_boolean_contract(program, frame, stmt, depth,
+            "REQUIRE", "contract requirement failed", err, err_size);
+    }
+    if (plc_line_starts_with(stmt->text, "ENSURE")) {
+        return plc_run_boolean_contract(program, frame, stmt, depth,
+            "ENSURE", "contract guarantee failed", err, err_size);
+    }
+    if (plc_line_starts_with(stmt->text, "STOPIF")) {
         const char *expr;
 
         expr = plc_skip_space(plc_skip_space(stmt->text) + 6);
@@ -399,11 +576,15 @@ static int plc_run_statement(const PLC_PROGRAM *program, PLC_FRAME *frame,
                 &guard, err, err_size)) {
             return 0;
         }
-        if (guard == 0.0) {
-            plc_set_error(err, err_size, "assertion failed");
-            return 0;
+        if (guard != 0.0) {
+            frame->stopped = 1;
         }
         return 1;
+    }
+
+    if (plc_line_starts_with(stmt->text, "ASSERT")) {
+        return plc_run_boolean_contract(program, frame, stmt, depth,
+            "ASSERT", "assertion failed", err, err_size);
     }
 
     if (!plc_split_arrows(stmt->text, parts, &count)) {
@@ -466,7 +647,7 @@ static int plc_execute_proc_with_heap(const PLC_PROGRAM *program,
     const double *args, int argc, PLC_VALUES *out, int depth,
     PLC_FRAME *heap_owner, char *err, unsigned err_size)
 {
-    PLC_FRAME frame;
+    PLC_FRAME *frame;
     int i;
 
     if (depth > PLC_MAX_DEPTH) {
@@ -478,13 +659,17 @@ static int plc_execute_proc_with_heap(const PLC_PROGRAM *program,
             proc->name, proc->argc, argc);
         return 0;
     }
-    memset(&frame, 0, sizeof(frame));
-    frame.heap_owner = heap_owner;
+    frame = (PLC_FRAME *)calloc(1, sizeof(*frame));
+    if (frame == 0) {
+        plc_set_error(err, err_size, "cannot allocate execution frame");
+        return 0;
+    }
+    frame->heap_owner = heap_owner;
     for (i = 0; i < argc && i < PLC_MAX_VARS; ++i) {
-        frame.v[i] = args[i];
+        frame->v[i] = args[i];
     }
     for (i = 0; i < proc->stmt_count; ++i) {
-        if (!plc_run_statement(program, &frame, proc, &proc->stmts[i],
+        if (!plc_run_statement(program, frame, proc, &proc->stmts[i],
                 depth, err, err_size)) {
             if (err != 0 && err[0] != '\0') {
                 char prefix[160];
@@ -494,17 +679,23 @@ static int plc_execute_proc_with_heap(const PLC_PROGRAM *program,
                     proc->stmts[i].line_no);
                 plc_prefix_error(err, err_size, prefix);
             }
+            free(frame);
             return 0;
+        }
+        if (frame->stopped) {
+            break;
         }
     }
     out->count = proc->results;
     if (out->count > PLC_MAX_RESULTS) {
         plc_set_error(err, err_size, "too many result values");
+        free(frame);
         return 0;
     }
     for (i = 0; i < out->count; ++i) {
-        out->value[i] = frame.r[i];
+        out->value[i] = frame->r[i];
     }
+    free(frame);
     return 1;
 }
 
@@ -536,6 +727,7 @@ int plc_call_proc(const PLC_PROGRAM *program, PLC_FRAME *caller_frame,
     int mat_id;
     int other_mat;
     int i;
+    const PLC_NATIVE_PROC *native_proc;
 
     heap_frame = plc_heap_frame(caller_frame);
     if (strcmp(name, "sqrt") == 0) {
@@ -556,6 +748,172 @@ int plc_call_proc(const PLC_PROGRAM *program, PLC_FRAME *caller_frame,
         out->count = 1;
         out->value[0] = strcmp(name, "sin") == 0
             ? sin(args[0]) : cos(args[0]);
+        return 1;
+    }
+    if (strcmp(name, "bit") == 0 || strcmp(name, "bit_not") == 0) {
+        int value;
+
+        if (argc != 1) {
+            plc_set_error(err, err_size, "bit operation expects one argument");
+            return 0;
+        }
+        value = ((int)args[0]) != 0 ? 1 : 0;
+        out->count = 1;
+        out->value[0] = strcmp(name, "bit_not") == 0
+            ? (value ? 0.0 : 1.0) : (double)value;
+        return 1;
+    }
+    if (strcmp(name, "bit_and") == 0 || strcmp(name, "bit_or") == 0
+            || strcmp(name, "bit_xor") == 0) {
+        int left_bit;
+        int right_bit;
+        int value;
+
+        if (argc != 2) {
+            plc_set_error(err, err_size, "bit operation expects two arguments");
+            return 0;
+        }
+        left_bit = ((int)args[0]) != 0 ? 1 : 0;
+        right_bit = ((int)args[1]) != 0 ? 1 : 0;
+        if (strcmp(name, "bit_and") == 0) {
+            value = left_bit && right_bit;
+        } else if (strcmp(name, "bit_or") == 0) {
+            value = left_bit || right_bit;
+        } else {
+            value = left_bit != right_bit;
+        }
+        out->count = 1;
+        out->value[0] = (double)value;
+        return 1;
+    }
+    if (strcmp(name, "bits_pack4") == 0) {
+        if (argc != 4) {
+            plc_set_error(err, err_size, "bits_pack4 expects four arguments");
+            return 0;
+        }
+        out->count = 1;
+        out->value[0] = (double)plc_bit_pack4((int)args[0],
+            (int)args[1], (int)args[2], (int)args[3]);
+        return 1;
+    }
+    if (strcmp(name, "bits_get") == 0) {
+        int index_value;
+
+        if (argc != 2) {
+            plc_set_error(err, err_size, "bits_get expects two arguments");
+            return 0;
+        }
+        index_value = (int)args[1];
+        if (index_value < 0 || index_value > 30) {
+            plc_set_error(err, err_size, "bit index out of range");
+            return 0;
+        }
+        out->count = 1;
+        out->value[0] = (double)plc_bit_get_word((unsigned long)args[0],
+            index_value);
+        return 1;
+    }
+    if (strcmp(name, "fixed_quantize") == 0
+            || strcmp(name, "fixed_add") == 0
+            || strcmp(name, "fixed_mul") == 0) {
+        int scale;
+        double value;
+
+        if ((strcmp(name, "fixed_quantize") == 0 && argc != 2)
+                || (strcmp(name, "fixed_quantize") != 0 && argc != 3)) {
+            plc_set_error(err, err_size, "bad fixed operation argument count");
+            return 0;
+        }
+        scale = (int)args[argc - 1];
+        if (scale < 0 || scale > 30) {
+            plc_set_error(err, err_size, "fixed scale out of range");
+            return 0;
+        }
+        if (strcmp(name, "fixed_quantize") == 0) {
+            value = plc_fixed_quantize_bits(args[0], scale);
+        } else if (strcmp(name, "fixed_add") == 0) {
+            value = plc_fixed_add_bits(args[0], args[1], scale);
+        } else {
+            value = plc_fixed_mul_bits(args[0], args[1], scale);
+        }
+        out->count = 1;
+        out->value[0] = plc_fixed_quantize_bits(value, scale);
+        return 1;
+    }
+    if (strcmp(name, "fixed_div_checked") == 0
+            || strcmp(name, "arith_divide_checked") == 0) {
+        int scale;
+
+        if ((strcmp(name, "fixed_div_checked") == 0 && argc != 3)
+                || (strcmp(name, "arith_divide_checked") == 0 && argc != 2)) {
+            plc_set_error(err, err_size,
+                "bad checked division argument count");
+            return 0;
+        }
+        out->count = 2;
+        if (fabs(args[1]) < 0.0000001) {
+            out->value[0] = 0.0;
+            out->value[1] = 1.0;
+            if (caller_frame != 0) {
+                caller_frame->exception_raised = 1;
+                caller_frame->exception_code = 1;
+            }
+            return 1;
+        }
+        if (strcmp(name, "fixed_div_checked") == 0) {
+            scale = (int)args[2];
+            if (scale < 0 || scale > 30) {
+                plc_set_error(err, err_size, "fixed scale out of range");
+                return 0;
+            }
+            if (!plc_fixed_div_bits(args[0], args[1], scale,
+                    &out->value[0])) {
+                out->value[0] = 0.0;
+                out->value[1] = 1.0;
+                if (caller_frame != 0) {
+                    caller_frame->exception_raised = 1;
+                    caller_frame->exception_code = 1;
+                }
+                return 1;
+            }
+        } else {
+            out->value[0] = args[0] / args[1];
+        }
+        out->value[1] = 0.0;
+        return 1;
+    }
+    if (strcmp(name, "raise_exception") == 0
+            || strcmp(name, "exception_raised") == 0
+            || strcmp(name, "exception_code") == 0
+            || strcmp(name, "exception_clear") == 0) {
+        if (caller_frame == 0) {
+            plc_set_error(err, err_size, "exception operation needs a frame");
+            return 0;
+        }
+        if ((strcmp(name, "raise_exception") == 0 && argc != 1)
+                || (strcmp(name, "raise_exception") != 0 && argc != 0)) {
+            plc_set_error(err, err_size,
+                "bad exception operation argument count");
+            return 0;
+        }
+        if (strcmp(name, "raise_exception") == 0) {
+            caller_frame->exception_raised = 1;
+            caller_frame->exception_code = (int)args[0];
+            out->count = 1;
+            out->value[0] = (double)caller_frame->exception_code;
+            return 1;
+        }
+        if (strcmp(name, "exception_clear") == 0) {
+            caller_frame->exception_raised = 0;
+            caller_frame->exception_code = 0;
+            out->count = 1;
+            out->value[0] = 0.0;
+            return 1;
+        }
+        out->count = 1;
+        out->value[0] = strcmp(name, "exception_raised") == 0
+            ? (double)caller_frame->exception_raised
+            : (double)caller_frame->exception_code;
         return 1;
     }
     if (strcmp(name, "list_new") == 0) {
@@ -711,6 +1069,125 @@ int plc_call_proc(const PLC_PROGRAM *program, PLC_FRAME *caller_frame,
         out->value[0] = (double)out_list;
         return 1;
     }
+    if (strcmp(name, "list_select_greater") == 0
+            || strcmp(name, "list_count_equal") == 0
+            || strcmp(name, "list_exists_equal") == 0
+            || strcmp(name, "list_forall_greater") == 0) {
+        double threshold;
+        int count_value;
+        int ok;
+
+        if (caller_frame == 0) {
+            plc_set_error(err, err_size, "list predicate needs a caller frame");
+            return 0;
+        }
+        if (argc != 2) {
+            plc_set_error(err, err_size, "list predicate expects two arguments");
+            return 0;
+        }
+        list_id = (int)args[0];
+        threshold = args[1];
+        if (!plc_list_valid(heap_frame, list_id, err, err_size)) {
+            return 0;
+        }
+        if (strcmp(name, "list_select_greater") == 0) {
+            out_list = plc_new_list(heap_frame, err, err_size);
+            if (out_list < 0) {
+                return 0;
+            }
+            for (i = 0; i < heap_frame->list_sizes[list_id]; ++i) {
+                if (heap_frame->lists[list_id][i] > threshold
+                        && !plc_list_append(heap_frame, out_list,
+                            heap_frame->lists[list_id][i],
+                            err, err_size)) {
+                    return 0;
+                }
+            }
+            out->count = 1;
+            out->value[0] = (double)out_list;
+            return 1;
+        }
+        count_value = 0;
+        ok = strcmp(name, "list_forall_greater") == 0 ? 1 : 0;
+        for (i = 0; i < heap_frame->list_sizes[list_id]; ++i) {
+            if (fabs(heap_frame->lists[list_id][i] - threshold)
+                    < 0.0000001) {
+                ++count_value;
+            }
+            if (strcmp(name, "list_exists_equal") == 0
+                    && fabs(heap_frame->lists[list_id][i] - threshold)
+                        < 0.0000001) {
+                ok = 1;
+            }
+            if (strcmp(name, "list_forall_greater") == 0
+                    && !(heap_frame->lists[list_id][i] > threshold)) {
+                ok = 0;
+            }
+        }
+        out->count = 1;
+        if (strcmp(name, "list_count_equal") == 0) {
+            out->value[0] = (double)count_value;
+        } else {
+            out->value[0] = (double)ok;
+        }
+        return 1;
+    }
+    if (strcmp(name, "list_zip_pairs") == 0
+            || strcmp(name, "list_pair") == 0) {
+        int size;
+
+        if (caller_frame == 0) {
+            plc_set_error(err, err_size, "list pair operation needs a frame");
+            return 0;
+        }
+        if (argc != 2) {
+            plc_set_error(err, err_size,
+                "list pair operation expects two arguments");
+            return 0;
+        }
+        list_id = (int)args[0];
+        other_list = (int)args[1];
+        if (!plc_list_valid(heap_frame, list_id, err, err_size)
+                || !plc_list_valid(heap_frame, other_list, err, err_size)) {
+            return 0;
+        }
+        if (strcmp(name, "list_pair") == 0) {
+            if (heap_frame->pair_count >= PLC_MAX_PAIRS) {
+                plc_set_error(err, err_size, "too many pairs");
+                return 0;
+            }
+            pair_id = heap_frame->pair_count;
+            heap_frame->pair_left[pair_id] = (double)list_id;
+            heap_frame->pair_right[pair_id] = (double)other_list;
+            ++heap_frame->pair_count;
+            out->count = 1;
+            out->value[0] = (double)pair_id;
+            return 1;
+        }
+        size = heap_frame->list_sizes[list_id] < heap_frame->list_sizes[other_list]
+            ? heap_frame->list_sizes[list_id] : heap_frame->list_sizes[other_list];
+        out_list = plc_new_list(heap_frame, err, err_size);
+        if (out_list < 0) {
+            return 0;
+        }
+        for (i = 0; i < size; ++i) {
+            if (heap_frame->pair_count >= PLC_MAX_PAIRS) {
+                plc_set_error(err, err_size, "too many pairs");
+                return 0;
+            }
+            pair_id = heap_frame->pair_count;
+            heap_frame->pair_left[pair_id] = heap_frame->lists[list_id][i];
+            heap_frame->pair_right[pair_id] = heap_frame->lists[other_list][i];
+            ++heap_frame->pair_count;
+            if (!plc_list_append(heap_frame, out_list, (double)pair_id,
+                    err, err_size)) {
+                return 0;
+            }
+        }
+        out->count = 1;
+        out->value[0] = (double)out_list;
+        return 1;
+    }
     if (strcmp(name, "pair") == 0) {
         if (caller_frame == 0) {
             plc_set_error(err, err_size, "pair needs a caller frame");
@@ -780,6 +1257,34 @@ int plc_call_proc(const PLC_PROGRAM *program, PLC_FRAME *caller_frame,
         }
         out->count = 1;
         out->value[0] = (double)count;
+        return 1;
+    }
+    if (strcmp(name, "pair_left_list_len") == 0
+            || strcmp(name, "pair_right_list_len") == 0) {
+        double list_value;
+
+        if (caller_frame == 0) {
+            plc_set_error(err, err_size, "pair list access needs a frame");
+            return 0;
+        }
+        if (argc != 1) {
+            plc_set_error(err, err_size, "pair list access expects one argument");
+            return 0;
+        }
+        pair_id = (int)args[0];
+        if (pair_id < 0 || pair_id >= heap_frame->pair_count) {
+            plc_set_error(err, err_size, "bad pair id");
+            return 0;
+        }
+        list_value = strcmp(name, "pair_left_list_len") == 0
+            ? heap_frame->pair_left[pair_id]
+            : heap_frame->pair_right[pair_id];
+        list_id = (int)list_value;
+        if (!plc_list_valid(heap_frame, list_id, err, err_size)) {
+            return 0;
+        }
+        out->count = 1;
+        out->value[0] = (double)heap_frame->list_sizes[list_id];
         return 1;
     }
     if (strcmp(name, "set_new") == 0) {
@@ -1005,6 +1510,105 @@ int plc_call_proc(const PLC_PROGRAM *program, PLC_FRAME *caller_frame,
         out->value[0] = (double)found;
         return 1;
     }
+    if (strcmp(name, "relation_select_domain") == 0
+            || strcmp(name, "relation_select_range") == 0) {
+        if (caller_frame == 0) {
+            plc_set_error(err, err_size,
+                "relation selection needs a frame");
+            return 0;
+        }
+        if (argc != 2) {
+            plc_set_error(err, err_size,
+                "relation selection expects two arguments");
+            return 0;
+        }
+        list_id = (int)args[0];
+        if (!plc_list_valid(heap_frame, list_id, err, err_size)) {
+            return 0;
+        }
+        out_list = plc_new_list(heap_frame, err, err_size);
+        if (out_list < 0) {
+            return 0;
+        }
+        for (i = 0; i < heap_frame->list_sizes[list_id]; ++i) {
+            pair_id = (int)heap_frame->lists[list_id][i];
+            if (pair_id < 0 || pair_id >= heap_frame->pair_count) {
+                plc_set_error(err, err_size, "bad pair id in relation");
+                return 0;
+            }
+            if (((strcmp(name, "relation_select_domain") == 0
+                        && fabs(heap_frame->pair_left[pair_id] - args[1])
+                            < 0.0000001)
+                    || (strcmp(name, "relation_select_range") == 0
+                        && fabs(heap_frame->pair_right[pair_id] - args[1])
+                            < 0.0000001))
+                    && !plc_list_append(heap_frame, out_list,
+                        (double)pair_id, err, err_size)) {
+                return 0;
+            }
+        }
+        out->count = 1;
+        out->value[0] = (double)out_list;
+        return 1;
+    }
+    if (strcmp(name, "relation_exists_range_equal") == 0
+            || strcmp(name, "relation_forall_domain_greater") == 0
+            || strcmp(name, "relation_signature") == 0) {
+        int predicate_ok;
+
+        if (caller_frame == 0) {
+            plc_set_error(err, err_size, "relation predicate needs a frame");
+            return 0;
+        }
+        if ((strcmp(name, "relation_signature") == 0 && argc != 1)
+                || (strcmp(name, "relation_signature") != 0 && argc != 2)) {
+            plc_set_error(err, err_size,
+                "relation predicate has bad argument count");
+            return 0;
+        }
+        list_id = (int)args[0];
+        if (!plc_list_valid(heap_frame, list_id, err, err_size)) {
+            return 0;
+        }
+        predicate_ok = strcmp(name, "relation_forall_domain_greater") == 0
+            ? 1 : 0;
+        if (strcmp(name, "relation_signature") == 0) {
+            int signature;
+
+            signature = 23 + heap_frame->list_sizes[list_id] * 37;
+            for (i = 0; i < heap_frame->list_sizes[list_id]; ++i) {
+                pair_id = (int)heap_frame->lists[list_id][i];
+                if (pair_id < 0 || pair_id >= heap_frame->pair_count) {
+                    plc_set_error(err, err_size, "bad pair id in relation");
+                    return 0;
+                }
+                signature = (signature * 31
+                    + (int)heap_frame->pair_left[pair_id] * 7
+                    + (int)heap_frame->pair_right[pair_id] * 11) % 32767;
+            }
+            out->count = 1;
+            out->value[0] = (double)signature;
+            return 1;
+        }
+        for (i = 0; i < heap_frame->list_sizes[list_id]; ++i) {
+            pair_id = (int)heap_frame->lists[list_id][i];
+            if (pair_id < 0 || pair_id >= heap_frame->pair_count) {
+                plc_set_error(err, err_size, "bad pair id in relation");
+                return 0;
+            }
+            if (strcmp(name, "relation_exists_range_equal") == 0
+                    && fabs(heap_frame->pair_right[pair_id] - args[1])
+                        < 0.0000001) {
+                predicate_ok = 1;
+            } else if (strcmp(name, "relation_forall_domain_greater") == 0
+                    && heap_frame->pair_left[pair_id] <= args[1]) {
+                predicate_ok = 0;
+            }
+        }
+        out->count = 1;
+        out->value[0] = predicate_ok ? 1.0 : 0.0;
+        return 1;
+    }
     if (strcmp(name, "set_cartesian") == 0
             || strcmp(name, "relation_compose") == 0) {
         if (caller_frame == 0) {
@@ -1199,6 +1803,104 @@ int plc_call_proc(const PLC_PROGRAM *program, PLC_FRAME *caller_frame,
         }
         out->count = 1;
         out->value[0] = heap_frame->record_values[record_id][slot];
+        return 1;
+    }
+    if (strcmp(name, "record_set_path2") == 0
+            || strcmp(name, "record_get_path2") == 0
+            || strcmp(name, "record_has_path2") == 0) {
+        int key1;
+        int key2;
+        int child_id;
+        int slot;
+
+        if (caller_frame == 0) {
+            plc_set_error(err, err_size, "record path operation needs a frame");
+            return 0;
+        }
+        if ((strcmp(name, "record_set_path2") == 0 && argc != 4)
+                || (strcmp(name, "record_set_path2") != 0 && argc != 3)) {
+            plc_set_error(err, err_size,
+                "bad record path operation argument count");
+            return 0;
+        }
+        record_id = (int)args[0];
+        key1 = (int)args[1];
+        key2 = (int)args[2];
+        if (!plc_record_valid(heap_frame, record_id, err, err_size)) {
+            return 0;
+        }
+        slot = plc_record_find_key(heap_frame, record_id, key1);
+        if (slot < 0) {
+            if (strcmp(name, "record_set_path2") != 0) {
+                out->count = 1;
+                out->value[0] = 0.0;
+                return 1;
+            }
+            child_id = plc_new_record(heap_frame, err, err_size);
+            if (child_id < 0
+                    || !plc_record_set_value(heap_frame, record_id, key1,
+                        (double)child_id, err, err_size)) {
+                return 0;
+            }
+        } else {
+            child_id = (int)heap_frame->record_values[record_id][slot];
+        }
+        if (!plc_record_valid(heap_frame, child_id, err, err_size)) {
+            return 0;
+        }
+        if (strcmp(name, "record_set_path2") == 0) {
+            if (!plc_record_set_value(heap_frame, child_id, key2,
+                    args[3], err, err_size)) {
+                return 0;
+            }
+            out->count = 1;
+            out->value[0] = (double)record_id;
+            return 1;
+        }
+        slot = plc_record_find_key(heap_frame, child_id, key2);
+        if (strcmp(name, "record_has_path2") == 0) {
+            out->count = 1;
+            out->value[0] = slot >= 0 ? 1.0 : 0.0;
+            return 1;
+        }
+        if (slot < 0) {
+            plc_set_error(err, err_size, "missing record path");
+            return 0;
+        }
+        out->count = 1;
+        out->value[0] = heap_frame->record_values[child_id][slot];
+        return 1;
+    }
+    if (strcmp(name, "record_shape_equal") == 0) {
+        int other_record;
+        int ok;
+
+        if (caller_frame == 0) {
+            plc_set_error(err, err_size, "record_shape_equal needs a frame");
+            return 0;
+        }
+        if (argc != 2) {
+            plc_set_error(err, err_size,
+                "record_shape_equal expects two arguments");
+            return 0;
+        }
+        record_id = (int)args[0];
+        other_record = (int)args[1];
+        if (!plc_record_valid(heap_frame, record_id, err, err_size)
+                || !plc_record_valid(heap_frame, other_record,
+                    err, err_size)) {
+            return 0;
+        }
+        ok = heap_frame->record_sizes[record_id]
+            == heap_frame->record_sizes[other_record];
+        for (i = 0; ok && i < heap_frame->record_sizes[record_id]; ++i) {
+            if (plc_record_find_key(heap_frame, other_record,
+                    heap_frame->record_keys[record_id][i]) < 0) {
+                ok = 0;
+            }
+        }
+        out->count = 1;
+        out->value[0] = ok ? 1.0 : 0.0;
         return 1;
     }
     if (strcmp(name, "complex") == 0) {
@@ -1885,9 +2587,53 @@ int plc_call_proc(const PLC_PROGRAM *program, PLC_FRAME *caller_frame,
         out->value[0] = args[0] * 10.0 + args[1];
         return 1;
     }
+    if (strcmp(name, "chess_piece_kind") == 0
+            || strcmp(name, "chess_piece_side") == 0) {
+        if (argc != 1) {
+            plc_set_error(err, err_size,
+                "chess piece access expects one argument");
+            return 0;
+        }
+        out->count = 1;
+        out->value[0] = strcmp(name, "chess_piece_kind") == 0
+            ? (double)plc_chess_piece_kind_code((int)args[0])
+            : (double)plc_chess_piece_side_code((int)args[0]);
+        return 1;
+    }
+    if (strcmp(name, "chess_pawn_promotes") == 0) {
+        if (argc != 3) {
+            plc_set_error(err, err_size,
+                "chess_pawn_promotes expects from, to and side");
+            return 0;
+        }
+        out->count = 1;
+        out->value[0] = plc_chess_model_pawn_promotion((int)args[0],
+            (int)args[1], (int)args[2]) ? 1.0 : 0.0;
+        return 1;
+    }
+    if (strcmp(name, "chess_en_passant_possible") == 0) {
+        if (argc != 5) {
+            plc_set_error(err, err_size,
+                "chess_en_passant_possible expects from, to, last_from, last_to and side");
+            return 0;
+        }
+        out->count = 1;
+        out->value[0] = plc_chess_model_en_passant((int)args[0],
+            (int)args[1], (int)args[2], (int)args[3],
+            (int)args[4]) ? 1.0 : 0.0;
+        return 1;
+    }
     if (strcmp(name, "chess_board_new") == 0
             || strcmp(name, "chess_board_place") == 0
-            || strcmp(name, "chess_board_piece") == 0) {
+            || strcmp(name, "chess_board_piece") == 0
+            || strcmp(name, "chess_board_move") == 0
+            || strcmp(name, "chess_apply_move") == 0
+            || strcmp(name, "chess_legal_move") == 0
+            || strcmp(name, "chess_legal_rook_move") == 0) {
+        int moving_piece;
+        int from_square;
+        int to_square;
+
         if (caller_frame == 0) {
             plc_set_error(err, err_size, "chess board needs a frame");
             return 0;
@@ -1920,6 +2666,57 @@ int plc_call_proc(const PLC_PROGRAM *program, PLC_FRAME *caller_frame,
             out->value[0] = (double)record_id;
             return 1;
         }
+        if (strcmp(name, "chess_board_move") == 0
+                || strcmp(name, "chess_apply_move") == 0
+                || strcmp(name, "chess_legal_move") == 0
+                || strcmp(name, "chess_legal_rook_move") == 0) {
+            int legal;
+            int enforce_safety;
+
+            if (argc != 3) {
+                plc_set_error(err, err_size,
+                    "chess board move expects board, from, to");
+                return 0;
+            }
+            record_id = (int)args[0];
+            from_square = (int)args[1];
+            to_square = (int)args[2];
+            if (!plc_chess_board_get_piece(heap_frame, record_id,
+                    from_square, &moving_piece, err, err_size)) {
+                return 0;
+            }
+            enforce_safety = strcmp(name, "chess_apply_move") == 0
+                || strcmp(name, "chess_legal_move") == 0;
+            if (!plc_chess_model_legal_move(heap_frame, record_id,
+                    from_square, to_square, enforce_safety, &legal,
+                    err, err_size)) {
+                return 0;
+            }
+            if (strcmp(name, "chess_legal_rook_move") == 0
+                    || strcmp(name, "chess_legal_move") == 0) {
+                if (strcmp(name, "chess_legal_rook_move") == 0
+                        && plc_chess_piece_kind_code(moving_piece) != 4) {
+                    legal = 0;
+                }
+                out->count = 1;
+                out->value[0] = legal ? 1.0 : 0.0;
+                return 1;
+            }
+            if (strcmp(name, "chess_apply_move") == 0) {
+                if (!plc_chess_model_apply_move(heap_frame, record_id,
+                        from_square, to_square, 1, err, err_size)) {
+                    return 0;
+                }
+            } else if (!plc_record_set_value(heap_frame, record_id, from_square,
+                    0.0, err, err_size)
+                    || !plc_record_set_value(heap_frame, record_id,
+                        to_square, (double)moving_piece, err, err_size)) {
+                return 0;
+            }
+            out->count = 1;
+            out->value[0] = (double)record_id;
+            return 1;
+        }
         if (argc != 2) {
             plc_set_error(err, err_size,
                 "chess_board_piece expects two arguments");
@@ -1930,6 +2727,136 @@ int plc_call_proc(const PLC_PROGRAM *program, PLC_FRAME *caller_frame,
         out->count = 1;
         out->value[0] = field_key >= 0
             ? heap_frame->record_values[record_id][field_key] : 0.0;
+        return 1;
+    }
+    if (strcmp(name, "chess_side_in_check") == 0
+            || strcmp(name, "chess_checkmate_simple") == 0
+            || strcmp(name, "chess_checkmate") == 0
+            || strcmp(name, "chess_material_score") == 0
+            || strcmp(name, "chess_best_capture_score") == 0
+            || strcmp(name, "chess_legal_move_count") == 0
+            || strcmp(name, "chess_position_signature") == 0
+            || strcmp(name, "chess_fen_signature") == 0
+            || strcmp(name, "chess_stalemate") == 0) {
+        int side;
+        int in_check;
+        int score;
+
+        if (caller_frame == 0) {
+            plc_set_error(err, err_size, "chess check needs a frame");
+            return 0;
+        }
+        if (strcmp(name, "chess_fen_signature") == 0) {
+            if (argc != 4) {
+                plc_set_error(err, err_size,
+                    "chess_fen_signature expects board, side, castling and ep-square");
+                return 0;
+            }
+            record_id = (int)args[0];
+            if (!plc_chess_model_fen_signature(heap_frame, record_id,
+                    (int)args[1], (int)args[2], (int)args[3],
+                    &score, err, err_size)) {
+                return 0;
+            }
+            out->count = 1;
+            out->value[0] = (double)score;
+            return 1;
+        }
+        if (strcmp(name, "chess_position_signature") == 0) {
+            if (argc != 1) {
+                plc_set_error(err, err_size,
+                    "chess_position_signature expects board");
+                return 0;
+            }
+            record_id = (int)args[0];
+            if (!plc_chess_model_position_signature(heap_frame, record_id,
+                    &score, err, err_size)) {
+                return 0;
+            }
+            out->count = 1;
+            out->value[0] = (double)score;
+            return 1;
+        }
+        if (argc != 2) {
+            plc_set_error(err, err_size,
+                "chess check expects board and side");
+            return 0;
+        }
+        record_id = (int)args[0];
+        side = (int)args[1];
+        if (strcmp(name, "chess_material_score") == 0) {
+            if (!plc_chess_model_material_score(heap_frame, record_id,
+                    side, &score, err, err_size)) {
+                return 0;
+            }
+            out->count = 1;
+            out->value[0] = (double)score;
+            return 1;
+        }
+        if (strcmp(name, "chess_best_capture_score") == 0) {
+            if (!plc_chess_model_best_capture_score(heap_frame, record_id,
+                    side, &score, err, err_size)) {
+                return 0;
+            }
+            out->count = 1;
+            out->value[0] = (double)score;
+            return 1;
+        }
+        if (strcmp(name, "chess_legal_move_count") == 0) {
+            if (!plc_chess_model_legal_move_count(heap_frame, record_id,
+                    side, &score, err, err_size)) {
+                return 0;
+            }
+            out->count = 1;
+            out->value[0] = (double)score;
+            return 1;
+        }
+        if (strcmp(name, "chess_checkmate_simple") == 0
+                || strcmp(name, "chess_checkmate") == 0) {
+            if (!plc_chess_model_checkmate(heap_frame, record_id, side,
+                    &in_check, err, err_size)) {
+                return 0;
+            }
+            out->count = 1;
+            out->value[0] = in_check ? 1.0 : 0.0;
+            return 1;
+        }
+        if (strcmp(name, "chess_stalemate") == 0) {
+            if (!plc_chess_model_stalemate(heap_frame, record_id, side,
+                    &in_check, err, err_size)) {
+                return 0;
+            }
+            out->count = 1;
+            out->value[0] = in_check ? 1.0 : 0.0;
+            return 1;
+        }
+        if (!plc_chess_model_side_in_check(heap_frame, record_id, side,
+                &in_check, err, err_size)) {
+            return 0;
+        }
+        out->count = 1;
+        out->value[0] = in_check ? 1.0 : 0.0;
+        return 1;
+    }
+    if (strcmp(name, "chess_can_castle_path") == 0) {
+        int can_castle;
+
+        if (caller_frame == 0) {
+            plc_set_error(err, err_size, "chess castle check needs a frame");
+            return 0;
+        }
+        if (argc != 4) {
+            plc_set_error(err, err_size,
+                "chess_can_castle_path expects board, side, king and rook");
+            return 0;
+        }
+        if (!plc_chess_model_can_castle_path(heap_frame, (int)args[0],
+                (int)args[1], (int)args[2], (int)args[3],
+                &can_castle, err, err_size)) {
+            return 0;
+        }
+        out->count = 1;
+        out->value[0] = can_castle ? 1.0 : 0.0;
         return 1;
     }
     if (strcmp(name, "chess_rook_attack_map") == 0
@@ -1991,6 +2918,36 @@ int plc_call_proc(const PLC_PROGRAM *program, PLC_FRAME *caller_frame,
             (double)square) ? 1.0 : 0.0;
         return 1;
     }
+    native_proc = plc_find_native(program, name);
+    if (native_proc != 0) {
+        PLANKAC_RESULT native_result;
+
+        if (argc != native_proc->argc) {
+            sprintf(err, "%s expects %d argument(s), got %d",
+                native_proc->name, native_proc->argc, argc);
+            return 0;
+        }
+        memset(&native_result, 0, sizeof(native_result));
+        if (!native_proc->fn(native_proc->user_data, args, argc,
+                &native_result, err, err_size)) {
+            if (err != 0 && err_size > 0 && err[0] == '\0') {
+                plc_set_error(err, err_size, "native function failed");
+            }
+            return 0;
+        }
+        if (native_result.count != native_proc->results
+                || native_result.count < 0
+                || native_result.count > PLANKAC_MAX_RESULTS) {
+            plc_set_error(err, err_size,
+                "native function returned bad result count");
+            return 0;
+        }
+        out->count = native_result.count;
+        for (i = 0; i < native_result.count; ++i) {
+            out->value[i] = native_result.value[i];
+        }
+        return 1;
+    }
     proc = plc_find_proc(program, name);
     if (proc == 0) {
         sprintf(err, "unknown procedure: %s", name);
@@ -2036,6 +2993,37 @@ void plc_fill_proc_info(const PLC_PROC *proc, PLANKAC_PROC_INFO *info)
     info->argc = proc->argc;
     info->results = proc->results;
     info->statements = proc->stmt_count;
+    for (i = 0; i < PLANKAC_MAX_ARGS; ++i) {
+        info->arg_types[i][0] = '\0';
+        if (i < proc->argc) {
+            strncpy(info->arg_types[i], proc->arg_types[i],
+                PLANKAC_MAX_TYPE_TEXT - 1);
+            info->arg_types[i][PLANKAC_MAX_TYPE_TEXT - 1] = '\0';
+        }
+    }
+    for (i = 0; i < PLANKAC_MAX_RESULTS; ++i) {
+        info->result_types[i][0] = '\0';
+        if (i < proc->results) {
+            strncpy(info->result_types[i], proc->result_types[i],
+                PLANKAC_MAX_TYPE_TEXT - 1);
+            info->result_types[i][PLANKAC_MAX_TYPE_TEXT - 1] = '\0';
+        }
+    }
+}
+
+void plc_fill_native_info(const PLC_NATIVE_PROC *proc,
+    PLANKAC_NATIVE_INFO *info)
+{
+    int i;
+
+    if (proc == 0 || info == 0) {
+        return;
+    }
+    memset(info, 0, sizeof(*info));
+    strncpy(info->name, proc->name, sizeof(info->name) - 1);
+    info->name[sizeof(info->name) - 1] = '\0';
+    info->argc = proc->argc;
+    info->results = proc->results;
     for (i = 0; i < PLANKAC_MAX_ARGS; ++i) {
         info->arg_types[i][0] = '\0';
         if (i < proc->argc) {
@@ -2184,6 +3172,59 @@ int plankac_context_find_proc(PLANKAC_CONTEXT *ctx, const char *name,
         return PLANKAC_ERR;
     }
     plc_fill_proc_info(proc, info);
+    return PLANKAC_OK;
+}
+
+int plankac_context_register_native(PLANKAC_CONTEXT *ctx, const char *name,
+    int argc, int results, const char *const *arg_types,
+    const char *const *result_types, PLANKAC_NATIVE_FN fn, void *user_data,
+    char *err, unsigned err_size)
+{
+    if (ctx == 0) {
+        plc_copy_error(err, err_size, "missing PlankaC context");
+        return PLANKAC_ERR;
+    }
+    if (!plc_register_native(&ctx->program, name, argc, results,
+            arg_types, result_types, fn, user_data, err, err_size)) {
+        return PLANKAC_ERR;
+    }
+    return PLANKAC_OK;
+}
+
+int plankac_context_native_count(PLANKAC_CONTEXT *ctx)
+{
+    if (ctx == 0) {
+        return 0;
+    }
+    return ctx->program.native_count;
+}
+
+int plankac_context_get_native(PLANKAC_CONTEXT *ctx, int index,
+    PLANKAC_NATIVE_INFO *info)
+{
+    if (ctx == 0 || info == 0) {
+        return PLANKAC_ERR;
+    }
+    if (index < 0 || index >= ctx->program.native_count) {
+        return PLANKAC_ERR;
+    }
+    plc_fill_native_info(&ctx->program.natives[index], info);
+    return PLANKAC_OK;
+}
+
+int plankac_context_find_native(PLANKAC_CONTEXT *ctx, const char *name,
+    PLANKAC_NATIVE_INFO *info)
+{
+    const PLC_NATIVE_PROC *proc;
+
+    if (ctx == 0 || info == 0) {
+        return PLANKAC_ERR;
+    }
+    proc = plc_find_native(&ctx->program, name);
+    if (proc == 0) {
+        return PLANKAC_ERR;
+    }
+    plc_fill_native_info(proc, info);
     return PLANKAC_OK;
 }
 
@@ -2371,6 +3412,42 @@ int plankac_context_write_asm8086_runtime(PLANKAC_CONTEXT *ctx,
     return PLANKAC_OK;
 }
 
+int plankac_context_write_ir(PLANKAC_CONTEXT *ctx,
+    const char *path, char *err, unsigned err_size)
+{
+    if (ctx == 0 || !ctx->loaded) {
+        plc_copy_error(err, err_size, "PlankaC context is not loaded");
+        return PLANKAC_ERR;
+    }
+    if (path == 0 || path[0] == '\0') {
+        plc_copy_error(err, err_size, "missing IR output path");
+        return PLANKAC_ERR;
+    }
+    if (!plc_emit_ir(&ctx->program, path, err, err_size)) {
+        return PLANKAC_ERR;
+    }
+    plc_copy_error(err, err_size, "");
+    return PLANKAC_OK;
+}
+
+int plankac_context_write_lowering_report(PLANKAC_CONTEXT *ctx,
+    const char *path, char *err, unsigned err_size)
+{
+    if (ctx == 0 || !ctx->loaded) {
+        plc_copy_error(err, err_size, "PlankaC context is not loaded");
+        return PLANKAC_ERR;
+    }
+    if (path == 0 || path[0] == '\0') {
+        plc_copy_error(err, err_size, "missing lowering output path");
+        return PLANKAC_ERR;
+    }
+    if (!plc_emit_lowering_report(&ctx->program, path, err, err_size)) {
+        return PLANKAC_ERR;
+    }
+    plc_copy_error(err, err_size, "");
+    return PLANKAC_OK;
+}
+
 int plankac_reload(char *err, unsigned err_size)
 {
     char local_err[PLC_MAX_LINE];
@@ -2454,6 +3531,49 @@ int plankac_find_proc(const char *name, PLANKAC_PROC_INFO *info)
         return PLANKAC_ERR;
     }
     plc_fill_proc_info(proc, info);
+    return PLANKAC_OK;
+}
+
+int plankac_register_native(const char *name, int argc, int results,
+    const char *const *arg_types, const char *const *result_types,
+    PLANKAC_NATIVE_FN fn, void *user_data, char *err, unsigned err_size)
+{
+    if (!plc_register_native(&g_plankac_program, name, argc, results,
+            arg_types, result_types, fn, user_data, err, err_size)) {
+        return PLANKAC_ERR;
+    }
+    return PLANKAC_OK;
+}
+
+int plankac_native_count(void)
+{
+    return g_plankac_program.native_count;
+}
+
+int plankac_get_native(int index, PLANKAC_NATIVE_INFO *info)
+{
+    if (info == 0) {
+        return PLANKAC_ERR;
+    }
+    if (index < 0 || index >= g_plankac_program.native_count) {
+        return PLANKAC_ERR;
+    }
+    plc_fill_native_info(&g_plankac_program.natives[index], info);
+    return PLANKAC_OK;
+}
+
+int plankac_find_native(const char *name, PLANKAC_NATIVE_INFO *info)
+{
+    const PLC_NATIVE_PROC *proc;
+
+    if (info == 0) {
+        return PLANKAC_ERR;
+    }
+    proc = plc_find_native(&g_plankac_program, name);
+    if (proc == 0) {
+        return PLANKAC_ERR;
+    }
+    plc_fill_native_info(proc, info);
     return PLANKAC_OK;
 }
 
@@ -2584,6 +3704,32 @@ int plankac_write_asm8086_runtime(const char *path,
         return PLANKAC_ERR;
     }
     if (!plc_emit_asm8086_runtime(&g_plankac_program, path, err, err_size)) {
+        return PLANKAC_ERR;
+    }
+    plc_copy_error(err, err_size, "");
+    return PLANKAC_OK;
+}
+
+int plankac_write_ir(const char *path, char *err, unsigned err_size)
+{
+    if (!plankac_load(err, err_size)) {
+        return PLANKAC_ERR;
+    }
+    if (!plc_emit_ir(&g_plankac_program, path, err, err_size)) {
+        return PLANKAC_ERR;
+    }
+    plc_copy_error(err, err_size, "");
+    return PLANKAC_OK;
+}
+
+int plankac_write_lowering_report(const char *path,
+    char *err, unsigned err_size)
+{
+    if (!plankac_load(err, err_size)) {
+        return PLANKAC_ERR;
+    }
+    if (!plc_emit_lowering_report(&g_plankac_program, path,
+            err, err_size)) {
         return PLANKAC_ERR;
     }
     plc_copy_error(err, err_size, "");

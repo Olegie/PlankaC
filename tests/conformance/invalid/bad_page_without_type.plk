@@ -1,0 +1,8 @@
+P1 bad_page_without_type () => R0[:32.16]
+1[:32.16] => Z1[:32.16]
+2[:32.16] => Z2[:32.16]
+PAGE
+V|1   2   0
+|A + B => R
+ENDPAGE
+END

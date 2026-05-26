@@ -18,7 +18,7 @@ Minimal command-line demonstration:
 graphics/c/plankahost_demo.c
 ```
 
-The host layer is intentionally small. It owns the operating-system boundary:
+The host layer is intentionally narrow. It owns the operating-system boundary:
 window creation, timers, mouse and keyboard input, pixel buffers, and drawing
 to the screen. The application layer stays in `.plk`.
 

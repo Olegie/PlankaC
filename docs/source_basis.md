@@ -24,25 +24,29 @@ published descriptions of Zuse's language and later implementation work.
 2. Inputs use `V` variables.
 3. Intermediate values use `Z` variables.
 4. Results use `R` variables.
-5. Constants are written as typed values such as `2[:32.16]`.
+5. Constants are written as typed values such as `2[:32.16]` or through the
+   `C` bank with `CONST`.
 6. Every variable use carries a structure marker.
 7. Assignments are program equations with `=>`.
 8. Guarded equations use `condition => value => target`.
 9. Procedures are called by value.
 10. Procedures are non-recursive.
-11. Error cases are represented by result/status pairs, not exceptions.
+11. Arithmetic errors can be represented by result/status pairs; direct
+    division and modulo by zero fail execution.
 12. No modern host language is part of the `.plk` source.
 
 ## Scope
 
 The implemented profile includes calculator procedures, arithmetic,
 comparisons, scientific helpers, guarded division, memory operations,
-self-checks, indexed values, record fields, frame-local lists, loops,
-assertions, relation helpers, and chess-style movement predicates.
+self-checks, indexed values, the `C` bank, bit/fixed helpers, record fields,
+frame-local lists, loops, assertions, contracts, stop criteria, relation
+helpers, PAGE documents, typed IR, tagged value storage, and board/game chess
+procedures.
 
 Implementation coverage is tracked in `docs/plankalkuel_coverage.md`. That
-matrix is the boundary between supported PlankaC behavior, partial source
-modeling, and features kept as future work.
+matrix is the boundary between supported PlankaC behavior, source-profile
+modeling, and open engineering tasks.
 
 ## Type Markers / Typmarkierungen
 

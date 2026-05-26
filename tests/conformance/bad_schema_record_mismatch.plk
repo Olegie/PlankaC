@@ -1,0 +1,7 @@
+P1 bad_schema_record_mismatch () => R0[:32.0]
+record_new() => Z0[:Q32.0]
+list_new() => Z1[:L32.0]
+record_set(Z0[:Q32.0], 1[:32.0], 7[:32.0]) => Z0[:Q32.0]
+record_set(Z0[:Q32.0], 1[:32.0], Z1[:L32.0]) => Z0[:Q32.0]
+record_size(Z0[:Q32.0]) => R0[:32.0]
+END

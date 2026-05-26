@@ -224,6 +224,61 @@ P260 two_dimensional_swapped_rows_session
 P261 two_dimensional_aligned_cells_session
 ```
 
+## Core Language Closure
+
+```text
+P270 c_bank_session
+P271 c_array_session
+P272 multidim_array_session
+P273 bit_fixed_session
+P274 exception_session
+P275 stop_contract_session
+P276 predicate_select_session
+P277 list_pair_session
+P278 relation_select_session
+P279 record_path_session
+P280 chess_legal_move_session
+P281 chess_side_check_session
+P282 chess_board_move_session
+```
+
+## Page Tables, Predicate Syntax, And Board Search
+
+```text
+P290 page_table_session
+P291 predicate_syntax_session
+P292 chess_full_legal_session
+P293 chess_material_search_session
+P294 chess_checkmate_session
+P295 bit_native_storage_session
+```
+
+## Game-Level Chess Model
+
+```text
+P300 chess_legal_move_count_session
+P301 chess_promotion_session
+P302 chess_castle_path_session
+P303 chess_position_signature_session
+```
+
+## Relation Predicates And Schema Checks
+
+```text
+P320 relation_range_selection_session
+P321 relation_quantifier_session
+P322 relation_signature_session
+```
+
+## Complete Game-State Chess Checks
+
+```text
+P330 chess_en_passant_session
+P331 chess_stalemate_session
+P332 chess_fen_signature_session
+P333 chess_history_session
+```
+
 ## Self-Checks
 
 ```text

@@ -17,7 +17,8 @@
 #define PLC_MAX_RESULTS 8
 #define PLC_MAX_VARS 64
 #define PLC_MAX_DEPTH 64
-#define PLC_MAX_INDEX 32
+#define PLC_MAX_INDEX 256
+#define PLC_ARRAY_DIM 16
 #define PLC_MAX_FIELDS 32
 #define PLC_MAX_FIELD_NAME 64
 #define PLC_MAX_TYPE_TEXT 24
@@ -39,6 +40,27 @@
 #define PLC_TYPE_FAMILY_VEC3 7
 #define PLC_TYPE_FAMILY_MAT4 8
 #define PLC_TYPE_FAMILY_UNKNOWN 9
+#define PLC_MAX_VALUE_SHADOWS 512
+#define PLC_2D_MAX_ROWS 96
+#define PLC_2D_MAX_CELLS 64
+#define PLC_2D_MAX_CELL_TEXT 64
+#define PLC_VALUE_TAG_EMPTY 0
+#define PLC_VALUE_TAG_NUMERIC 1
+#define PLC_VALUE_TAG_BIT 2
+#define PLC_VALUE_TAG_FIXED 3
+#define PLC_VALUE_TAG_HANDLE 4
+#define PLC_VALUE_TAG_EXCEPTION 5
+#define PLC_IR_MAX_STMTS 4096
+#define PLC_IR_OP_EVAL 1
+#define PLC_IR_OP_CALL 2
+#define PLC_IR_OP_GUARD_EVAL 3
+#define PLC_IR_OP_GUARD_CALL 4
+#define PLC_IR_OP_LOOP 5
+#define PLC_IR_OP_ASSERT 6
+#define PLC_IR_OP_REQUIRE 7
+#define PLC_IR_OP_ENSURE 8
+#define PLC_IR_OP_STOPIF 9
+#define PLC_IR_OP_CONST 10
 
 typedef struct PLC_TYPE_SPEC {
     int family;
@@ -65,10 +87,87 @@ typedef struct PLC_PROC {
     int stmt_count;
 } PLC_PROC;
 
+typedef struct PLC_NATIVE_PROC {
+    char name[PLC_MAX_NAME];
+    int argc;
+    int results;
+    char arg_types[PLC_MAX_ARGS][PLC_MAX_TYPE_TEXT];
+    char result_types[PLC_MAX_RESULTS][PLC_MAX_TYPE_TEXT];
+    PLANKAC_NATIVE_FN fn;
+    void *user_data;
+} PLC_NATIVE_PROC;
+
+typedef struct PLC_TAGGED_VALUE {
+    int tag;
+    int family;
+    int bits;
+    int scale;
+    long raw;
+    int handle;
+    double number;
+} PLC_TAGGED_VALUE;
+
+typedef struct PLC_VALUE_SHADOW {
+    char bank;
+    int index;
+    int has_subscript;
+    int subscript;
+    int has_field;
+    char field[PLC_MAX_FIELD_NAME];
+    PLC_TAGGED_VALUE value;
+} PLC_VALUE_SHADOW;
+
+typedef struct PLC_IR_STMT {
+    int proc_number;
+    char proc_name[PLC_MAX_NAME];
+    int source_line;
+    int op;
+    int guard_family;
+    int value_family;
+    int target_family;
+    int argc;
+    int results;
+    char callee[PLC_MAX_NAME];
+    char guard[PLC_MAX_LINE];
+    char value[PLC_MAX_LINE];
+    char target[PLC_MAX_LINE];
+    char lowering[PLC_MAX_NAME];
+} PLC_IR_STMT;
+
+typedef struct PLC_IR_PROGRAM {
+    PLC_IR_STMT stmts[PLC_IR_MAX_STMTS];
+    int stmt_count;
+    int proc_count;
+    int source_count;
+} PLC_IR_PROGRAM;
+
+typedef struct PLC_2D_CELL_MODEL {
+    int row;
+    int col_start;
+    int col_end;
+    char text[PLC_2D_MAX_CELL_TEXT];
+} PLC_2D_CELL_MODEL;
+
+typedef struct PLC_2D_ROW_MODEL {
+    int kind;
+    int row;
+    int col;
+    int cell_count;
+    PLC_2D_CELL_MODEL cells[PLC_2D_MAX_CELLS];
+} PLC_2D_ROW_MODEL;
+
+typedef struct PLC_2D_DOCUMENT {
+    int row_count;
+    int expression_count;
+    PLC_2D_ROW_MODEL rows[PLC_2D_MAX_ROWS];
+} PLC_2D_DOCUMENT;
+
 typedef struct PLC_PROGRAM {
     PLC_PROC procs[PLC_MAX_PROCS];
     int proc_count;
     int source_count;
+    PLC_NATIVE_PROC natives[PLANKAC_MAX_NATIVE];
+    int native_count;
 } PLC_PROGRAM;
 
 struct PLANKAC_CONTEXT {
@@ -79,12 +178,15 @@ struct PLANKAC_CONTEXT {
 typedef struct PLC_FRAME {
     struct PLC_FRAME *heap_owner;
     double v[PLC_MAX_VARS];
+    double c[PLC_MAX_VARS];
     double z[PLC_MAX_VARS];
     double r[PLC_MAX_VARS];
     double va[PLC_MAX_VARS][PLC_MAX_INDEX];
+    double ca[PLC_MAX_VARS][PLC_MAX_INDEX];
     double za[PLC_MAX_VARS][PLC_MAX_INDEX];
     double ra[PLC_MAX_VARS][PLC_MAX_INDEX];
     double vf[PLC_MAX_VARS][PLC_MAX_FIELDS];
+    double cf[PLC_MAX_VARS][PLC_MAX_FIELDS];
     double zf[PLC_MAX_VARS][PLC_MAX_FIELDS];
     double rf[PLC_MAX_VARS][PLC_MAX_FIELDS];
     char field_names[PLC_MAX_FIELDS][PLC_MAX_FIELD_NAME];
@@ -106,6 +208,11 @@ typedef struct PLC_FRAME {
     int vec3_count;
     double mat4_values[PLC_MAX_MAT4][16];
     int mat4_count;
+    PLC_VALUE_SHADOW value_shadows[PLC_MAX_VALUE_SHADOWS];
+    int value_shadow_count;
+    int exception_raised;
+    int exception_code;
+    int stopped;
 } PLC_FRAME;
 
 typedef struct PLC_VALUES {
@@ -118,8 +225,11 @@ typedef struct PLC_REF {
     int index;
     int has_subscript;
     int subscript;
+    int subscript_count;
+    int subscripts[2];
     int has_field;
     char field[PLC_MAX_FIELD_NAME];
+    char type_marker[PLC_MAX_TYPE_TEXT];
 } PLC_REF;
 
 typedef struct PLC_PARSER {
@@ -153,6 +263,12 @@ int plc_count_refs(const char *first, const char *last, char bank);
 int plc_parse_header(const char *line, PLC_PROC *proc,
     char *err, unsigned err_size);
 const PLC_PROC *plc_find_proc(const PLC_PROGRAM *program, const char *name);
+const PLC_NATIVE_PROC *plc_find_native(const PLC_PROGRAM *program,
+    const char *name);
+int plc_register_native(PLC_PROGRAM *program, const char *name,
+    int argc, int results, const char *const *arg_types,
+    const char *const *result_types, PLANKAC_NATIVE_FN fn, void *user_data,
+    char *err, unsigned err_size);
 int plc_load_sources(PLC_PROGRAM *program, const char *const *sources,
     char *err, unsigned err_size);
 int plc_load_program(PLC_PROGRAM *program, char *err, unsigned err_size);
@@ -171,6 +287,8 @@ int plc_eval_args_text(const PLC_PROGRAM *program, PLC_FRAME *frame,
 int plc_eval_value_text(const PLC_PROGRAM *program, PLC_FRAME *frame,
     int depth, const char *text, PLC_VALUES *out,
     char *err, unsigned err_size);
+int plc_assign_const_text(PLC_FRAME *frame, const char *text,
+    double value, char *err, unsigned err_size);
 int plc_assign_targets(PLC_FRAME *frame, const char *text,
     const PLC_VALUES *values, char *err, unsigned err_size);
 int plc_split_arrows(const char *text, char parts[][PLC_MAX_LINE],
@@ -185,7 +303,77 @@ const char *plc_type_family_name(int family);
 int plc_expand_2d_statement(const char *expr_row, const char *index_row,
     const char *type_row, char *out, unsigned out_size,
     char *err, unsigned err_size);
+int plc_expand_2d_page(char rows[][PLC_MAX_LINE], int row_count,
+    char statements[][PLC_MAX_LINE], int *statement_count,
+    int max_statements, char *err, unsigned err_size);
+int plc_validate_2d_document(char rows[][PLC_MAX_LINE], int row_count,
+    char *err, unsigned err_size);
+int plc_build_2d_document(char rows[][PLC_MAX_LINE], int row_count,
+    PLC_2D_DOCUMENT *document, char *err, unsigned err_size);
 int plc_analyze_program(const PLC_PROGRAM *program,
+    char *err, unsigned err_size);
+int plc_analyze_structural_schemas(const PLC_PROGRAM *program,
+    char *err, unsigned err_size);
+
+void plc_tagged_from_double(PLC_TAGGED_VALUE *out, double value,
+    const char *type_marker);
+double plc_tagged_to_double(const PLC_TAGGED_VALUE *value);
+const char *plc_value_tag_name(int tag);
+int plc_frame_store_tagged(PLC_FRAME *frame, const PLC_REF *ref,
+    double value, const char *type_marker, char *err, unsigned err_size);
+int plc_frame_load_tagged(const PLC_FRAME *frame, const PLC_REF *ref,
+    PLC_TAGGED_VALUE *out);
+
+int plc_ir_build_program(const PLC_PROGRAM *program, PLC_IR_PROGRAM *ir,
+    char *err, unsigned err_size);
+int plc_ir_validate_program(const PLC_IR_PROGRAM *ir,
+    char *err, unsigned err_size);
+int plc_emit_ir(const PLC_PROGRAM *program, const char *path,
+    char *err, unsigned err_size);
+int plc_emit_lowering_report(const PLC_PROGRAM *program, const char *path,
+    char *err, unsigned err_size);
+
+unsigned long plc_bit_pack4(int a, int b, int c, int d);
+int plc_bit_get_word(unsigned long word, int index);
+long plc_fixed_raw_from_double(double value, int scale);
+double plc_fixed_double_from_raw(long raw, int scale);
+long plc_fixed_raw_add(long left, long right);
+long plc_fixed_raw_mul(long left, long right, int scale);
+int plc_fixed_raw_div_checked(long left, long right, int scale, long *out);
+double plc_fixed_quantize_bits(double value, int scale);
+double plc_fixed_add_bits(double left, double right, int scale);
+double plc_fixed_mul_bits(double left, double right, int scale);
+int plc_fixed_div_bits(double left, double right, int scale, double *out);
+
+int plc_chess_model_legal_move(PLC_FRAME *frame, int board_id,
+    int from_square, int to_square, int enforce_king_safety,
+    int *legal, char *err, unsigned err_size);
+int plc_chess_model_apply_move(PLC_FRAME *frame, int board_id,
+    int from_square, int to_square, int enforce_king_safety,
+    char *err, unsigned err_size);
+int plc_chess_model_side_in_check(PLC_FRAME *frame, int board_id, int side,
+    int *in_check, char *err, unsigned err_size);
+int plc_chess_model_checkmate(PLC_FRAME *frame, int board_id, int side,
+    int *is_mate, char *err, unsigned err_size);
+int plc_chess_model_material_score(PLC_FRAME *frame, int board_id, int side,
+    int *score, char *err, unsigned err_size);
+int plc_chess_model_best_capture_score(PLC_FRAME *frame, int board_id,
+    int side, int *score, char *err, unsigned err_size);
+int plc_chess_model_legal_move_count(PLC_FRAME *frame, int board_id,
+    int side, int *count, char *err, unsigned err_size);
+int plc_chess_model_pawn_promotion(int from_square, int to_square,
+    int side);
+int plc_chess_model_can_castle_path(PLC_FRAME *frame, int board_id,
+    int side, int king_from, int rook_from, int *can_castle,
+    char *err, unsigned err_size);
+int plc_chess_model_position_signature(PLC_FRAME *frame, int board_id,
+    int *signature, char *err, unsigned err_size);
+int plc_chess_model_stalemate(PLC_FRAME *frame, int board_id, int side,
+    int *is_stalemate, char *err, unsigned err_size);
+int plc_chess_model_en_passant(int from_square, int to_square,
+    int last_from, int last_to, int side);
+int plc_chess_model_fen_signature(PLC_FRAME *frame, int board_id,
+    int side, int castling, int ep_square, int *signature,
     char *err, unsigned err_size);
 
 int plc_emit_bytecode(const PLC_PROGRAM *program, const char *path,
@@ -208,5 +396,7 @@ int plc_call_proc(const PLC_PROGRAM *program, PLC_FRAME *caller_frame,
 void plc_format_value(double value, char *out);
 void plc_copy_error(char *out, unsigned out_size, const char *text);
 void plc_fill_proc_info(const PLC_PROC *proc, PLANKAC_PROC_INFO *info);
+void plc_fill_native_info(const PLC_NATIVE_PROC *proc,
+    PLANKAC_NATIVE_INFO *info);
 
 #endif

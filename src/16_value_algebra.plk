@@ -1,4 +1,4 @@
-# Historical value algebra profile for compound handles.
+# Value algebra profile for compound handles.
 
 P230 list_equal_session () => R0[:1.1]
 list_new() => Z1[:L32.0]

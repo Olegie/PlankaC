@@ -1,0 +1,7 @@
+P1 bad_schema_list_mismatch () => R0[:32.0]
+list_new() => Z0[:L32.0]
+record_new() => Z1[:Q32.0]
+list_push(Z0[:L32.0], 1[:32.0]) => Z0[:L32.0]
+list_push(Z0[:L32.0], Z1[:Q32.0]) => Z0[:L32.0]
+list_len(Z0[:L32.0]) => R0[:32.0]
+END

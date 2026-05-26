@@ -1,0 +1,33 @@
+# Relation predicate and schema sessions.
+
+P320 relation_range_selection_session () => R0[:1.1]
+list_new() => Z0[:L32.0]
+pair(1[:32.0], 7[:32.0]) => Z1[:P32.0]
+pair(2[:32.0], 7[:32.0]) => Z2[:P32.0]
+pair(3[:32.0], 8[:32.0]) => Z3[:P32.0]
+list_push(Z0[:L32.0], Z1[:P32.0]) => Z0[:L32.0]
+list_push(Z0[:L32.0], Z2[:P32.0]) => Z0[:L32.0]
+list_push(Z0[:L32.0], Z3[:P32.0]) => Z0[:L32.0]
+relation_select_range(Z0[:L32.0], 7[:32.0]) => Z4[:L32.0]
+set_size(Z4[:L32.0]) => Z5[:32.0]
+(Z5[:32.0] = 2[:32.0]) => R0[:1.1]
+END
+
+P321 relation_quantifier_session () => R0[:1.1]
+list_new() => Z0[:L32.0]
+pair(3[:32.0], 9[:32.0]) => Z1[:P32.0]
+pair(4[:32.0], 10[:32.0]) => Z2[:P32.0]
+list_push(Z0[:L32.0], Z1[:P32.0]) => Z0[:L32.0]
+list_push(Z0[:L32.0], Z2[:P32.0]) => Z0[:L32.0]
+relation_exists_range_equal(Z0[:L32.0], 10[:32.0]) => Z3[:1.1]
+relation_forall_domain_greater(Z0[:L32.0], 2[:32.0]) => Z4[:1.1]
+(Z3[:1.1] & Z4[:1.1]) => R0[:1.1]
+END
+
+P322 relation_signature_session () => R0[:1.1]
+list_new() => Z0[:L32.0]
+pair(5[:32.0], 11[:32.0]) => Z1[:P32.0]
+list_push(Z0[:L32.0], Z1[:P32.0]) => Z0[:L32.0]
+relation_signature(Z0[:L32.0]) => Z2[:32.0]
+(0[:32.0] < Z2[:32.0]) => R0[:1.1]
+END

@@ -1,0 +1,111 @@
+# Executable closure cases for the core Plankalkuel profile.
+
+P270 c_bank_session () => R0[:32.16]
+CONST C0[:32.16] = 41[:32.16]
+C0[:32.16] + 1[:32.16] => R0[:32.16]
+END
+
+P271 c_array_session () => R0[:32.16]
+CONST C2[1,2][:32.16] = 17[:32.16]
+C2[1][2][:32.16] + 1[:32.16] => R0[:32.16]
+END
+
+P272 multidim_array_session () => R0[:32.16]
+11[:32.16] => Z1[1,2][:32.16]
+31[:32.16] => Z1[2][3][:32.16]
+Z1[1,2][:32.16] + Z1[2,3][:32.16] => R0[:32.16]
+END
+
+P273 bit_fixed_session () => R0[:32.16]
+bits_pack4(1[:1.1], 0[:1.1], 1[:1.1], 1[:1.1]) => Z0[:32.0]
+fixed_mul(1.5[:32.16], 2[:32.16], 1[:32.0]) => Z1[:32.16]
+Z0[:32.0] + Z1[:32.16] => R0[:32.16]
+END
+
+P274 exception_session () => R0[:32.16], R1[:1.1]
+fixed_div_checked(10[:32.16], 0[:32.16], 4[:32.0]) => R0[:32.16], R1[:1.1]
+END
+
+P275 stop_contract_session () => R0[:32.16]
+REQUIRE (1[:1.1] = 1[:1.1])
+1[:32.16] => R0[:32.16]
+ENSURE (R0[:32.16] = 1[:32.16])
+STOPIF (1[:1.1] = 1[:1.1])
+99[:32.16] => R0[:32.16]
+END
+
+P276 predicate_select_session () => R0[:32.0]
+list_new() => Z0[:L32.0]
+list_push(Z0[:L32.0], 2[:32.0]) => Z0[:L32.0]
+list_push(Z0[:L32.0], 5[:32.0]) => Z0[:L32.0]
+list_push(Z0[:L32.0], 5[:32.0]) => Z0[:L32.0]
+list_push(Z0[:L32.0], 9[:32.0]) => Z0[:L32.0]
+list_select_greater(Z0[:L32.0], 4[:32.0]) => Z1[:L32.0]
+list_count_equal(Z0[:L32.0], 5[:32.0]) => Z2[:32.0]
+list_exists_equal(Z0[:L32.0], 9[:32.0]) => Z3[:1.1]
+list_forall_greater(Z1[:L32.0], 4[:32.0]) => Z4[:1.1]
+list_len(Z1[:L32.0]) + Z2[:32.0] + Z3[:1.1] + Z4[:1.1] => R0[:32.0]
+END
+
+P277 list_pair_session () => R0[:32.0]
+list_new() => Z0[:L32.0]
+list_push(Z0[:L32.0], 1[:32.0]) => Z0[:L32.0]
+list_push(Z0[:L32.0], 2[:32.0]) => Z0[:L32.0]
+list_new() => Z1[:L32.0]
+list_push(Z1[:L32.0], 7[:32.0]) => Z1[:L32.0]
+list_push(Z1[:L32.0], 8[:32.0]) => Z1[:L32.0]
+list_push(Z1[:L32.0], 9[:32.0]) => Z1[:L32.0]
+list_zip_pairs(Z0[:L32.0], Z1[:L32.0]) => Z2[:L32.0]
+list_pair(Z0[:L32.0], Z1[:L32.0]) => Z3[:P32.0]
+list_len(Z2[:L32.0]) + pair_left_list_len(Z3[:P32.0]) + pair_right_list_len(Z3[:P32.0]) => R0[:32.0]
+END
+
+P278 relation_select_session () => R0[:32.0]
+list_new() => Z0[:L32.0]
+pair(1[:32.0], 5[:32.0]) => Z1[:P32.0]
+list_push(Z0[:L32.0], Z1[:P32.0]) => Z0[:L32.0]
+pair(1[:32.0], 6[:32.0]) => Z2[:P32.0]
+list_push(Z0[:L32.0], Z2[:P32.0]) => Z0[:L32.0]
+pair(2[:32.0], 7[:32.0]) => Z3[:P32.0]
+list_push(Z0[:L32.0], Z3[:P32.0]) => Z0[:L32.0]
+relation_select_domain(Z0[:L32.0], 1[:32.0]) => Z4[:L32.0]
+list_len(Z4[:L32.0]) => R0[:32.0]
+END
+
+P279 record_path_session () => R0[:32.0]
+record_new() => Z0[:Q32.0]
+record_set_path2(Z0[:Q32.0], 10[:32.0], 20[:32.0], 42[:32.0]) => Z0[:Q32.0]
+record_new() => Z1[:Q32.0]
+record_set_path2(Z1[:Q32.0], 10[:32.0], 30[:32.0], 7[:32.0]) => Z1[:Q32.0]
+record_get_path2(Z0[:Q32.0], 10[:32.0], 20[:32.0]) + record_has_path2(Z0[:Q32.0], 10[:32.0], 20[:32.0]) + record_shape_equal(Z0[:Q32.0], Z1[:Q32.0]) => R0[:32.0]
+END
+
+P280 chess_legal_move_session () => R0[:1.1]
+chess_board_new() => Z0[:Q32.0]
+chess_square(1[:32.0], 1[:32.0]) => Z1[:32.0]
+chess_square(1[:32.0], 8[:32.0]) => Z2[:32.0]
+chess_piece(4[:32.0], 1[:32.0]) => Z3[:32.0]
+chess_board_place(Z0[:Q32.0], Z1[:32.0], Z3[:32.0]) => Z0[:Q32.0]
+chess_legal_rook_move(Z0[:Q32.0], Z1[:32.0], Z2[:32.0]) => R0[:1.1]
+END
+
+P281 chess_side_check_session () => R0[:1.1]
+chess_board_new() => Z0[:Q32.0]
+chess_square(5[:32.0], 1[:32.0]) => Z1[:32.0]
+chess_square(5[:32.0], 8[:32.0]) => Z2[:32.0]
+chess_piece(6[:32.0], 1[:32.0]) => Z3[:32.0]
+chess_piece(4[:32.0], 2[:32.0]) => Z4[:32.0]
+chess_board_place(Z0[:Q32.0], Z1[:32.0], Z3[:32.0]) => Z0[:Q32.0]
+chess_board_place(Z0[:Q32.0], Z2[:32.0], Z4[:32.0]) => Z0[:Q32.0]
+chess_side_in_check(Z0[:Q32.0], 1[:32.0]) => R0[:1.1]
+END
+
+P282 chess_board_move_session () => R0[:32.0]
+chess_board_new() => Z0[:Q32.0]
+chess_square(1[:32.0], 1[:32.0]) => Z1[:32.0]
+chess_square(1[:32.0], 2[:32.0]) => Z2[:32.0]
+chess_piece(4[:32.0], 1[:32.0]) => Z3[:32.0]
+chess_board_place(Z0[:Q32.0], Z1[:32.0], Z3[:32.0]) => Z0[:Q32.0]
+chess_board_move(Z0[:Q32.0], Z1[:32.0], Z2[:32.0]) => Z0[:Q32.0]
+chess_board_piece(Z0[:Q32.0], Z2[:32.0]) => R0[:32.0]
+END

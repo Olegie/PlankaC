@@ -1,7 +1,7 @@
 # PlankaMath memory plans.
 # Speicherplaene without hidden global state.
 #
-# A historical Plankalkuel plan is a function-like program. Therefore the
+# A Plankalkuel plan is a function-like program. Therefore the
 # calculator memory value is passed as V0 and returned as R0.
 
 P80 memory_clear () => R0[:32.16]

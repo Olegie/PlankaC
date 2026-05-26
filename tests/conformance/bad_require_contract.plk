@@ -1,0 +1,4 @@
+P1 bad_requirement () => R0[:32.16]
+REQUIRE (0[:1.1])
+1[:32.16] => R0[:32.16]
+END

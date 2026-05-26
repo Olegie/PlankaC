@@ -68,9 +68,54 @@ int plc_emit_bytecode_stmt(FILE *fp, const PLC_PROC *proc,
 
     (void)err_size;
 
-    if (plc_line_starts_with(stmt->text, "ASSERT")) {
-        fprintf(fp, "  ASSERT ");
-        plc_write_quoted(fp, plc_skip_space(plc_skip_space(stmt->text) + 6));
+    if (plc_line_starts_with(stmt->text, "CONST")) {
+        const char *body;
+        const char *eq;
+        char target[PLC_MAX_LINE];
+        char expr[PLC_MAX_LINE];
+
+        body = plc_skip_space(plc_skip_space(stmt->text) + 5);
+        eq = strchr(body, '=');
+        if (eq == 0 || eq[1] == '>') {
+            sprintf(err, "P%d %s line %d: bad CONST statement",
+                proc->number, proc->name, stmt->line_no);
+            return 0;
+        }
+        plc_copy_range(target, sizeof(target), body, eq);
+        plc_trim_in_place(target);
+        strncpy(expr, eq + 1, sizeof(expr) - 1);
+        expr[sizeof(expr) - 1] = '\0';
+        plc_trim_in_place(expr);
+        fprintf(fp, "  CONST ");
+        plc_write_quoted(fp, target);
+        fprintf(fp, " = ");
+        plc_write_quoted(fp, expr);
+        fprintf(fp, "\n");
+        return 1;
+    }
+
+    if (plc_line_starts_with(stmt->text, "ASSERT")
+            || plc_line_starts_with(stmt->text, "REQUIRE")
+            || plc_line_starts_with(stmt->text, "ENSURE")
+            || plc_line_starts_with(stmt->text, "STOPIF")) {
+        const char *keyword;
+        int keyword_len;
+
+        keyword = "ASSERT";
+        keyword_len = 6;
+        if (plc_line_starts_with(stmt->text, "REQUIRE")) {
+            keyword = "REQUIRE";
+            keyword_len = 7;
+        } else if (plc_line_starts_with(stmt->text, "ENSURE")) {
+            keyword = "ENSURE";
+            keyword_len = 6;
+        } else if (plc_line_starts_with(stmt->text, "STOPIF")) {
+            keyword = "STOPIF";
+            keyword_len = 6;
+        }
+        fprintf(fp, "  %s ", keyword);
+        plc_write_quoted(fp,
+            plc_skip_space(plc_skip_space(stmt->text) + keyword_len));
         fprintf(fp, "\n");
         return 1;
     }
@@ -422,7 +467,7 @@ static int plc_asm_parse_ref(const char **pp, PLC_ASM_REF *ref)
     p = plc_asm_skip(*pp);
     memset(ref, 0, sizeof(*ref));
     ref->subscript = -1;
-    if (*p != 'V' && *p != 'Z' && *p != 'R') {
+    if (*p != 'V' && *p != 'C' && *p != 'Z' && *p != 'R') {
         return 0;
     }
     ref->bank = *p;
@@ -434,15 +479,44 @@ static int plc_asm_parse_ref(const char **pp, PLC_ASM_REF *ref)
     p = endptr;
     p = plc_asm_skip(p);
     if (*p == '[' && p[1] != ':') {
+        int first_subscript;
+
         ++p;
-        ref->subscript = (int)strtol(p, &endptr, 10);
+        first_subscript = (int)strtol(p, &endptr, 10);
+        ref->subscript = first_subscript;
         p = endptr;
         p = plc_asm_skip(p);
+        if (*p == ',') {
+            int second_subscript;
+
+            ++p;
+            p = plc_asm_skip(p);
+            second_subscript = (int)strtol(p, &endptr, 10);
+            ref->subscript = first_subscript * PLC_ARRAY_DIM
+                + second_subscript;
+            p = endptr;
+            p = plc_asm_skip(p);
+        }
         if (*p != ']') {
             return 0;
         }
         ++p;
         p = plc_asm_skip(p);
+        if (*p == '[' && p[1] != ':') {
+            int second_subscript;
+
+            ++p;
+            second_subscript = (int)strtol(p, &endptr, 10);
+            ref->subscript = first_subscript * PLC_ARRAY_DIM
+                + second_subscript;
+            p = endptr;
+            p = plc_asm_skip(p);
+            if (*p != ']') {
+                return 0;
+            }
+            ++p;
+            p = plc_asm_skip(p);
+        }
     }
     n = 0;
     while (*p == '.') {
@@ -624,6 +698,106 @@ static int plc_asm_parse_identifier(const char **pp, char *name,
     return 1;
 }
 
+static int plc_asm_predicate_starts_with(const char *text,
+    const char *keyword, const char **body)
+{
+    unsigned n;
+
+    text = plc_asm_skip(text);
+    n = (unsigned)strlen(keyword);
+    if (strncmp(text, keyword, n) != 0) {
+        return 0;
+    }
+    if (text[n] != '\0' && !isspace((unsigned char)text[n])) {
+        return 0;
+    }
+    if (body != 0) {
+        *body = plc_asm_skip(text + n);
+    }
+    return 1;
+}
+
+static const char *plc_asm_predicate_find_operator(const char *text, char op)
+{
+    int paren_depth;
+    int bracket_depth;
+
+    paren_depth = 0;
+    bracket_depth = 0;
+    while (*text != '\0') {
+        if (*text == '(') {
+            ++paren_depth;
+        } else if (*text == ')' && paren_depth > 0) {
+            --paren_depth;
+        } else if (*text == '[') {
+            ++bracket_depth;
+        } else if (*text == ']' && bracket_depth > 0) {
+            --bracket_depth;
+        } else if (*text == op && paren_depth == 0 && bracket_depth == 0) {
+            return text;
+        }
+        ++text;
+    }
+    return 0;
+}
+
+static int plc_asm_emit_predicate_value(PLC_ASM_COMPILER *ctx,
+    const char **pp)
+{
+    const char *body;
+    const char *op;
+    const char *end;
+    const char *call_name;
+    char left[PLC_MAX_LINE];
+    char right[PLC_MAX_LINE];
+    char args_text[PLC_MAX_LINE * 2];
+
+    body = 0;
+    op = 0;
+    call_name = 0;
+    if (plc_asm_predicate_starts_with(*pp, "SELECT", &body)) {
+        op = plc_asm_predicate_find_operator(body, '>');
+        call_name = "list_select_greater";
+    } else if (plc_asm_predicate_starts_with(*pp, "FORALL", &body)) {
+        op = plc_asm_predicate_find_operator(body, '>');
+        call_name = "list_forall_greater";
+    } else if (plc_asm_predicate_starts_with(*pp, "EXISTS", &body)) {
+        op = plc_asm_predicate_find_operator(body, '=');
+        call_name = "list_exists_equal";
+    } else if (plc_asm_predicate_starts_with(*pp, "COUNT", &body)) {
+        op = plc_asm_predicate_find_operator(body, '=');
+        call_name = "list_count_equal";
+    } else {
+        return -1;
+    }
+    if (op == 0) {
+        plc_set_error(ctx->err, ctx->err_size, "bad ASM predicate");
+        return 0;
+    }
+    end = op + 1;
+    while (*end != '\0') {
+        ++end;
+    }
+    plc_copy_range(left, sizeof(left), body, op);
+    plc_trim_in_place(left);
+    plc_copy_range(right, sizeof(right), op + 1, end);
+    plc_trim_in_place(right);
+    if (strlen(left) + strlen(right) + 4 >= sizeof(args_text)) {
+        plc_set_error(ctx->err, ctx->err_size, "ASM predicate too long");
+        return 0;
+    }
+    strcpy(args_text, "(");
+    strcat(args_text, left);
+    strcat(args_text, ",");
+    strcat(args_text, right);
+    strcat(args_text, ")");
+    if (!plc_asm_emit_call_value(ctx, call_name, args_text, 0)) {
+        return 0;
+    }
+    *pp = end;
+    return 1;
+}
+
 static int plc_asm_emit_primary(PLC_ASM_COMPILER *ctx, const char **pp)
 {
     const char *p;
@@ -631,8 +805,14 @@ static int plc_asm_emit_primary(PLC_ASM_COMPILER *ctx, const char **pp)
     char name[PLC_MAX_NAME];
     char *endptr;
     double value;
+    int predicate_result;
 
     p = plc_asm_skip(*pp);
+    predicate_result = plc_asm_emit_predicate_value(ctx, &p);
+    if (predicate_result >= 0) {
+        *pp = p;
+        return predicate_result;
+    }
     if (*p == '(') {
         ++p;
         if (!plc_asm_emit_expr(ctx, &p)) {
@@ -646,7 +826,7 @@ static int plc_asm_emit_primary(PLC_ASM_COMPILER *ctx, const char **pp)
         *pp = p + 1;
         return 1;
     }
-    if (*p == 'V' || *p == 'Z' || *p == 'R') {
+    if (*p == 'V' || *p == 'C' || *p == 'Z' || *p == 'R') {
         if (!plc_asm_parse_ref(&p, &ref)) {
             plc_set_error(ctx->err, ctx->err_size, "bad ASM ref");
             return 0;
@@ -1107,16 +1287,39 @@ static int plc_asm_emit_value_to_targets(PLC_ASM_COMPILER *ctx,
 }
 
 static int plc_asm_emit_statement(PLC_ASM_COMPILER *ctx,
-    const PLC_STMT *stmt)
+    const PLC_STMT *stmt, int end_label)
 {
     char parts[5][PLC_MAX_LINE];
     int count;
 
-    if (plc_line_starts_with(stmt->text, "ASSERT")) {
+    if (plc_line_starts_with(stmt->text, "CONST")) {
+        const char *body;
+        const char *eq;
+        char target[PLC_MAX_LINE];
+
+        body = plc_skip_space(plc_skip_space(stmt->text) + 5);
+        eq = strchr(body, '=');
+        if (eq == 0 || eq[1] == '>') {
+            plc_set_error(ctx->err, ctx->err_size, "bad ASM CONST");
+            return 0;
+        }
+        plc_copy_range(target, sizeof(target), body, eq);
+        plc_trim_in_place(target);
+        if (!plc_asm_emit_expr_text(ctx, plc_skip_space(eq + 1))) {
+            return 0;
+        }
+        return plc_asm_assign_one(ctx, target);
+    }
+
+    if (plc_line_starts_with(stmt->text, "ASSERT")
+            || plc_line_starts_with(stmt->text, "REQUIRE")
+            || plc_line_starts_with(stmt->text, "ENSURE")) {
         const char *expr;
         int ok_label;
+        int keyword_len;
 
-        expr = plc_skip_space(plc_skip_space(stmt->text) + 6);
+        keyword_len = plc_line_starts_with(stmt->text, "REQUIRE") ? 7 : 6;
+        expr = plc_skip_space(plc_skip_space(stmt->text) + keyword_len);
         if (!plc_asm_emit_expr_text(ctx, expr)) {
             return 0;
         }
@@ -1126,6 +1329,18 @@ static int plc_asm_emit_statement(PLC_ASM_COMPILER *ctx,
         fprintf(ctx->fp, "    jne .L_assert_ok_%d\n", ok_label);
         fprintf(ctx->fp, "    int3\n");
         fprintf(ctx->fp, ".L_assert_ok_%d:\n", ok_label);
+        return 1;
+    }
+    if (plc_line_starts_with(stmt->text, "STOPIF")) {
+        const char *expr;
+
+        expr = plc_skip_space(plc_skip_space(stmt->text) + 6);
+        if (!plc_asm_emit_expr_text(ctx, expr)) {
+            return 0;
+        }
+        fprintf(ctx->fp, "    xorpd xmm1, xmm1\n");
+        fprintf(ctx->fp, "    ucomisd xmm0, xmm1\n");
+        fprintf(ctx->fp, "    jne .L_proc_end_%d\n", end_label);
         return 1;
     }
     if (!plc_split_arrows(stmt->text, parts, &count)) {
@@ -1208,7 +1423,7 @@ static int plc_asm_emit_proc(PLC_ASM_COMPILER *ctx, const PLC_PROC *proc)
         plc_asm_emit_set_ref(ctx, &ref);
     }
     for (i = 0; i < proc->stmt_count; ++i) {
-        if (!plc_asm_emit_statement(ctx, &proc->stmts[i])) {
+        if (!plc_asm_emit_statement(ctx, &proc->stmts[i], end_label)) {
             char prefix[160];
 
             sprintf(prefix, "P%d %s line %d: ",

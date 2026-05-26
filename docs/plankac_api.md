@@ -1,6 +1,6 @@
 # PlankaC C API
 
-PlankaC can be used as a small C library. A host program can load `.plk`
+PlankaC can be used as a compact C library. A host program can load `.plk`
 source files, inspect the procedure table, and run procedures by name.
 
 Public header:
@@ -13,6 +13,7 @@ Example program:
 
 ```text
 examples/c_api_demo.c
+examples/c_abi_demo.c
 ```
 
 ## Build A Static Library
@@ -24,12 +25,20 @@ gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/core/plankac_source.c -
 gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/core/plankac_expr.c -o build/plankac_expr.o
 gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/types/plankac_types.c -o build/plankac_types.o
 gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/notation/plankac_2d.c -o build/plankac_2d.o
+gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/notation/plankac_document.c -o build/plankac_document.o
+gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/notation/plankac_page.c -o build/plankac_page.o
 gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/analyzer/plankac_analyzer.c -o build/plankac_analyzer.o
+gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/analyzer/plankac_schema.c -o build/plankac_schema.o
+gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/values/plankac_bits.c -o build/plankac_bits.o
+gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/values/plankac_value.c -o build/plankac_value.o
+gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/models/plankac_chess_model.c -o build/plankac_chess_model.o
+gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/ir/plankac_ir.c -o build/plankac_ir.o
+gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/backends/plankac_lowering.c -o build/plankac_lowering.o
 gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/backends/plankac_bytecode.c -o build/plankac_bytecode.o
 gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/backends/plankac_asm8086.c -o build/plankac_asm8086.o
 gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/core/plankac_runtime.c -o build/plankac_runtime.o
 gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/backends/plankac_native_runtime.c -o build/plankac_native_runtime.o
-ar rcs build/libplankac.a build/plankac_common.o build/plankac_source.o build/plankac_expr.o build/plankac_types.o build/plankac_2d.o build/plankac_analyzer.o build/plankac_bytecode.o build/plankac_asm8086.o build/plankac_runtime.o build/plankac_native_runtime.o
+ar rcs build/libplankac.a build/plankac_common.o build/plankac_types.o build/plankac_2d.o build/plankac_document.o build/plankac_page.o build/plankac_analyzer.o build/plankac_schema.o build/plankac_bits.o build/plankac_value.o build/plankac_chess_model.o build/plankac_ir.o build/plankac_lowering.o build/plankac_source.o build/plankac_expr.o build/plankac_bytecode.o build/plankac_asm8086.o build/plankac_runtime.o build/plankac_native_runtime.o
 ```
 
 Link an application:
@@ -47,7 +56,7 @@ build/plankac_api_demo.exe
 Expected output:
 
 ```text
-procedures: 118
+procedures: 148
 found P140 complex_norm_session args=0 results=1
 P0 type_sheet args=0 results=1
   first types: V0=- R0=[:1.1]
@@ -118,6 +127,46 @@ plankac_context_load_sources(ctx, sources, err, sizeof(err));
 Source paths are resolved by the host process, so pass paths relative to the
 current working directory or absolute paths from your application.
 
+## Native Function ABI
+
+The context API also lets `.plk` source call C functions registered by the
+host. This is the bridge for platform services, device I/O, application state,
+or host-provided math routines without rewriting the host in `.plk`.
+
+Callback type:
+
+```c
+typedef int (*PLANKAC_NATIVE_FN)(void *user_data,
+    const double *args, int argc, PLANKAC_RESULT *result,
+    char *err, unsigned err_size);
+```
+
+Register a function:
+
+```c
+const char *arg_types[] = { "[:32.16]", "[:32.16]" };
+const char *result_types[] = { "[:32.16]", "[:1.1]" };
+
+plankac_context_register_native(ctx, "host_mad", 2, 2,
+    arg_types, result_types, host_mad, user_data, err, sizeof(err));
+```
+
+Call it from `.plk`:
+
+```text
+P700 host_bridge (V0[:32.16], V1[:32.16]) => R0[:32.16], R1[:1.1]
+host_mad(V0[:32.16], V1[:32.16]) => R0[:32.16], R1[:1.1]
+END
+```
+
+The checked demo is:
+
+```text
+build/plankac_abi_demo.exe
+```
+
+For the ABI contract and backend boundary, see `docs/abi.md`.
+
 ## Main Functions
 
 ```text
@@ -130,6 +179,10 @@ plankac_context_load_bytecode_text()
 plankac_context_proc_count()
 plankac_context_get_proc()
 plankac_context_find_proc()
+plankac_context_register_native()
+plankac_context_native_count()
+plankac_context_get_native()
+plankac_context_find_native()
 plankac_context_run()
 plankac_context_run_number()
 plankac_context_summary()
@@ -138,7 +191,15 @@ plankac_context_write_c_backend()
 plankac_context_write_asm_runtime()
 plankac_context_write_asm_image()
 plankac_context_write_asm8086_runtime()
+plankac_context_write_ir()
+plankac_context_write_lowering_report()
 plankac_write_asm8086_runtime()
+plankac_write_ir()
+plankac_write_lowering_report()
+plankac_register_native()
+plankac_native_count()
+plankac_get_native()
+plankac_find_native()
 plankac_format()
 ```
 
@@ -147,7 +208,7 @@ PlankaMath GUI, but new embedding code should prefer the context API.
 
 `PLANKAC_PROC_INFO` also exposes the first-level argument and result marker
 strings collected from procedure headers, for example `[:32.16]` or `[:1.1]`.
-That is enough for small host programs to list procedure signatures before
+That is enough for host programs to list procedure signatures before
 calling them.
 
 ## PlankaHost API
