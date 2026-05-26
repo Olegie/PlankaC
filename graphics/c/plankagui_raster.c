@@ -89,3 +89,36 @@ void pmg_panel(PMG_IMAGE *img, PMG_RECT r, PMG_RGB fill, PMG_RGB stroke)
     pmg_fill_rect(img, r, fill);
     pmg_stroke_rect(img, r, stroke);
 }
+
+void pmg_draw_line(PMG_IMAGE *img, int x0, int y0, int x1, int y1,
+    PMG_RGB c)
+{
+    int dx;
+    int dy;
+    int sx;
+    int sy;
+    int err;
+
+    dx = x1 > x0 ? x1 - x0 : x0 - x1;
+    dy = y1 > y0 ? y1 - y0 : y0 - y1;
+    sx = x0 < x1 ? 1 : -1;
+    sy = y0 < y1 ? 1 : -1;
+    err = dx - dy;
+    for (;;) {
+        int twice;
+
+        pmg_put_pixel(img, x0, y0, c);
+        if (x0 == x1 && y0 == y1) {
+            break;
+        }
+        twice = err * 2;
+        if (twice > -dy) {
+            err -= dy;
+            x0 += sx;
+        }
+        if (twice < dx) {
+            err += dx;
+            y0 += sy;
+        }
+    }
+}

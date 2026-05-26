@@ -14,6 +14,22 @@ through PlankaC and runs selected procedures from the `.plk` source plans.
 Calculator keys call the same `.plk` procedures used by the console
 interpreter, with the legacy C runtime kept as a fallback.
 
+The shared application host is:
+
+```text
+graphics/c/plankahost_window.c
+graphics/c/plankahost.c
+```
+
+`PlankaHost.exe` loads the standard PlankaC profile plus one `.plk`
+application file. It can start the calculator-style PlankaGUI profile or the
+3D cube profile without compiling a new C host for each profile:
+
+```text
+build\PlankaHost.exe graphics\src\plankagui.plk
+build\PlankaHost.exe graphics\src\plankacube.plk
+```
+
 `c/targets/win16_gui.c` is the real Win16 host for Windows 3.x. Build it with Open
 Watcom by running:
 

@@ -547,6 +547,17 @@ int plc_call_proc(const PLC_PROGRAM *program, PLC_FRAME *caller_frame,
         out->value[0] = sqrt(args[0]);
         return 1;
     }
+    if (strcmp(name, "sin") == 0 || strcmp(name, "cos") == 0) {
+        if (argc != 1) {
+            plc_set_error(err, err_size,
+                "trigonometric function expects one argument");
+            return 0;
+        }
+        out->count = 1;
+        out->value[0] = strcmp(name, "sin") == 0
+            ? sin(args[0]) : cos(args[0]);
+        return 1;
+    }
     if (strcmp(name, "list_new") == 0) {
         if (caller_frame == 0) {
             plc_set_error(err, err_size, "list_new needs a caller frame");
@@ -1481,16 +1492,28 @@ int plc_call_proc(const PLC_PROGRAM *program, PLC_FRAME *caller_frame,
     }
     if (strcmp(name, "mat4_identity") == 0
             || strcmp(name, "mat4_translate") == 0
-            || strcmp(name, "mat4_scale") == 0) {
+            || strcmp(name, "mat4_scale") == 0
+            || strcmp(name, "mat4_rotate_x") == 0
+            || strcmp(name, "mat4_rotate_y") == 0
+            || strcmp(name, "mat4_rotate_z") == 0) {
         double m[16];
+        double angle;
+        double s;
+        double c;
+        int is_rotate;
         int j;
 
         if (caller_frame == 0) {
             plc_set_error(err, err_size, "mat4 operation needs a caller frame");
             return 0;
         }
+        is_rotate = strcmp(name, "mat4_rotate_x") == 0
+            || strcmp(name, "mat4_rotate_y") == 0
+            || strcmp(name, "mat4_rotate_z") == 0;
         if ((strcmp(name, "mat4_identity") == 0 && argc != 0)
-                || (strcmp(name, "mat4_identity") != 0 && argc != 3)) {
+                || ((strcmp(name, "mat4_translate") == 0
+                    || strcmp(name, "mat4_scale") == 0) && argc != 3)
+                || (is_rotate && argc != 1)) {
             plc_set_error(err, err_size, "bad mat4 operation argument count");
             return 0;
         }
@@ -1509,6 +1532,26 @@ int plc_call_proc(const PLC_PROGRAM *program, PLC_FRAME *caller_frame,
             m[0] = args[0];
             m[5] = args[1];
             m[10] = args[2];
+        } else if (is_rotate) {
+            angle = args[0];
+            s = sin(angle);
+            c = cos(angle);
+            if (strcmp(name, "mat4_rotate_x") == 0) {
+                m[5] = c;
+                m[6] = 0.0 - s;
+                m[9] = s;
+                m[10] = c;
+            } else if (strcmp(name, "mat4_rotate_y") == 0) {
+                m[0] = c;
+                m[2] = s;
+                m[8] = 0.0 - s;
+                m[10] = c;
+            } else {
+                m[0] = c;
+                m[1] = 0.0 - s;
+                m[4] = s;
+                m[5] = c;
+            }
         }
         mat_id = plc_new_mat4(heap_frame, m, err, err_size);
         if (mat_id < 0) {

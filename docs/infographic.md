@@ -9,8 +9,9 @@ come from the current tree, not from a project pitch.
 | --- | ---: |
 | Loaded PlankaC source profile | 24 files |
 | Repository `src/*.plk` files | 20 files |
-| Loaded procedures | 116 procedures |
-| C source/header modules | 20 files |
+| Graphics `.plk` profiles | 2 files |
+| Loaded procedures | 118 procedures |
+| C source/header modules | 37 files |
 | Negative conformance fixtures | 17 files |
 | Main host language | C89-oriented C |
 | Main compiler artifacts | bytecode, generated C, x86-64 ASM, 8086/DOS ASM |
@@ -24,7 +25,7 @@ pie showData
     "Core calculator and math" : 30
     "Structured data and relations" : 44
     "Chess model" : 12
-    "3D geometry extension" : 12
+    "3D geometry extension" : 14
     "Complex values" : 5
     "2D notation sessions" : 4
     "Self-checks" : 9
@@ -40,8 +41,9 @@ and backend/conformance checks.
 ```mermaid
 pie showData
     title C implementation lines by module directory
-    "core" : 4348
-    "backends" : 2834
+    "core" : 4391
+    "backends" : 2873
+    "graphics" : 3250
     "targets" : 1456
     "legacy" : 515
     "analyzer" : 356
@@ -54,7 +56,7 @@ pie showData
 
 The dominant implementation mass is concentrated in the expected subsystems:
 loader/runtime logic in `c/core`, compiler-output logic in `c/backends`, and
-host integrations in `c/targets`.
+host integrations in `graphics/c` and `c/targets`.
 
 ## Coverage Status
 
@@ -64,7 +66,7 @@ pie showData
     "supported" : 13
     "supported subset" : 15
     "partial" : 2
-    "supported extension" : 1
+    "supported extension" : 2
 ```
 
 The coverage matrix is intentionally strict. `docs/plankalkuel_coverage.md`
@@ -86,8 +88,11 @@ flowchart LR
     Table --> ASM64["x86-64 ASM"]
     Table --> ASM86["8086/DOS ASM"]
     Table --> API["C API"]
+    Table --> Host["PlankaHost app context"]
 
     API --> GUI["Modern Windows GUI"]
+    Host --> GUI2["2D GUI profile"]
+    Host --> Cube["3D cube profile"]
     BC --> BCRun["Bytecode runner"]
 ```
 
@@ -125,6 +130,7 @@ flowchart TB
         A --> D["Generated C"]
         A --> E["x86-64 ASM"]
         B --> F["Modern Windows GUI"]
+        A --> O["runfile app procedures"]
     end
 
     subgraph SixteenBit["16-bit path"]
@@ -137,6 +143,7 @@ flowchart TB
         K["libplankac.a"] --> L["External C host"]
         K --> M["Procedure metadata"]
         K --> N["Run by name or P-number"]
+        K --> P["PlankaHost app launcher"]
     end
 ```
 
@@ -161,6 +168,8 @@ build\plankac.exe run calculator_demo
 build\plankac.exe run relation_inverse_session
 build\plankac.exe run chess_queen_attack_map_full_session
 build\plankac.exe run three_d_pipeline_session
+build\plankac.exe runfile graphics\src\plankagui.plk app_kind
+build\plankac.exe runfile graphics\src\plankacube.plk app_kind
 build\plankac.exe bytecode build\plankamath.pbc
 build\plankac.exe cgen build\plankac_generated.c
 build\plankac.exe asmgen build\plankac_asm_runtime.S
@@ -171,8 +180,8 @@ build\plankac_conformance.exe
 Expected high-level result:
 
 ```text
-PlankaC OK: 24 files, 116 procedures
-Bytecode OK: 116 procedures
+PlankaC OK: 24 files, 118 procedures
+Bytecode OK: 118 procedures
 8086 ASM written: build\plankac_8086.asm
 CONFORMANCE OK
 ```

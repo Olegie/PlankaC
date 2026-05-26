@@ -31,3 +31,14 @@ Library builds use `c/core`, `c/types`, `c/notation`, `c/analyzer`,
 
 Command-line builds add `c/tools/plankac_cli.c`. GUI, Win16, and DOS targets
 live under `c/targets` and link only the pieces they need.
+
+The graphical application layer is split under `graphics/c`:
+
+| File | Role |
+| --- | --- |
+| `graphics/c/plankahost.h` | shared application host API |
+| `graphics/c/plankahost.c` | loads the base profile plus one `.plk` application and exposes procedure/run/render helpers |
+| `graphics/c/plankahost_window.c` | Windows launcher for GUI and 3D application profiles |
+| `graphics/c/plankahost_demo.c` | command-line proof for host loading, metadata, and base-procedure dispatch |
+| `graphics/c/plankagui_*` | 2D scene loader, rasterizer, bitmap text, PNG export, and renderer |
+| `graphics/c/plankacube_*` | 3D scene loader, projection renderer, export host, and window host |

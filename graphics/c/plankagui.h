@@ -61,6 +61,8 @@ void pmg_clear(PMG_IMAGE *img, PMG_RGB c);
 void pmg_fill_rect(PMG_IMAGE *img, PMG_RECT r, PMG_RGB c);
 void pmg_stroke_rect(PMG_IMAGE *img, PMG_RECT r, PMG_RGB c);
 void pmg_panel(PMG_IMAGE *img, PMG_RECT r, PMG_RGB fill, PMG_RGB stroke);
+void pmg_draw_line(PMG_IMAGE *img, int x0, int y0, int x1, int y1,
+    PMG_RGB c);
 
 int pmg_text_width(const char *text, int scale);
 void pmg_draw_text(PMG_IMAGE *img, int x, int y, const char *text,

@@ -7,6 +7,10 @@ PlankaC uses this structure:
     -> PlankaC reader/interpreter
     -> console and GUI run selected procedures
 
+.plk application profile
+    -> PlankaHost
+    -> Windows 2D GUI or 3D scene
+
 .plk source plans
     -> compact PlankaMath C mirror
     -> real Win16 Windows 3.x GUI
@@ -58,7 +62,12 @@ build/plankac.exe asmgen build/plankac_asm_runtime.S
 build/plankac.exe asm8086 build/plankac_8086.asm
 ```
 
-The modern Windows GUI links the PlankaC runtime modules directly.
+The modern application host is `PlankaHost.exe`. It loads the standard
+PlankaC source profile, then one `.plk` application file. That single context
+contains the older calculator procedures and the newer data, relation, chess,
+3D, and application procedures. `PlankaGUI.exe` and `PlankaCube.exe` remain
+specific launchers; the shared host API is declared in
+`graphics/c/plankahost.h`.
 
 The Win16 GUI is a separate target:
 
@@ -100,7 +109,7 @@ gcc -Wall -Wextra -std=c89 -Ic/include examples/c_api_demo.c build/libplankac.a 
 gcc -Wall -Wextra -std=c89 -Ic/include tests/plankac_conformance.c build/libplankac.a -o build/plankac_conformance.exe -lm
 ```
 
-See `docs/plankac_api.md`.
+See `docs/plankac_api.md` and `docs/plankahost_api.md`.
 See `docs/plankac_bytecode.md` for compiler output and `docs/conformance.md`
 for parser/runtime edge tests.
 
@@ -115,16 +124,22 @@ repository:
 - guarded equations;
 - indexed values, nested record fields, handle-backed records, lists, pairs,
   sets, relations, relation composition, value algebra helpers, chess board
-  helpers, complex values, 3D vectors, 4x4 matrices, projection, loops, and
+  helpers, complex values, 3D vectors, 4x4 matrices, rotation, projection, loops, and
   assertions;
 - executable two-dimensional table rows;
 - calls to other `.plk` procedures with interprocedural type-family checks;
 - multi-result calls.
 
 The modern GUI loads the procedure list from PlankaC and runs selected `.plk`
-procedures through the same API used by external C programs. The Win16 GUI uses
-the compact calculator execution layer. The DOS runner uses the same compact
-layer and is intended for MS-DOS, FreeDOS, DOSBox, and DOS mode on Windows 9x.
+procedures through the same API used by external C programs. PlankaHost
+extends that path into an application API: it exposes procedure metadata,
+`plankahost_run`, kind-specific rendering, button hit-testing, and timer
+stepping over the loaded `.plk` context. `plankac runfile extra.plk proc`
+loads the standard profile plus one external `.plk` file, so application
+procedures can also be executed from the command line without writing a C
+host. The Win16 GUI uses the compact calculator execution layer. The DOS
+runner uses the same compact layer and is intended for MS-DOS, FreeDOS,
+DOSBox, and DOS mode on Windows 9x.
 
 The native ASM runner is different from the interpreter path. It contains
 generated functions such as `plc_native_p10` and `plc_native_p999`, and it

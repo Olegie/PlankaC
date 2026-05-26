@@ -19,7 +19,7 @@ The generated file starts like this:
 ```text
 PLANKAC-BYTECODE 0.1
 SOURCES 24
-PROCEDURES 116
+PROCEDURES 118
 PROC P10 add ARGC 2 RESULTS 1
   EVAL "(V0[:32.16] + V1[:32.16])" -> "R0[:32.16]"
 END

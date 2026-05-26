@@ -28,6 +28,8 @@ build/plankac.exe check
 build/plankac.exe compile
 build/plankac.exe list
 build/plankac.exe run <procedure|Pnumber> [args...]
+build/plankac.exe checkfile <extra.plk>
+build/plankac.exe runfile <extra.plk> <procedure|Pnumber> [args...]
 build/plankac.exe bytecode <output.pbc>
 build/plankac.exe checkbc <input.pbc>
 build/plankac.exe runbc <input.pbc> <procedure|Pnumber> [args...]
@@ -46,6 +48,10 @@ build/plankac.exe run calculator_demo
 build/plankac.exe run divide_checked 84 0
 build/plankac.exe run P73 12 20
 build/plankac.exe run three_d_pipeline_session
+build/plankac.exe runfile graphics/src/plankagui.plk app_canvas
+build/plankac.exe runfile graphics/src/plankagui.plk add 12 8
+build/plankac.exe runfile graphics/src/plankacube.plk cube_scene_checksum
+build/plankac.exe runfile graphics/src/plankacube.plk app_timer_step 0.5
 build/plankac.exe bytecode build/plankamath.pbc
 build/plankac.exe checkbc build/plankamath.pbc
 build/plankac.exe runbc build/plankamath.pbc set_session
@@ -61,8 +67,12 @@ R0=30
 R0=0 R1=1
 R0=16
 R0=120
+R0=960 R1=460
+R0=20
+R0=2403.500000
+R0=0.545000
 Bytecode written: build/plankamath.pbc
-Bytecode OK: 116 procedures
+Bytecode OK: 118 procedures
 R0=2
 C backend written: build/plankac_generated.c
 ASM runtime written: build/plankac_asm_runtime.S
@@ -106,7 +116,8 @@ PlankaC currently supports the notation used in this repository:
   `chess_board_new`, `chess_board_place`, `chess_board_piece`, attack maps,
   and simple check predicates;
 - modern 3D extension helpers such as `vec3`, `vec3_dot`, `vec3_cross`,
-  `mat4_translate`, `mat4_scale`, `mat4_mul`, `mat4_transform_point`, and
+  `mat4_translate`, `mat4_scale`, `mat4_rotate_x`, `mat4_rotate_y`,
+  `mat4_rotate_z`, `mat4_mul`, `mat4_transform_point`, and
   `perspective_project`;
 - numeric constants with structure markers;
 - arithmetic operators `+`, `-`, `*`, `/`, `%`, `^`;
@@ -125,3 +136,5 @@ project because PlankaC is meant to be inspectable as a language tool, not a
 single dense demonstration file.
 
 The bytecode format is documented in `docs/plankac_bytecode.md`.
+The `.plk` application model and shared host API are documented in
+`docs/plk_application_model.md` and `docs/plankahost_api.md`.

@@ -1,7 +1,7 @@
 # PlankaGUI source profile.
 # The procedures describe a compact window layout, button grid, procedure
-# list, argument area, log area, and palette entries. The C renderer only
-# evaluates these procedures and serializes the resulting drawing to SVG.
+# list, argument area, log area, and palette entries. The host evaluates
+# these procedures and rasterizes the resulting application contract.
 
 P3000 gui_canvas () => R0[:32.0], R1[:32.0]
 960[:32.0] => R0[:32.0]
@@ -122,4 +122,21 @@ gui_window_rect() => Z2[:32.0], Z3[:32.0], Z4[:32.0], Z5[:32.0]
 gui_button_id(3[:32.0], 4[:32.0]) => Z6[:32.0]
 gui_keypad_panel_rect() => Z7[:32.0], Z8[:32.0], Z9[:32.0], Z10[:32.0]
 (Z0[:32.0] + Z1[:32.0] + Z4[:32.0] + Z5[:32.0] + Z6[:32.0] + Z9[:32.0]) => R0[:32.0]
+END
+
+P3060 app_kind () => R0[:32.0]
+1[:32.0] => R0[:32.0]
+END
+
+P3061 app_canvas () => R0[:32.0], R1[:32.0]
+gui_canvas() => R0[:32.0], R1[:32.0]
+END
+
+P3062 app_checksum () => R0[:32.16]
+gui_scene_checksum() => Z1[:32.0]
+Z1[:32.0] => R0[:32.16]
+END
+
+P3063 app_timer_step (V0[:32.16]) => R0[:32.16]
+V0[:32.16] => R0[:32.16]
 END

@@ -11,7 +11,7 @@
 
 #define PLC_MAX_LINE 512
 #define PLC_MAX_NAME 64
-#define PLC_MAX_PROCS 128
+#define PLC_MAX_PROCS 192
 #define PLC_MAX_STMTS 96
 #define PLC_MAX_ARGS 16
 #define PLC_MAX_RESULTS 8

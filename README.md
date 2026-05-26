@@ -11,7 +11,7 @@ Bytecode-Runner, C-Backend-Emitter, native ASM-Backend und Einbettungs-API
 fuer eine lineare Plankalkuel-Notation. PlankaMath ist das mitgelieferte
 Beispielprojekt: ein Taschenrechner mit weiteren `.plk`-Plaenen fuer
 indizierte Werte, geschachtelte Felder, Listen, Paare, Mengen, Relationen,
-komplexe Werte, 3D-Vektoren, 4x4-Matrizen, Projektion, Schleifen,
+komplexe Werte, 3D-Vektoren, 4x4-Matrizen, Rotation, Projektion, Schleifen,
 Assertions und Schachstrukturen.
 
 ## Inhalt
@@ -24,7 +24,7 @@ Assertions und Schachstrukturen.
 | `c/` | PlankaC-Module, klassische C-Laufzeit, Konsolenstarter, DOS-Runner, Win32/Win64-GUI und Win16-GUI |
 | `graphics/` | PlankaGUI: grafische Oberflaechen aus `.plk`-Prozeduren |
 | `asm/` | 8086-Hilfsroutine |
-| `docs/` | Syntax, Ausfuehrungsmodell, Infografik, Quellenbasis, Bibliographie |
+| `docs/` | Syntax, Ausfuehrungsmodell, Host-API, Infografik, Quellenbasis, Bibliographie |
 
 Wichtige Dateien:
 
@@ -44,7 +44,7 @@ Wichtige Dateien:
 | `src/12_relation_composition.plk` | kartesische Produkte, Relationskomposition, einfache Quantoren |
 | `src/13_chess_board.plk` | Brett-, Figuren- und Angriffskarten-Beispiele |
 | `src/14_two_dimensional_tables.plk` | ausfuehrbare zweidimensionale Tabellenzeilen |
-| `src/15_3d_geometry.plk` | moderne 3D-Erweiterung mit `vec3`, `mat4`, Transformation und Projektion |
+| `src/15_3d_geometry.plk` | moderne 3D-Erweiterung mit `vec3`, `mat4`, Rotation, Transformation und Projektion |
 | `src/16_value_algebra.plk` | Listen-, Mengen-, Paar-, Record- und Relationsgleichheit |
 | `src/17_chess_model.plk` | Brettzustand, Figurenwerte, Angriffskarten und Check-Beispiele |
 | `src/18_two_dimensional_general.plk` | frei ausgerichtete und vertauschte `V|`/`S|` Tabellenzeilen |
@@ -57,13 +57,42 @@ Wichtige Dateien:
 | `c/targets/` | CLI-, DOS-, Win16- und Windows-GUI-Hosts |
 | `c/legacy/plankamath.c` | kompakte Rueckfall-Laufzeit |
 | `graphics/src/plankagui.plk` | Fenster-, Button-, Listen- und Farb-Prozeduren fuer grafische Ausgabe |
-| `graphics/c/` | modulare PlankaGUI-Lade-, Raster-, Schrift-, Export- und Render-Schicht |
+| `graphics/src/plankacube.plk` | 3D-Szenenprofil mit Cube-Topologie, Matrix-Transform und Projektionsprozeduren |
+| `graphics/c/plankahost.h` | gemeinsames Host-API fuer `.plk`-Anwendungen |
+| `graphics/c/` | PlankaHost-, PlankaGUI-, PlankaCube-, Raster-, Schrift-, Export- und Render-Schicht |
 | `build-dos.bat` | Open-Watcom-Build fuer `build\dos\PMDOS.EXE` |
 | `build-win16.bat` | Open-Watcom-Build fuer `build\win16\PlankaMath16.exe` |
 | `examples/c_api_demo.c` | kleines externes C-Programm mit PlankaC als Bibliothek |
 | `tests/plankac_conformance.c` | Conformance-Runner fuer Parser und Laufzeit |
 
 Siehe auch `docs/infographic.md` fuer eine kurze visuelle Projektkarte.
+Das Ausfuehrungsmodell fuer `.plk`-Anwendungen steht in
+`docs/plk_application_model.md`; die Host-Schicht ist in
+`docs/plankahost_api.md` beschrieben.
+
+## PlankaHost
+
+Der bevorzugte grafische Einstieg ist `PlankaHost.exe`. Der Host laedt die
+Standardbibliothek aus `src/` und danach eine `.plk`-Anwendung. Die Anwendung
+meldet ihren Typ ueber `app_kind` und stellt gemeinsame Prozeduren wie
+`app_canvas`, `app_checksum` und `app_timer_step` bereit.
+
+```powershell
+.\build\PlankaHost.exe graphics\src\plankagui.plk
+.\build\PlankaHost.exe graphics\src\plankacube.plk
+```
+
+`PlankaGUI.exe` und `PlankaCube.exe` bleiben als direkte Kompatibilitaets-
+Starter vorhanden, aber die gemeinsame Host-API ist `PlankaHost`.
+
+Fuer eingebettete Programme ist `graphics/c/plankahost.h` der praktische
+Einstieg. `plankahost_open` laedt die komplette PlankaC-Basis, die alten
+Rechnerprozeduren, Datenstruktur-, Relations-, Schach- und 3D-Prozeduren
+sowie das angegebene Anwendungsprofil. Danach kann ein Host Prozeduren
+listen, nach Namen suchen und per `plankahost_run` ausfuehren. Damit liegt
+das Anwendungsverhalten in `.plk`; C bleibt die Grenze zu Fenster, Timer,
+Maus, Tastatur und Rasterausgabe. `plankahost_demo.exe` prueft denselben
+Pfad ohne Fenster.
 
 ## PlankaGUI
 
@@ -82,6 +111,35 @@ Prozeduren wie `add`, `multiply`, `divide_checked`, `square` und
 
 <p align="center">
   <img src="graphics/examples/plankagui.png" alt="PlankaGUI rendered interface" width="640">
+</p>
+
+## PlankaCube
+
+PlankaCube ist ein kleines 3D-Profil auf derselben Grafikschicht. Die
+`.plk`-Datei definiert Canvas, Viewport, Palette, Cube-Vertices,
+Kantenliste, Modellmatrix und perspektivische Projektion. Der Host stellt den
+Fenstertimer und den Rasterausgang bereit; die Geometrie- und
+Projektionswerte kommen aus PlankaC-Prozeduren wie `cube_vertex`,
+`cube_edge`, `cube_model_transform` und `cube_project_vertex`.
+
+`build\PlankaCube.exe` oeffnet ein Windows-Fenster mit rotierendem Cube.
+Ein Klick oder die Leertaste pausiert die Animation. Der Exportpfad nutzt den
+gleichen Renderer:
+
+```powershell
+.\build\plankacube_export.exe graphics\examples\plankacube.png
+```
+
+Ein anderes 3D-Profil kann ohne neuen C-Code gestartet werden, solange die
+Datei denselben `cube_*`-Vertrag bereitstellt:
+
+```powershell
+.\build\PlankaCube.exe graphics\src\plankacube.plk
+.\build\plankac.exe runfile graphics\src\plankacube.plk cube_scene_checksum
+```
+
+<p align="center">
+  <img src="graphics/examples/plankacube.png" alt="PlankaCube rendered 3D scene" width="640">
 </p>
 
 ## Beispiel
@@ -107,7 +165,7 @@ Der zentrale Pfad ist PlankaC: die Module lesen die `.plk`-Dateien, bauen eine
 Prozedurtabelle und fuehren das `.plk`-Profil des Projekts direkt aus.
 Unterstuetzt sind Zuweisungen, Guards, arithmetische Ausdruecke, indizierte
 Werte, Felder, Listen, Mengen, Relationen, komplexe Werte, 3D-Vektoren,
-4x4-Matrizen, Projektion, Schleifen, Assertions, Prozeduraufrufe und mehrere
+4x4-Matrizen, Rotation, Projektion, Schleifen, Assertions, Prozeduraufrufe und mehrere
 Rueckgabewerte, etwa bei
 `divide_checked`.
 
@@ -128,7 +186,7 @@ Mehr dazu steht in `docs/execution_model.md`.
 
 Die 3D-Schicht ist bewusst als moderne PlankaC-Erweiterung markiert. Sie
 erweitert das implementierte Sprachprofil um Vektoren, Matrizen,
-Transformationen und Projektion, ohne diese Erweiterung dem dokumentierten
+Rotationen, Transformationen und Projektion, ohne diese Erweiterung dem dokumentierten
 Plankalkuel-Sprachkern zuzuschreiben.
 
 ## Voraussetzungen
@@ -264,6 +322,7 @@ Erwartete Ausgabe:
 .\build\plankac.exe run divide_checked 84 0
 .\build\plankac.exe tests
 .\build\plankac.exe run three_d_pipeline_session
+.\build\plankac.exe runfile graphics\src\plankacube.plk cube_scene_checksum
 .\build\plankac.exe bytecode build\plankamath.pbc
 .\build\plankac.exe checkbc build\plankamath.pbc
 .\build\plankac.exe runbc build\plankamath.pbc set_session
@@ -275,13 +334,14 @@ Erwartete Ausgabe:
 Erwartete Ausgabe:
 
 ```text
-PlankaC OK: 24 files, 116 procedures
+PlankaC OK: 24 files, 118 procedures
 R0=30
 R0=0 R1=1
 R0=1
 R0=120
+R0=2403.500000
 Bytecode written: build\plankamath.pbc
-Bytecode OK: 116 procedures
+Bytecode OK: 118 procedures
 R0=2
 C backend written: build\plankac_generated.c
 ASM runtime written: build\plankac_asm_runtime.S
@@ -301,6 +361,34 @@ GUI starten:
 
 Die GUI laedt die `.plk`-Plaene ueber PlankaC. Die Legacy-C-Laufzeit bleibt
 als Rueckfallpfad im Build.
+
+3D-GUI starten:
+
+```powershell
+.\build\PlankaCube.exe
+```
+
+Das Fenster liest `graphics\src\plankacube.plk`, ruft die Cube- und
+Projektionsprozeduren ueber PlankaC auf und rendert die Szene fortlaufend in
+einen Windows-Rasterpuffer.
+
+Gemeinsamen Host starten:
+
+```powershell
+.\build\PlankaHost.exe graphics\src\plankagui.plk
+.\build\PlankaHost.exe graphics\src\plankacube.plk
+```
+
+Der gleiche Host laedt auch die Basisprozeduren aus `src/`. Ein Klick auf
+`+`, `*`, `/`, `ROOT` oder `X^2` ruft also keine nachgebaute C-Funktion auf,
+sondern die im geladenen PlankaC-Kontext sichtbare `.plk`-Prozedur.
+
+Host-API ohne Fenster pruefen:
+
+```powershell
+.\build\plankahost_demo.exe graphics\src\plankagui.plk
+.\build\plankahost_demo.exe graphics\src\plankacube.plk
+```
 
 Win16-GUI unter Windows 3.x starten:
 
@@ -354,6 +442,8 @@ plankac_destroy(ctx);
 ```
 
 Siehe [`docs/plankac_api.md`](docs/plankac_api.md).
+Fuer grafische und anwendungsorientierte Hosts siehe
+[`docs/plankahost_api.md`](docs/plankahost_api.md).
 
 ## Conformance
 

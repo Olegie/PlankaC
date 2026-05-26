@@ -474,6 +474,12 @@ double plc_native_builtin(void *opaque, const char *name,
     if (strcmp(name, "sqrt") == 0 && argc == 1) {
         return sqrt(args[0]);
     }
+    if (strcmp(name, "sin") == 0 && argc == 1) {
+        return sin(args[0]);
+    }
+    if (strcmp(name, "cos") == 0 && argc == 1) {
+        return cos(args[0]);
+    }
     if (strcmp(name, "list_new") == 0 && argc == 0) {
         return (double)plc_native_new_list(frame);
     }
@@ -980,17 +986,30 @@ double plc_native_builtin(void *opaque, const char *name,
         }
         return (double)plc_native_new_vec3(frame, x, y, z);
     }
-    if ((strcmp(name, "mat4_identity") == 0
+    if (strcmp(name, "mat4_identity") == 0
             || strcmp(name, "mat4_translate") == 0
-            || strcmp(name, "mat4_scale") == 0)
-            && (argc == 0 || argc == 3)) {
+            || strcmp(name, "mat4_scale") == 0
+            || strcmp(name, "mat4_rotate_x") == 0
+            || strcmp(name, "mat4_rotate_y") == 0
+            || strcmp(name, "mat4_rotate_z") == 0) {
         double m[16];
+        double angle;
+        double s;
+        double c;
+        int is_rotate;
         int j;
 
+        is_rotate = strcmp(name, "mat4_rotate_x") == 0
+            || strcmp(name, "mat4_rotate_y") == 0
+            || strcmp(name, "mat4_rotate_z") == 0;
         if (strcmp(name, "mat4_identity") == 0 && argc != 0) {
             return 0.0;
         }
-        if (strcmp(name, "mat4_identity") != 0 && argc != 3) {
+        if ((strcmp(name, "mat4_translate") == 0
+                || strcmp(name, "mat4_scale") == 0) && argc != 3) {
+            return 0.0;
+        }
+        if (is_rotate && argc != 1) {
             return 0.0;
         }
         for (j = 0; j < 16; ++j) {
@@ -1008,6 +1027,26 @@ double plc_native_builtin(void *opaque, const char *name,
             m[0] = args[0];
             m[5] = args[1];
             m[10] = args[2];
+        } else if (is_rotate) {
+            angle = args[0];
+            s = sin(angle);
+            c = cos(angle);
+            if (strcmp(name, "mat4_rotate_x") == 0) {
+                m[5] = c;
+                m[6] = 0.0 - s;
+                m[9] = s;
+                m[10] = c;
+            } else if (strcmp(name, "mat4_rotate_y") == 0) {
+                m[0] = c;
+                m[2] = s;
+                m[8] = 0.0 - s;
+                m[10] = c;
+            } else {
+                m[0] = c;
+                m[1] = 0.0 - s;
+                m[4] = s;
+                m[5] = c;
+            }
         }
         return (double)plc_native_new_mat4(frame, m);
     }

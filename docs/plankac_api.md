@@ -47,7 +47,7 @@ build/plankac_api_demo.exe
 Expected output:
 
 ```text
-procedures: 116
+procedures: 118
 found P140 complex_norm_session args=0 results=1
 P0 type_sheet args=0 results=1
   first types: V0=- R0=[:1.1]
@@ -149,3 +149,34 @@ PlankaMath GUI, but new embedding code should prefer the context API.
 strings collected from procedure headers, for example `[:32.16]` or `[:1.1]`.
 That is enough for small host programs to list procedure signatures before
 calling them.
+
+## PlankaHost API
+
+Graphical or application-oriented hosts can use the higher-level API in:
+
+```text
+graphics/c/plankahost.h
+```
+
+`PlankaHost` loads the standard PlankaC source profile plus one application
+file. The loaded context therefore contains the older calculator procedures,
+data-structure procedures, relation helpers, chess procedures, 3D helpers, and
+the selected application procedures.
+
+Main functions:
+
+```text
+plankahost_open()
+plankahost_close()
+plankahost_proc_count()
+plankahost_get_proc()
+plankahost_find_proc()
+plankahost_run()
+plankahost_render()
+plankahost_button_at()
+plankahost_timer_step()
+```
+
+Use the core context API when you need a pure computation library. Use
+`PlankaHost` when you want a complete loaded application profile with render,
+input, timer, and procedure-dispatch helpers. See `docs/plankahost_api.md`.

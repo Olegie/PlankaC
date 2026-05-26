@@ -26,6 +26,12 @@ set PLANKAC_CLI_SOURCES=%PLANKAC_LIB_SOURCES% c\tools\plankac_cli.c
 set PLANKAGUI_CORE=graphics\c\plankagui_scene.c graphics\c\plankagui_raster.c graphics\c\plankagui_font.c graphics\c\plankagui_png.c graphics\c\plankagui_render.c
 set PLANKAGUI_EXPORT_SOURCES=graphics\c\plankagui_main.c %PLANKAGUI_CORE%
 set PLANKAGUI_WINDOW_SOURCES=graphics\c\plankagui_window.c %PLANKAGUI_CORE%
+set PLANKACUBE_CORE=graphics\c\plankacube_scene.c graphics\c\plankacube_render.c graphics\c\plankagui_raster.c graphics\c\plankagui_font.c
+set PLANKACUBE_EXPORT_SOURCES=graphics\c\plankacube_main.c %PLANKACUBE_CORE% graphics\c\plankagui_png.c
+set PLANKACUBE_WINDOW_SOURCES=graphics\c\plankacube_window.c %PLANKACUBE_CORE%
+set PLANKAHOST_CORE=graphics\c\plankahost.c graphics\c\plankagui_scene.c graphics\c\plankagui_raster.c graphics\c\plankagui_font.c graphics\c\plankagui_render.c graphics\c\plankacube_scene.c graphics\c\plankacube_render.c
+set PLANKAHOST_WINDOW_SOURCES=graphics\c\plankahost_window.c %PLANKAHOST_CORE%
+set PLANKAHOST_DEMO_SOURCES=graphics\c\plankahost_demo.c %PLANKAHOST_CORE%
 
 echo Building console runner...
 gcc -Wall -Wextra -std=c89 %PLANKAC_INC% c\legacy\plankamath.c c\targets\plankamath_cli.c -o build\plankamath_cli.exe -lm
@@ -76,6 +82,22 @@ echo Building PlankaGUI window...
 gcc -Wall -Wextra -std=c89 %PLANKAC_INC% -Igraphics\c %PLANKAGUI_WINDOW_SOURCES% build\libplankac.a -o build\PlankaGUI.exe -mwindows -lgdi32 -lm
 if errorlevel 1 exit /b 1
 
+echo Building PlankaCube export tool...
+gcc -Wall -Wextra -std=c89 %PLANKAC_INC% -Igraphics\c %PLANKACUBE_EXPORT_SOURCES% build\libplankac.a -o build\plankacube_export.exe -lm
+if errorlevel 1 exit /b 1
+
+echo Building PlankaCube window...
+gcc -Wall -Wextra -std=c89 %PLANKAC_INC% -Igraphics\c %PLANKACUBE_WINDOW_SOURCES% build\libplankac.a -o build\PlankaCube.exe -mwindows -lgdi32 -lm
+if errorlevel 1 exit /b 1
+
+echo Building PlankaHost window...
+gcc -Wall -Wextra -std=c89 %PLANKAC_INC% -Igraphics\c %PLANKAHOST_WINDOW_SOURCES% build\libplankac.a -o build\PlankaHost.exe -mwindows -lgdi32 -lm
+if errorlevel 1 exit /b 1
+
+echo Building PlankaHost API demo...
+gcc -Wall -Wextra -std=c89 %PLANKAC_INC% -Igraphics\c %PLANKAHOST_DEMO_SOURCES% build\libplankac.a -o build\plankahost_demo.exe -lm
+if errorlevel 1 exit /b 1
+
 echo Building Windows GUI...
 gcc -Wall -Wextra -std=c89 %PLANKAC_INC% -c c\legacy\plankamath.c -o build\plankamath.o
 if errorlevel 1 exit /b 1
@@ -104,6 +126,21 @@ build\plankac.exe checkbc build\plankamath.pbc
 if errorlevel 1 exit /b 1
 
 build\plankac.exe runbc build\plankamath.pbc set_session
+if errorlevel 1 exit /b 1
+
+build\plankac.exe runfile graphics\src\plankacube.plk cube_scene_checksum
+if errorlevel 1 exit /b 1
+
+build\plankac.exe runfile graphics\src\plankagui.plk app_kind
+if errorlevel 1 exit /b 1
+
+build\plankac.exe runfile graphics\src\plankacube.plk app_kind
+if errorlevel 1 exit /b 1
+
+build\plankahost_demo.exe graphics\src\plankagui.plk
+if errorlevel 1 exit /b 1
+
+build\plankahost_demo.exe graphics\src\plankacube.plk
 if errorlevel 1 exit /b 1
 
 build\plankac.exe cgen build\plankac_generated.c
@@ -185,6 +222,9 @@ build\plankac_conformance.exe
 if errorlevel 1 exit /b 1
 
 build\plankagui_export.exe graphics\examples\plankagui.png
+if errorlevel 1 exit /b 1
+
+build\plankacube_export.exe graphics\examples\plankacube.png 0.85 graphics\src\plankacube.plk
 if errorlevel 1 exit /b 1
 
 echo Done.

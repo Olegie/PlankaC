@@ -158,6 +158,38 @@ P208 triangle_normal_session
 P209 three_d_pipeline_session
 P210 make_engine_point
 P211 vec3_child_heap_session
+P212 trig_session
+P213 mat4_rotate_session
+```
+
+## PlankaGUI Graphics Profiles
+
+The `app_*` names are profile-level entry points. `plankagui.plk` and
+`plankacube.plk` are loaded as separate application files, so both profiles
+can use the same public application names without colliding in normal host
+use.
+
+```text
+P3060 app_kind
+P3061 app_canvas
+P3062 app_checksum
+P3063 app_timer_step
+P3000 gui_canvas
+P3001 gui_window_rect
+P3010 gui_button_rect
+P3020 gui_function_row_rect
+P3040 gui_style_rgb
+P3050 gui_scene_checksum
+P3260 app_kind
+P3261 app_canvas
+P3262 app_checksum
+P3263 app_timer_step
+P3200 cube_canvas
+P3221 cube_vertex
+P3222 cube_edge
+P3230 cube_model_transform
+P3231 cube_project_vertex
+P3240 cube_scene_checksum
 ```
 
 ## Value Algebra

@@ -39,7 +39,8 @@ records, assertions, and exception handling.
 | Loops / repetition | supported subset | `LOOP count => value => target` repeats an assignment |
 | Assertions | supported subset | `ASSERT (expr)` stops execution on false predicates |
 | Complex numbers | supported subset | `[:C32.16]` markers, handle-backed complex values, real/imag access, add/sub/mul/conjugate/norm/equality |
-| 3D geometry extension | supported extension | not part of the documented Plankalkuel core profile; PlankaC adds `vec3`, dot/cross/normalize, `mat4`, transform, projection, and pipeline examples in `src/15_3d_geometry.plk` |
+| 3D geometry extension | supported extension | not part of the documented Plankalkuel core profile; PlankaC adds `vec3`, dot/cross/normalize, `mat4`, rotation, transform, projection, pipeline examples in `src/15_3d_geometry.plk`, and a cube scene in `graphics/src/plankacube.plk` |
+| PLK application host contracts | supported extension | `PlankaHost` loads the standard profile plus one `.plk` application file and dispatches `app_kind`, `app_canvas`, `app_checksum`, `app_timer_step`, GUI geometry, and cube geometry procedures through the same PlankaC context |
 | Type/value model | partial | markers are parsed into families with width/scale pieces, stored in metadata, and checked across calls; values still use compact numeric/handle runtime storage |
 | Arithmetic exception handling | partial | calculator uses result/status pairs such as `R1[:1.1]` |
 | No recursion | supported subset | static direct/indirect recursion rejection plus runtime call-depth protection |
@@ -54,7 +55,7 @@ records, assertions, and exception handling.
 3. A stricter source-accurate value model for compound values instead of the
    current compact numeric/handle runtime.
 4. A larger 3D/geometry layer if the project becomes an engine-oriented
-   library: camera model, clipping, meshes, raster output, and scene graphs.
+   library: clipping, mesh loading, materials, and scene graphs.
 5. A larger chess/modeling suite, including fuller board state and legality
    rules.
 6. A full 16-bit compound runtime if the 8086/DOS backend should execute more

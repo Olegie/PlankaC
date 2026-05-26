@@ -65,7 +65,7 @@ The suite checks:
 - indexed values, nested record fields, handle-backed records, lists, pairs,
   sets, relation algebra, relation composition, cartesian products,
   inverse/image helpers, value equality helpers, record merge, quantifier-like
-  helpers, complex values, 3D vector/matrix transforms, projection, loops,
+  helpers, complex values, 3D vector/matrix transforms, rotation, projection, loops,
   executable two-dimensional rows, bytecode loading, and chess-style board
   structure examples;
 - generated native ASM runner smoke checks through `build.bat`, including

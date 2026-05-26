@@ -31,7 +31,7 @@ They describe calculator procedures with numbered programs, `V` input
 variables, `Z` intermediate variables, `R` result variables, type markers,
 guarded equations, indexed values, nested fields, handle-backed records,
 lists, pairs, sets, relation composition, value algebra helpers, chess board
-state, 3D vectors, 4x4 matrices, projection, loops, assertions, executable
+state, 3D vectors, 4x4 matrices, rotation, projection, loops, assertions, executable
 two-dimensional table rows, and chess-style structure examples.
 
 ## Two Execution Paths
@@ -62,7 +62,8 @@ handles assignments, guarded equations, arithmetic expressions, procedure
 calls, `V`/`Z`/`R` variables, indexed slots, nested record fields, frame-local
 lists, pairs, sets, relation predicates, relation composition, relation
 inverse/image helpers, complex values, 3D vector handles, 4x4 matrix handles,
-structured record handles, chess board records, loops, assertions, structure markers,
+rotation helpers, structured record handles, chess board records, loops,
+assertions, structure markers,
 interprocedural marker/type-family checks, shared handle heaps, executable
 two-dimensional rows, and multi-result procedures.
 
@@ -71,6 +72,15 @@ The Windows GUI uses PlankaC first. Its function list is loaded from the
 `add`, `subtract`, `multiply`, `divide_checked`, `root_checked`, and `square`
 through PlankaC. If the `.plk` load fails, the GUI can still use the legacy C
 runtime.
+
+PlankaHost is the shared application path. It loads the standard PlankaC
+profile, then one application file such as `graphics/src/plankagui.plk` or
+`graphics/src/plankacube.plk`. The same context contains the older calculator
+procedures, the structured-value and relation procedures, chess procedures,
+3D helpers, and the selected application procedures. `PlankaHost.exe` uses
+`app_kind`, `app_canvas`, `app_checksum`, and `app_timer_step` to choose and
+drive the host surface. For the cube profile, vertices, edge topology, model
+matrices, and projection values are evaluated from `.plk` procedures.
 
 PlankaC also has compiler-output modes. It can emit a textual bytecode file
 with procedure, expression, call, guarded-call, loop, and assertion operations,
@@ -104,8 +114,8 @@ Use this statement when presenting the project:
 ```text
 The source plans are written in .plk files using linear Plankalkuel notation.
 PlankaC reads and executes the repository's .plk profile directly; the
-PlankaMath GUI is one bundled host application and keeps the compact C runtime
-as a fallback.
+PlankaHost layer can load additional .plk application profiles, and the
+PlankaMath GUI keeps the compact C runtime as a fallback.
 ```
 
 ## PlankaC Scope
@@ -136,13 +146,13 @@ build/plankac.exe asm8086 build/plankac_8086.asm
 Expected result:
 
 ```text
-PlankaC OK: 24 files, 116 procedures
+PlankaC OK: 24 files, 118 procedures
 R0=30
 R0=0 R1=1
 R0=1
 R0=120
 Bytecode written: build/plankamath.pbc
-Bytecode OK: 116 procedures
+Bytecode OK: 118 procedures
 R0=2
 C backend written: build/plankac_generated.c
 ASM runtime written: build/plankac_asm_runtime.S

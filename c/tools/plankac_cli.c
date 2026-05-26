@@ -44,6 +44,27 @@ static int plc_run_named(const PLC_PROGRAM *program, const char *name,
     return 0;
 }
 
+static int plc_load_program_with_file(PLC_PROGRAM *program, const char *path,
+    char *err, unsigned err_size)
+{
+    const char *sources[64];
+    int count;
+
+    count = 0;
+    while (PLC_SOURCES[count] != 0 && count < 62) {
+        sources[count] = PLC_SOURCES[count];
+        ++count;
+    }
+    if (count >= 62) {
+        plc_set_error(err, err_size, "too many default sources");
+        return 0;
+    }
+    sources[count] = path;
+    ++count;
+    sources[count] = 0;
+    return plc_load_sources(program, sources, err, err_size);
+}
+
 static void plc_print_usage(void)
 {
     printf("PlankaC v0.1\n");
@@ -51,6 +72,8 @@ static void plc_print_usage(void)
     printf("  check | compile\n");
     printf("  list\n");
     printf("  run <procedure|Pnumber> [args...]\n");
+    printf("  checkfile <extra.plk>\n");
+    printf("  runfile <extra.plk> <procedure|Pnumber> [args...]\n");
     printf("  bytecode <output.pbc>\n");
     printf("  checkbc <input.pbc>\n");
     printf("  runbc <input.pbc> <procedure|Pnumber> [args...]\n");
@@ -103,6 +126,34 @@ int main(int argc, char **argv)
             return 1;
         }
         return plc_run_named(&program, argv[2], argc - 3, argv + 3);
+    }
+
+    if (strcmp(argv[1], "checkfile") == 0) {
+        if (argc < 3) {
+            printf("Missing .plk input path.\n");
+            return 1;
+        }
+        if (!plc_load_program_with_file(&program, argv[2],
+                err, sizeof(err))) {
+            printf("PlankaC file load failed: %s\n", err);
+            return 1;
+        }
+        printf("PlankaC file OK: %d files, %d procedures\n",
+            program.source_count, program.proc_count);
+        return 0;
+    }
+
+    if (strcmp(argv[1], "runfile") == 0) {
+        if (argc < 4) {
+            printf("Usage: runfile <extra.plk> <procedure|Pnumber> [args...]\n");
+            return 1;
+        }
+        if (!plc_load_program_with_file(&program, argv[2],
+                err, sizeof(err))) {
+            printf("PlankaC file load failed: %s\n", err);
+            return 1;
+        }
+        return plc_run_named(&program, argv[3], argc - 4, argv + 4);
     }
 
     if (strcmp(argv[1], "bytecode") == 0) {

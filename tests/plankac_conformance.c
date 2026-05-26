@@ -541,6 +541,22 @@ static int expect_extended_features(void)
         return 0;
     }
 
+    ok = plankac_context_run(ctx, "trig_session", 0, 0,
+        &result, err, sizeof(err));
+    if (!ok || !nearly(result.value[0], 1.0)) {
+        printf("FAIL trig_session\n");
+        plankac_destroy(ctx);
+        return 0;
+    }
+
+    ok = plankac_context_run(ctx, "mat4_rotate_session", 0, 0,
+        &result, err, sizeof(err));
+    if (!ok || !nearly(result.value[0], 123.0)) {
+        printf("FAIL mat4_rotate_session\n");
+        plankac_destroy(ctx);
+        return 0;
+    }
+
     ok = plankac_context_run(ctx, "list_equal_session", 0, 0,
         &result, err, sizeof(err));
     if (!ok || !nearly(result.value[0], 1.0)) {
