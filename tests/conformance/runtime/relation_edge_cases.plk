@@ -1,0 +1,12 @@
+P1 relation_edge_cases () => R0[:32.0]
+list_new() => Z1[:L32.0]
+pair(1[:32.0], 2[:32.0]) => Z2[:P32.0]
+list_push(Z1[:L32.0], Z2[:P32.0]) => Z1[:L32.0]
+pair(2[:32.0], 3[:32.0]) => Z3[:P32.0]
+list_push(Z1[:L32.0], Z3[:P32.0]) => Z1[:L32.0]
+relation_inverse(Z1[:L32.0]) => Z4[:L32.0]
+relation_has_pair(Z4[:L32.0], 2[:32.0], 1[:32.0]) => Z5[:1.1]
+relation_compose(Z1[:L32.0], Z4[:L32.0]) => Z6[:L32.0]
+set_size(Z6[:L32.0]) => Z7[:32.0]
+Z5[:1.1] + Z7[:32.0] => R0[:32.0]
+END

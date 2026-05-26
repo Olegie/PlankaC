@@ -227,7 +227,7 @@ static int plc_compile_native_asm(const PLC_PROGRAM *program,
 
 static void plc_print_usage(void)
 {
-    printf("PlankaC v0.1\n");
+    printf("PlankaC %s\n", PLANKAC_VERSION);
     printf("commands:\n");
     printf("  check\n");
     printf("  compile <output-prefix>\n");

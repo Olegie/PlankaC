@@ -163,6 +163,12 @@ if errorlevel 1 exit /b 1
 build\plankac.exe runfile graphics\src\plankacube.plk app_kind
 if errorlevel 1 exit /b 1
 
+build\plankac.exe checkfile examples\max3.plk
+if errorlevel 1 exit /b 1
+
+build\plankac.exe runfile examples\max3.plk max3_demo
+if errorlevel 1 exit /b 1
+
 build\plankahost_demo.exe graphics\src\plankagui.plk
 if errorlevel 1 exit /b 1
 

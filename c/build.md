@@ -106,7 +106,7 @@ build\win16\PlankaMath16.exe
 ```
 
 The output is a 16-bit Windows NE executable for Windows 3.x and compatible
-Win16 environments. It uses the compact PlankaMath C runtime; the full PlankaC
+Win16 environments. It uses the compact PlankaMath C runtime; the modern PlankaC
 parser and backend modules stay on the modern toolchain path.
 
 ## Real DOS Runner

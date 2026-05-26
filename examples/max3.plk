@@ -1,0 +1,16 @@
+# Tutorial source: compute the maximum of three values.
+
+P710 tutorial_max2 (V0[:8.0], V1[:8.0]) => R0[:8.0]
+V0[:8.0] => Z1[:8.0]
+(Z1[:8.0] < V1[:8.0]) => V1[:8.0] => Z1[:8.0]
+Z1[:8.0] => R0[:8.0]
+END
+
+P711 tutorial_max3 (V0[:8.0], V1[:8.0], V2[:8.0]) => R0[:8.0]
+tutorial_max2(V0[:8.0], V1[:8.0]) => Z1[:8.0]
+tutorial_max2(Z1[:8.0], V2[:8.0]) => R0[:8.0]
+END
+
+P712 max3_demo () => R0[:8.0]
+tutorial_max3(4[:8.0], 9[:8.0], 7[:8.0]) => R0[:8.0]
+END

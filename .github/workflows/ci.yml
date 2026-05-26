@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  windows:
+    name: Windows build.bat
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install MinGW
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+            make
+
+      - name: Build and verify
+        shell: cmd
+        run: |
+          set PATH=C:\msys64\ucrt64\bin;%PATH%
+          build.bat
+
+      - name: Upload generated smoke artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-generated-artifacts
+          path: |
+            build/plankac.ir
+            build/plankamath.pbc
+            build/plankac.lowering
+            build/plankac_generated.c
+            build/plankac_asm_runtime.S
+            build/plankac_8086.asm
+
+  linux:
+    name: Linux Makefile
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check toolchain
+        run: |
+          cc --version
+          make --version
+
+      - name: Build and verify
+        run: make ci
+
+      - name: Upload generated smoke artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-generated-artifacts
+          path: |
+            build/plankac.ir
+            build/plankamath.pbc
+            build/plankac.lowering
+            build/plankac_generated.c
+            build/plankac_asm_runtime.S
+            build/plankac_8086.asm

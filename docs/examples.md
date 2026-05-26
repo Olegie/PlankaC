@@ -174,6 +174,21 @@ Run the 3D profile as source:
 build\plankac.exe runfile graphics\src\plankacube.plk cube_scene_checksum
 ```
 
+## Max3 To Native
+
+`examples/max3.plk` is the shortest end-to-end compiler example. It defines a
+max-of-two helper, a max-of-three procedure, and `max3_demo`.
+
+```text
+build\plankac.exe checkfile examples\max3.plk
+build\plankac.exe runfile examples\max3.plk max3_demo
+build\plankac.exe compile build\plankac_pipeline
+build\plankac.exe native-c build\plankac_native_c
+build\plankac.exe native-asm build\plankac_native_asm
+```
+
+The full walk-through is in `docs/tutorials/max3_to_native.md`.
+
 Open the shared host:
 
 ```bat

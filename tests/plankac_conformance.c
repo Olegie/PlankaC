@@ -1060,15 +1060,27 @@ int main(void)
     ok = expect_run_file_result("valid_page_table_document",
             "tests/conformance/valid/page_table_document.plk",
             "page_table_document", 5.0) && ok;
+    ok = expect_run_file_result("valid_max3_profile",
+            "tests/conformance/valid/max3_profile.plk",
+            "valid_max3_profile", 9.0) && ok;
     ok = expect_run_file_result("runtime_tagged_fixed",
             "tests/conformance/runtime/tagged_fixed_runtime.plk",
             "tagged_fixed_runtime", 4.0) && ok;
+    ok = expect_run_file_result("runtime_relation_edge_cases",
+            "tests/conformance/runtime/relation_edge_cases.plk",
+            "relation_edge_cases", 3.0) && ok;
     ok = expect_run_file_result("backend_predicate_equivalence",
             "tests/conformance/backend_equivalence/predicate_backend.plk",
             "predicate_backend_equivalence", 3.0) && ok;
+    ok = expect_run_file_result("backend_chess_equivalence",
+            "tests/conformance/backend_equivalence/chess_backend.plk",
+            "chess_backend_equivalence", 1.0) && ok;
     ok = expect_run_file_result("zuse_linear_assignment_table",
             "tests/conformance/zuse_examples/linear_assignment_table.plk",
             "zuse_linear_assignment_table", 5.0) && ok;
+    ok = expect_run_file_result("zuse_max3_linear",
+            "tests/conformance/zuse_examples/max3_linear.plk",
+            "zuse_max3_linear", 9.0) && ok;
     ok = expect_run_edge() && ok;
     ok = expect_load_fail("missing_end",
             "tests/conformance/bad_missing_end.plk",
@@ -1103,6 +1115,9 @@ int main(void)
     ok = expect_load_fail("bad_page_without_type",
             "tests/conformance/invalid/bad_page_without_type.plk",
             "missing V| or S| row") && ok;
+    ok = expect_load_fail("bad_page_detached_rows",
+            "tests/conformance/invalid/bad_page_detached_rows.plk",
+            "detached index/type row") && ok;
     ok = expect_load_fail("bad_recursion",
             "tests/conformance/bad_recursion.plk",
             "recursive procedure rejected") && ok;
@@ -1112,6 +1127,9 @@ int main(void)
     ok = expect_load_fail("bad_interproc_type",
             "tests/conformance/bad_interproc_type.plk",
             "procedure argument type mismatch") && ok;
+    ok = expect_load_fail("bad_result_type_mismatch",
+            "tests/conformance/invalid/bad_result_type_mismatch.plk",
+            "procedure result type mismatch") && ok;
     ok = expect_load_fail("bad_const_target",
             "tests/conformance/bad_const_target.plk",
             "CONST expects C-bank target") && ok;

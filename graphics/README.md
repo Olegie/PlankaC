@@ -1,6 +1,6 @@
 # PlankaGUI
 
-PlankaGUI is a small graphics profile written in linear Plankalkuel notation.
+PlankaGUI is a graphics profile written in linear Plankalkuel notation.
 The `.plk` source describes canvas size, window rectangles, button geometry,
 procedure-list rows, argument fields, log area, and color palette entries.
 New graphical surfaces can be added by writing more `.plk` procedures with

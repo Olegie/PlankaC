@@ -71,6 +71,13 @@ Run an application profile on top of the standard profile:
 build\plankac.exe runfile graphics\src\plankacube.plk app_kind
 ```
 
+Run a standalone tutorial file:
+
+```bat
+build\plankac.exe checkfile examples\max3.plk
+build\plankac.exe runfile examples\max3.plk max3_demo
+```
+
 ## Compiler Pipeline
 
 Emit the stable compiler artifact set:

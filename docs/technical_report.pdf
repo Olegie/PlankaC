@@ -1,0 +1,432 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [5 0 R 7 0 R 9 0 R 11 0 R] /Count 4 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+4 0 obj
+<< /Length 2634 >>
+stream
+BT
+/F1 10 Tf
+14 TL
+50 790 Td
+(PLANKAC TECHNICAL REPORT) Tj
+T*
+() Tj
+T*
+(ENGLISH) Tj
+T*
+() Tj
+T*
+(ABSTRACT) Tj
+T*
+() Tj
+T*
+(PlankaC is a substantial executable Plankalkuel-profile implementation in C.) Tj
+T*
+(It provides a parser, interpreter, typed IR, text bytecode, generated C,) Tj
+T*
+(generated x86-64 assembly, 8086/DOS-oriented assembly emission, embedding API,) Tj
+T*
+(host APIs for .plk applications, and a conformance corpus.) Tj
+T*
+() Tj
+T*
+(The project does not claim to be a complete historical reconstruction of) Tj
+T*
+(Plankalkuel. Its purpose is narrower and more testable: preserve a) Tj
+T*
+(source-oriented profile, make it executable, document the implemented) Tj
+T*
+(semantics, and expose compiler artifacts that can be checked by users.) Tj
+T*
+() Tj
+T*
+(SOURCE BASIS) Tj
+T*
+() Tj
+T*
+(The work is oriented around Konrad Zuse's published Plankalkuel material and) Tj
+T*
+(the later Plankalkuel 2000 implementation report. The bibliography is kept in) Tj
+T*
+(docs/bibliography.md. Those sources are used for notation, value-bank) Tj
+T*
+(terminology, plan/procedure structure, two-dimensional rows, structured) Tj
+T*
+(values, and the chess-modeling tradition.) Tj
+T*
+() Tj
+T*
+(The project intentionally separates source-derived language features from) Tj
+T*
+(modern extensions. The 3D geometry profile and graphical host procedures are) Tj
+T*
+(PlankaC extensions. They are useful, executable examples, not claims about the) Tj
+T*
+(documented historical core.) Tj
+T*
+() Tj
+T*
+(ARCHITECTURE) Tj
+T*
+() Tj
+T*
+(The repository is split into compiler and runtime layers:) Tj
+T*
+() Tj
+T*
+(  * c/core: source loading, parser support, expression evaluation, runtime API;) Tj
+T*
+(  * c/types: marker parsing, type families, compatibility rules;) Tj
+T*
+(  * c/notation: linear and PAGE/table two-dimensional notation support;) Tj
+T*
+(  * c/analyzer: static checks and structural schema checks;) Tj
+T*
+(  * c/values: tagged values, bit packing, and fixed-point helpers;) Tj
+T*
+(  * c/ir: typed intermediate representation;) Tj
+T*
+(  * c/backends: bytecode, lowering report, generated C, x86-64 ASM, 8086 ASM;) Tj
+T*
+(  * c/models: chess board and game-state helpers;) Tj
+T*
+(  * c/targets: CLI, Windows GUI, Win16, and DOS hosts;) Tj
+T*
+(  * graphics/c: PlankaHost, PlankaGUI, PlankaCube, raster and export layers.) Tj
+T*
+() Tj
+T*
+(The practical compiler path is:) Tj
+T*
+() Tj
+T*
+() Tj
+T*
+(.plk source -> parser/analyzer -> procedure table -> typed IR/bytecode ->) Tj
+T*
+(C/ASM/native runner) Tj
+T*
+() Tj
+T*
+() Tj
+T*
+(IMPLEMENTED PROFILE) Tj
+T*
+() Tj
+T*
+(The implemented profile includes numbered procedures, V/C/Z/R value) Tj
+T*
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents 4 0 R >>
+endobj
+6 0 obj
+<< /Length 2461 >>
+stream
+BT
+/F1 10 Tf
+14 TL
+50 790 Td
+(banks, type markers with width and scale, guards, assertions, loops,) Tj
+T*
+(procedure calls, multi-result procedures, indexed values, constants, lists,) Tj
+T*
+(pairs, sets, relations, records, complex values, bit/fixed helpers, PAGE) Tj
+T*
+(notation, predicate-like list/relation operations, chess structures, and a) Tj
+T*
+(focused 3D extension.) Tj
+T*
+() Tj
+T*
+(The coverage matrix in docs/plankalkuel_coverage.md is the public contract.) Tj
+T*
+(If a feature is listed as supported, it should have source examples, runtime) Tj
+T*
+(behavior, documentation, and conformance coverage.) Tj
+T*
+() Tj
+T*
+(BACKENDS) Tj
+T*
+() Tj
+T*
+(PlankaC emits several artifacts:) Tj
+T*
+() Tj
+T*
+(  * text bytecode reloadable by the PlankaC runner;) Tj
+T*
+(  * readable typed IR;) Tj
+T*
+(  * lowering reports for backend inspection;) Tj
+T*
+(  * generated C runners;) Tj
+T*
+(  * generated x86-64 ASM runners linked with the runtime on the Windows/MinGW) Tj
+T*
+(  ABI path;) Tj
+T*
+(  * 8086/DOS-oriented assembly source.) Tj
+T*
+() Tj
+T*
+(The current ASM backends are useful engineering artifacts. They do not mean) Tj
+T*
+(that every compound operation is lowered to bare machine instructions without) Tj
+T*
+(runtime support. The backend contract is documented explicitly so that future) Tj
+T*
+(work can deepen the lowering without changing the user-facing source profile.) Tj
+T*
+(The current executable x86-64 ASM runner targets the Windows/MinGW ABI; Linux) Tj
+T*
+(CI validates ASM emission structurally and uses generated C/native C for the) Tj
+T*
+(linked portable native path.) Tj
+T*
+() Tj
+T*
+(VERIFICATION) Tj
+T*
+() Tj
+T*
+(The verification entry points are:) Tj
+T*
+() Tj
+T*
+() Tj
+T*
+(build.bat) Tj
+T*
+(make ci) Tj
+T*
+(build/plankac_conformance) Tj
+T*
+() Tj
+T*
+() Tj
+T*
+(CI runs Windows and Linux builds. The conformance corpus contains valid,) Tj
+T*
+(invalid, runtime, backend-equivalence, and Zuse-style example fixtures.) Tj
+T*
+() Tj
+T*
+(RELEASE DISCIPLINE) Tj
+T*
+() Tj
+T*
+(Generated executables and compiler outputs are not stored in Git. Tagged) Tj
+T*
+(releases attach Windows and Linux binaries, source archives, and SHA-256) Tj
+T*
+(checksums. Win16 and DOS packages are labeled as experimental platform builds) Tj
+T*
+(when attached.) Tj
+T*
+() Tj
+T*
+(REVIEW GOAL) Tj
+T*
+() Tj
+T*
+(The project is suitable for review by people interested in programming) Tj
+T*
+(language implementation, computing history, compiler backends, and platform) Tj
+T*
+ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents 6 0 R >>
+endobj
+8 0 obj
+<< /Length 2633 >>
+stream
+BT
+/F1 10 Tf
+14 TL
+50 790 Td
+(porting. The desired review is technical: notation fidelity, value/type model) Tj
+T*
+(boundaries, backend contracts, conformance structure, and documentation) Tj
+T*
+(clarity.) Tj
+T*
+() Tj
+T*
+(DEUTSCH) Tj
+T*
+() Tj
+T*
+(ZUSAMMENFASSUNG) Tj
+T*
+() Tj
+T*
+(PlankaC ist eine substanzielle ausfuehrbare Plankalkuel-Profil-Implementierung) Tj
+T*
+(in C. Das Projekt enthaelt Parser, Interpreter, typed IR, Text-Bytecode,) Tj
+T*
+(generiertes C, generiertes x86-64-ASM, 8086/DOS-nahes ASM, Einbettungs-API,) Tj
+T*
+(Host-APIs fuer .plk-Anwendungen und einen Conformance-Corpus.) Tj
+T*
+() Tj
+T*
+(Das Projekt behauptet nicht, eine vollstaendige historische Rekonstruktion des) Tj
+T*
+(Plankalkuels zu sein. Der Anspruch ist enger und besser pruefbar: ein) Tj
+T*
+(quellenorientiertes Profil erhalten, ausfuehrbar machen, die implementierten) Tj
+T*
+(Semantiken dokumentieren und Compiler-Artefakte erzeugen, die Nutzer) Tj
+T*
+(nachvollziehen koennen.) Tj
+T*
+() Tj
+T*
+(QUELLENBEZUG) Tj
+T*
+() Tj
+T*
+(Die Arbeit orientiert sich an Konrad Zuses veroeffentlichtem Plankalkuel-) Tj
+T*
+(Material und am Plankalkuel-2000-Implementierungsbericht. Die Bibliographie) Tj
+T*
+(steht in docs/bibliography.md. Diese Quellen geben Richtung fuer Notation,) Tj
+T*
+(Wertbaenke, Planstruktur, zweidimensionale Zeilen, strukturierte Werte und die) Tj
+T*
+(Schachmodellierung.) Tj
+T*
+() Tj
+T*
+(Moderne Erweiterungen werden getrennt benannt. 3D-Geometrie und grafische) Tj
+T*
+(Host-Profile sind PlankaC-Erweiterungen. Sie sind ausfuehrbare Beispiele,) Tj
+T*
+(aber keine Behauptung ueber den historischen Sprachkern.) Tj
+T*
+() Tj
+T*
+(AUFBAU) Tj
+T*
+() Tj
+T*
+(Die Implementierung ist in Schichten aufgeteilt: Core, Types, Notation,) Tj
+T*
+(Analyzer, Values, IR, Backends, Models, Targets und Graphics. Der wichtige) Tj
+T*
+(Pfad ist:) Tj
+T*
+() Tj
+T*
+() Tj
+T*
+(.plk-Quelle -> Parser/Analyzer -> Prozedurtabelle -> typed IR/Bytecode ->) Tj
+T*
+(C/ASM/native runner) Tj
+T*
+() Tj
+T*
+() Tj
+T*
+(PROFIL) Tj
+T*
+() Tj
+T*
+(Unterstuetzt werden nummerierte Prozeduren, V/C/Z/R-Baenke,) Tj
+T*
+(Typmarker, Guards, Assertions, Schleifen, Prozeduraufrufe, mehrere) Tj
+T*
+(Rueckgabewerte, Indizes, Konstanten, Listen, Paare, Mengen, Relationen,) Tj
+T*
+(Records, komplexe Werte, Bit-/Fixed-Helfer, PAGE-Notation, praedikatnahe) Tj
+T*
+(Listen- und Relationsoperationen, Schachstrukturen und eine moderne) Tj
+T*
+(3D-Erweiterung.) Tj
+T*
+() Tj
+T*
+(Die Matrix in docs/plankalkuel_coverage.md ist der oeffentliche Vertrag. Ein) Tj
+T*
+(als unterstuetzt markiertes Feature soll Quellbeispiele, Laufzeitverhalten,) Tj
+T*
+(Dokumentation und Conformance-Abdeckung haben.) Tj
+T*
+ET
+endstream
+endobj
+9 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents 8 0 R >>
+endobj
+10 0 obj
+<< /Length 646 >>
+stream
+BT
+/F1 10 Tf
+14 TL
+50 790 Td
+() Tj
+T*
+(BACKENDS UND PRUEFUNG) Tj
+T*
+() Tj
+T*
+(PlankaC erzeugt Bytecode, typed IR, Lowering-Reports, C, x86-64-ASM und) Tj
+T*
+(8086/DOS-nahes ASM. Windows und Linux werden in CI gebaut. Die lokalen) Tj
+T*
+(Einstiege sind build.bat, make ci und der Conformance-Runner.) Tj
+T*
+() Tj
+T*
+(RELEASE-DISZIPLIN) Tj
+T*
+() Tj
+T*
+(Binaries und generierte Artefakte liegen nicht im Git-Baum. Releases enthalten) Tj
+T*
+(separate Windows-/Linux-Bundles, Source-Archive und SHA-256-Pruefsummen.) Tj
+T*
+(Win16- und DOS-Pakete werden als experimentelle Plattform-Builds bezeichnet,) Tj
+T*
+(wenn sie veroeffentlicht werden.) Tj
+T*
+ET
+endstream
+endobj
+11 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents 10 0 R >>
+endobj
+xref
+0 12
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000140 00000 n 
+0000000210 00000 n 
+0000002896 00000 n 
+0000003022 00000 n 
+0000005535 00000 n 
+0000005661 00000 n 
+0000008346 00000 n 
+0000008472 00000 n 
+0000009170 00000 n 
+trailer
+<< /Size 12 /Root 1 0 R >>
+startxref
+9298
+%%EOF

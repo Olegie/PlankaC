@@ -3,3 +3,7 @@
 
 # Plankalkuel source files used by PlankaC.
 *.plk text eol=lf linguist-language=Plankalkuel linguist-detectable=true
+
+# Generated documentation and visual assets.
+*.pdf binary
+*.png binary

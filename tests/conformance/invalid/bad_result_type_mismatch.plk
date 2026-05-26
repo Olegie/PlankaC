@@ -1,0 +1,7 @@
+P1 returns_int () => R0[:32.0]
+1[:32.0] => R0[:32.0]
+END
+
+P2 bad_result_type_mismatch () => R0[:32.16]
+returns_int() => R0[:32.16]
+END

@@ -124,7 +124,7 @@ build-dos.bat
 ```
 
 The output is `build\dos\PMDOS.EXE`, a 16-bit DOS MZ program with an 8.3
-filename. It is a compact runner, not the full PlankaC compiler.
+filename. It is a compact runner, separate from the modern PlankaC compiler.
 
 ## Backend Porting
 

@@ -12,7 +12,7 @@ come from the current tree, not from a project pitch.
 | Graphics `.plk` profiles | 2 files |
 | Loaded procedures | 148 procedures |
 | C and graphics source/header modules | 45 files |
-| Conformance fixture files | 27 files |
+| Conformance fixture files | 33 files |
 | Main host language | C89-oriented C |
 | Main compiler artifacts | typed IR, bytecode, generated C, x86-64 ASM, 8086/DOS ASM |
 | 16-bit targets | Win16 GUI, DOS runner |
@@ -180,6 +180,8 @@ build\plankac.exe run chess_queen_attack_map_full_session
 build\plankac.exe run three_d_pipeline_session
 build\plankac.exe runfile graphics\src\plankagui.plk app_kind
 build\plankac.exe runfile graphics\src\plankacube.plk app_kind
+build\plankac.exe checkfile examples\max3.plk
+build\plankac.exe runfile examples\max3.plk max3_demo
 build\plankac.exe bytecode build\plankamath.pbc
 build\plankac.exe ir build\plankac.ir
 build\plankac.exe lowering build\plankac.lowering
@@ -193,6 +195,8 @@ Expected high-level result:
 
 ```text
 PlankaC OK: 29 files, 148 procedures
+PlankaC file OK: 30 files, 151 procedures
+R0=9
 Bytecode OK: 148 procedures
 IR written: build\plankac.ir
 Lowering written: build\plankac.lowering

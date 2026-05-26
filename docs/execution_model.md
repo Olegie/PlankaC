@@ -143,14 +143,14 @@ PlankaMath GUI keeps the compact C runtime as a fallback.
 
 ## PlankaC Scope
 
-PlankaC v0.1 is a compact implementation of the repository's executable
-language profile. It checks and runs the actual `.plk` source files, exposes a
-C embedding API, writes bytecode, and can emit generated C, native x86-64
-ASM, DOS-oriented 8086 ASM source, and native executable builds through the
-compiler pipeline. Its implementation is split across core loading/execution,
-types, notation, analyzer, backend, target, and legacy modules. Its scope is
-the executable profile used in this repository; the coverage matrix records
-the exact feature surface and backend boundaries.
+PlankaC 1.1.0 is a substantial executable Plankalkuel-profile implementation
+in C. It checks and runs the actual `.plk` source files, exposes a C embedding
+API, writes bytecode and typed IR, emits generated C, generated x86-64 ASM,
+DOS-oriented 8086 ASM source, and native executable builds through the compiler
+pipeline. Its implementation is split across core loading/execution, types,
+notation, analyzer, values, IR, backend, target, graphics, and legacy modules.
+Its scope is the executable profile used in this repository; the coverage
+matrix records the exact feature surface and backend boundaries.
 
 ```text
 build/plankac.exe check

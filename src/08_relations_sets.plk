@@ -1,5 +1,5 @@
 # Relation, set, nested-structure, and chess plans.
-# The examples are intentionally small, but each one is executable PlankaC.
+# The examples are intentionally focused, and each one is executable PlankaC.
 
 P130 nested_record_session () => R0[:32.16]
 3[:32.16] => Z30.point.x[:32.16]

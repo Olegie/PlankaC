@@ -2,14 +2,17 @@
   <img src="docs/logo.svg" alt="PlankaC logo" width="560">
 </p>
 
-# PlankaC: A Compact Plankalkuel Runtime In C
+# PlankaC: A Plankalkuel-Profile Toolchain In C
 
-PlankaC is a compact parser, interpreter, bytecode writer, bytecode runner, C
-backend emitter, native ASM backend, and embedding API for a compact linear
-Plankalkuel notation. PlankaMath is the bundled example project: a calculator
+[![CI](https://github.com/Olegie/PlankaC/actions/workflows/ci.yml/badge.svg)](https://github.com/Olegie/PlankaC/actions/workflows/ci.yml)
+
+PlankaC is a substantial executable Plankalkuel-profile implementation in C:
+parser, interpreter, typed IR, bytecode writer, bytecode runner, C backend
+emitter, native ASM backend, 8086 ASM emitter, and embedding API for a linear
+Plankalkuel notation. PlankaMath is the bundled example profile: a calculator
 plus `.plk` plans for indexed values, nested fields, lists, pairs, sets,
-relations, complex values, 3D vectors, 4x4 matrices, rotation, projection, loops,
-assertions, and chess structures.
+relations, complex values, 3D vectors, 4x4 matrices, rotation, projection,
+loops, assertions, and chess structures.
 
 ## Contents
 
@@ -90,6 +93,11 @@ the host API is described in `docs/plankahost_api.md`.
 | [`Examples`](docs/examples.md) | runnable source and command examples for the implemented language profile |
 | [`Porting Guide`](docs/porting_guide.md) | embedding, platform targets, Win16/DOS limits, PlankaHost integration, and backend rules |
 | [`ABI And Embedding API`](docs/abi.md) | C hosts calling PlankaC procedures and `.plk` source calling registered C functions |
+| [`Max3 Tutorial`](docs/tutorials/max3_to_native.md) | one `.plk` file through interpreter, bytecode, generated C, generated ASM, and native runners |
+| [`Technical Report`](docs/technical_report.md) | English/German report on scope, architecture, source basis, backends, and verification |
+| [`Release Guide`](docs/release_guide.md) | versioning, tags, release assets, checksums, and binary policy |
+| [`German Project Page`](docs/de/plankac.md) | calm German description of the project and its boundaries |
+| [`External Review Request`](docs/review_request.md) | text for asking language/history people for technical review |
 
 ## PlankaHost
 
@@ -107,7 +115,7 @@ declares its type through `app_kind` and exposes common procedures such as
 but the shared host API is `PlankaHost`.
 
 For embedded programs, `graphics/c/plankahost.h` is the practical entry
-point. `plankahost_open` loads the complete PlankaC base profile, the older
+point. `plankahost_open` loads the standard PlankaC base profile, the older
 calculator procedures, data-structure, relation, chess, and 3D procedures,
 and then the selected application profile. A host can list procedures, look
 them up by name, and execute them with `plankahost_run`. Application behavior
@@ -201,7 +209,7 @@ build\plankac_native_asm.exe add 12 8
 
 The exact execution model is described in `docs/execution_model.md`.
 
-The 3D layer is deliberately marked as a modern PlankaC extension. It extends
+The 3D layer is marked as a PlankaC extension. It extends
 the implemented profile with vectors, matrices, rotations, transforms, and projection
 without assigning that extension to the documented Plankalkuel core.
 
@@ -222,6 +230,12 @@ The easiest path on Windows is:
 
 ```bat
 build.bat
+```
+
+On Linux:
+
+```bash
+make ci
 ```
 
 Manual build of the main PlankaC objects:
@@ -348,6 +362,8 @@ Run the `.plk` interpreter:
 .\build\plankac.exe tests
 .\build\plankac.exe run three_d_pipeline_session
 .\build\plankac.exe runfile graphics\src\plankacube.plk cube_scene_checksum
+.\build\plankac.exe checkfile examples\max3.plk
+.\build\plankac.exe runfile examples\max3.plk max3_demo
 .\build\plankac.exe bytecode build\plankamath.pbc
 .\build\plankac.exe checkbc build\plankamath.pbc
 .\build\plankac.exe runbc build\plankamath.pbc set_session
@@ -371,6 +387,8 @@ R0=0 R1=1
 R0=1
 R0=120
 R0=2403.500000
+PlankaC file OK: 30 files, 151 procedures
+R0=9
 Bytecode written: build\plankamath.pbc
 Bytecode OK: 148 procedures
 R0=2

@@ -1,0 +1,147 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing release tag, for example v1.1.0"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    name: Windows release bundle
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Install MinGW
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: mingw-w64-ucrt-x86_64-gcc
+
+      - name: Build
+        shell: pwsh
+        run: |
+          $env:Path = "C:\msys64\ucrt64\bin;$env:Path"
+          cmd /c build.bat
+
+      - name: Pack Windows binaries
+        shell: pwsh
+        run: |
+          $tag = "${{ github.event.inputs.tag }}"
+          if ($tag -eq "") { $tag = "${{ github.ref_name }}" }
+          if (-not $tag.StartsWith("v")) { throw "Release tag must start with v" }
+          New-Item -ItemType Directory -Force dist | Out-Null
+          $bundle = @(
+            "VERSION",
+            "LICENSE",
+            "CHANGELOG.md",
+            "README.en.md",
+            "docs/release_artifacts_note.md",
+            "build/plankac.exe",
+            "build/plankac_conformance.exe",
+            "build/plankac_api_demo.exe",
+            "build/plankac_abi_demo.exe",
+            "build/PlankaMath.exe",
+            "build/PlankaHost.exe",
+            "build/PlankaGUI.exe",
+            "build/PlankaCube.exe",
+            "build/plankagui_export.exe",
+            "build/plankacube_export.exe",
+            "build/plankahost_demo.exe"
+          )
+          Compress-Archive -Path $bundle -DestinationPath "dist/PlankaC-$tag-windows-x64.zip" -Force
+
+      - name: Upload Windows bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release
+          path: dist/*
+
+  linux:
+    name: Linux release bundle
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Check toolchain
+        run: |
+          cc --version
+          make --version
+          tar --version
+
+      - name: Build
+        run: make ci
+
+      - name: Pack Linux binaries
+        run: |
+          tag="${{ github.event.inputs.tag }}"
+          if [ -z "$tag" ]; then tag="${GITHUB_REF_NAME}"; fi
+          case "$tag" in v*) ;; *) echo "Release tag must start with v" >&2; exit 1 ;; esac
+          mkdir -p dist/PlankaC-"$tag"-linux-x64
+          cp VERSION LICENSE CHANGELOG.md README.en.md docs/release_artifacts_note.md dist/PlankaC-"$tag"-linux-x64/
+          cp build/plankac build/plankac_conformance build/plankac_api_demo build/plankac_abi_demo dist/PlankaC-"$tag"-linux-x64/
+          cp build/plankagui_export build/plankacube_export build/plankahost_demo dist/PlankaC-"$tag"-linux-x64/
+          tar -czf dist/PlankaC-"$tag"-linux-x64.tar.gz -C dist PlankaC-"$tag"-linux-x64
+
+      - name: Upload Linux bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-release
+          path: dist/*.tar.gz
+
+  publish:
+    name: Publish GitHub release
+    needs: [windows, linux]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Download bundles
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Add source archive and checksums
+        run: |
+          tag="${{ github.event.inputs.tag }}"
+          if [ -z "$tag" ]; then tag="${GITHUB_REF_NAME}"; fi
+          case "$tag" in v*) ;; *) echo "Release tag must start with v" >&2; exit 1 ;; esac
+          git archive --format=tar.gz -o "dist/PlankaC-$tag-source.tar.gz" HEAD
+          find dist -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > dist/SHA256SUMS
+
+      - name: Publish or update release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${{ github.event.inputs.tag }}"
+          if [ -z "$tag" ]; then tag="${GITHUB_REF_NAME}"; fi
+          case "$tag" in v*) ;; *) echo "Release tag must start with v" >&2; exit 1 ;; esac
+          files="$(find dist -type f | tr '\n' ' ')"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release edit "$tag" --target "$GITHUB_SHA" --title "PlankaC $tag" --notes-file docs/release_notes_template.md --latest
+            gh release upload "$tag" $files --clobber
+          else
+            gh release create "$tag" $files --target "$GITHUB_SHA" --title "PlankaC $tag" --notes-file docs/release_notes_template.md --latest
+          fi

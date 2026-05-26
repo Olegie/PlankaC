@@ -8,9 +8,13 @@ Source fixtures:
 ```text
 tests/conformance/valid_edge.plk
 tests/conformance/valid/page_table_document.plk
+tests/conformance/valid/max3_profile.plk
 tests/conformance/runtime/tagged_fixed_runtime.plk
+tests/conformance/runtime/relation_edge_cases.plk
 tests/conformance/backend_equivalence/predicate_backend.plk
+tests/conformance/backend_equivalence/chess_backend.plk
 tests/conformance/zuse_examples/linear_assignment_table.plk
+tests/conformance/zuse_examples/max3_linear.plk
 tests/conformance/bad_missing_end.plk
 tests/conformance/bad_header.plk
 tests/conformance/bad_stray_end.plk
@@ -31,7 +35,10 @@ tests/conformance/bad_const_target.plk
 tests/conformance/bad_require_contract.plk
 tests/conformance/bad_divide_zero.plk
 tests/conformance/invalid/bad_page_without_type.plk
+tests/conformance/invalid/bad_page_detached_rows.plk
+tests/conformance/invalid/bad_result_type_mismatch.plk
 examples/host_abi.plk
+examples/max3.plk
 ```
 
 Runner:
@@ -69,7 +76,11 @@ The suite checks:
 - missing type rows in executable two-dimensional notation;
 - PAGE document diagnostics with row/column recovery;
 - valid PAGE table loading from the `valid/` conformance tree;
+- detached PAGE row diagnostics for spatially invalid table rows;
+- standalone max-of-three procedures based on the linear Plankalkuel example
+  shape;
 - interprocedural type marker and type-family mismatches;
+- interprocedural result type mismatches;
 - direct and numbered recursion;
 - invalid arrow chains;
 - unknown procedure calls;
@@ -77,6 +88,8 @@ The suite checks:
 - invalid `CONST` targets;
 - failed contract requirements;
 - direct arithmetic divide-by-zero exceptions;
+- relation edge cases for inverse and composition behavior;
+- backend-equivalence fixtures covering predicate and chess procedures;
 - registered native C callback execution through `examples/host_abi.plk`;
 - typed IR emission through `plankac ir`;
 - backend lowering report emission through `plankac lowering`;

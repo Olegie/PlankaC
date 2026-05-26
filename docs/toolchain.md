@@ -3,6 +3,20 @@
 For the short command manual, see `docs/compiler_guide.md`. This page keeps
 the broader build and target structure in one place.
 
+The repository has two primary verification entries:
+
+```text
+build.bat
+make ci
+```
+
+GitHub Actions runs both paths: Windows builds through `build.bat`, and Linux
+builds through `Makefile`. Both jobs generate bytecode, typed IR, generated C,
+generated x86-64 ASM, 8086 ASM, API demos, conformance, and graphics exporter
+outputs. Windows also links and runs the generated x86-64 ASM runner; Linux
+validates the generated ASM as a structural smoke test because the current ASM
+runner uses the Windows/MinGW x64 ABI.
+
 PlankaC uses this structure:
 
 ```text
@@ -136,6 +150,7 @@ See `docs/plankac_api.md` and `docs/plankahost_api.md`.
 See `docs/plankac_bytecode.md` for compiler output and `docs/conformance.md`
 for parser/runtime edge tests.
 See `docs/compiler_pipeline.md` for the stable source-to-IR-to-native route.
+See `docs/release_guide.md` for tag and binary packaging rules.
 
 The current interpreter supports the executable profile used by this
 repository:

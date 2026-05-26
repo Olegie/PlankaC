@@ -2,17 +2,20 @@
   <img src="docs/logo.svg" alt="PlankaC logo" width="560">
 </p>
 
-# PlankaC: Kompakte Plankalkuel-Laufzeit in C
+# PlankaC: Plankalkuel-Profil und Toolchain in C
 
 [English README](README.en.md) | Lizenz: MIT
 
-PlankaC ist ein kompakter Parser, Interpreter, Bytecode-Schreiber,
-Bytecode-Runner, C-Backend-Emitter, native ASM-Backend und Einbettungs-API
-fuer eine lineare Plankalkuel-Notation. PlankaMath ist das mitgelieferte
-Beispielprojekt: ein Taschenrechner mit weiteren `.plk`-Plaenen fuer
-indizierte Werte, geschachtelte Felder, Listen, Paare, Mengen, Relationen,
-komplexe Werte, 3D-Vektoren, 4x4-Matrizen, Rotation, Projektion, Schleifen,
-Assertions und Schachstrukturen.
+[![CI](https://github.com/Olegie/PlankaC/actions/workflows/ci.yml/badge.svg)](https://github.com/Olegie/PlankaC/actions/workflows/ci.yml)
+
+PlankaC ist eine substanzielle ausfuehrbare Plankalkuel-Profil-
+Implementierung in C: Parser, Interpreter, typed IR, Bytecode-Schreiber,
+Bytecode-Runner, C-Backend-Emitter, native ASM-Backend, 8086-ASM-Emitter und
+Einbettungs-API fuer eine lineare Plankalkuel-Notation. PlankaMath ist das
+mitgelieferte Beispielprofil: ein Taschenrechner mit weiteren `.plk`-Plaenen
+fuer indizierte Werte, geschachtelte Felder, Listen, Paare, Mengen,
+Relationen, komplexe Werte, 3D-Vektoren, 4x4-Matrizen, Rotation, Projektion,
+Schleifen, Assertions und Schachstrukturen.
 
 ## Inhalt
 
@@ -94,6 +97,11 @@ Das Ausfuehrungsmodell fuer `.plk`-Anwendungen steht in
 | [`Examples`](docs/examples.md) | ausfuehrbare Quell- und Kommando-Beispiele fuer das implementierte Sprachprofil |
 | [`Porting Guide`](docs/porting_guide.md) | Einbettung, Plattformziele, Win16/DOS-Grenzen, PlankaHost-Integration und Backend-Regeln |
 | [`ABI And Embedding API`](docs/abi.md) | C-Hosts rufen PlankaC-Prozeduren auf; `.plk`-Quellen rufen registrierte C-Funktionen auf |
+| [`Max3 Tutorial`](docs/tutorials/max3_to_native.md) | eine `.plk`-Datei durch Interpreter, Bytecode, generiertes C, generiertes ASM und native Runner |
+| [`Technical Report`](docs/technical_report.md) | englisch/deutscher Bericht zu Scope, Architektur, Quellenbezug, Backends und Pruefung |
+| [`Release Guide`](docs/release_guide.md) | Versionen, Tags, Release-Assets, Checksums und Binary Policy |
+| [`Deutsche Projektseite`](docs/de/plankac.md) | ruhige deutsche Beschreibung des Projekts und seiner Grenzen |
+| [`External Review Request`](docs/review_request.md) | Text fuer technische Begutachtung durch Sprach-/Computing-History-Leute |
 
 ## PlankaHost
 
@@ -111,7 +119,7 @@ meldet ihren Typ ueber `app_kind` und stellt gemeinsame Prozeduren wie
 Starter vorhanden, aber die gemeinsame Host-API ist `PlankaHost`.
 
 Fuer eingebettete Programme ist `graphics/c/plankahost.h` der praktische
-Einstieg. `plankahost_open` laedt die komplette PlankaC-Basis, die alten
+Einstieg. `plankahost_open` laedt die Standardbasis von PlankaC, die alten
 Rechnerprozeduren, Datenstruktur-, Relations-, Schach- und 3D-Prozeduren
 sowie das angegebene Anwendungsprofil. Danach kann ein Host Prozeduren
 listen, nach Namen suchen und per `plankahost_run` ausfuehren. Damit liegt
@@ -209,7 +217,7 @@ build\plankac_native_asm.exe add 12 8
 
 Mehr dazu steht in `docs/execution_model.md`.
 
-Die 3D-Schicht ist bewusst als moderne PlankaC-Erweiterung markiert. Sie
+Die 3D-Schicht ist als PlankaC-Erweiterung markiert. Sie
 erweitert das implementierte Sprachprofil um Vektoren, Matrizen,
 Rotationen, Transformationen und Projektion, ohne diese Erweiterung dem dokumentierten
 Plankalkuel-Sprachkern zuzuschreiben.
@@ -239,6 +247,12 @@ Einfacher Build:
 
 ```powershell
 .\build.bat
+```
+
+Linux-Build und CI-Pfad:
+
+```bash
+make ci
 ```
 
 Manueller Build der wichtigsten PlankaC-Objekte:
@@ -366,6 +380,8 @@ Erwartete Ausgabe:
 .\build\plankac.exe tests
 .\build\plankac.exe run three_d_pipeline_session
 .\build\plankac.exe runfile graphics\src\plankacube.plk cube_scene_checksum
+.\build\plankac.exe checkfile examples\max3.plk
+.\build\plankac.exe runfile examples\max3.plk max3_demo
 .\build\plankac.exe bytecode build\plankamath.pbc
 .\build\plankac.exe checkbc build\plankamath.pbc
 .\build\plankac.exe runbc build\plankamath.pbc set_session
@@ -389,6 +405,8 @@ R0=0 R1=1
 R0=1
 R0=120
 R0=2403.500000
+PlankaC file OK: 30 files, 151 procedures
+R0=9
 Bytecode written: build\plankamath.pbc
 Bytecode OK: 148 procedures
 R0=2
