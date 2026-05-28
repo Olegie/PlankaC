@@ -3,7 +3,7 @@
 The compiler route has four stable layers:
 
 ```text
-.plk source -> procedure AST -> typed IR -> backend artifact
+.plk source -> procedure AST -> expression AST -> typed IR -> bytecode/C/ASM/8086 artifact
 ```
 
 ## Procedure AST
@@ -15,6 +15,22 @@ number, name, input contract, result contract, ordered statements
 ```
 
 This layer still preserves source line numbers for diagnostics.
+The implementation materializes that layer in `c/ir/plankac_ast.c`.
+The AST classifies statements before typed IR construction: plain evaluation,
+calls, guarded evaluation, guarded calls, loops, contracts, `STOPIF`, and
+`CONST`.
+
+Each statement also carries expression AST summaries for guard, value, and
+target-list text. The expression layer recognizes literals, references, calls,
+unary operators, binary operators, predicate forms, grouped expressions, and
+target lists. The readable artifact is emitted with:
+
+```text
+build\plankac.exe ast build\plankac.ast
+```
+
+Backends therefore consume a stream built from the AST boundary instead of each
+backend independently classifying source lines.
 
 ## Typed IR
 
@@ -22,7 +38,7 @@ The typed IR records one node per statement:
 
 ```text
 procedure, line, op, guard family, value family, target family,
-callee, arity, result count, lowering class
+callee, arity, result count, lowering class, expression node counts
 ```
 
 Current operation classes:
@@ -58,9 +74,9 @@ runtime entry points with the same procedure contract.
 
 ## Bytecode
 
-The bytecode backend serializes the procedure table and statement text into a
-loadable text format. The bytecode runner reloads that artifact and executes
-the same procedure contracts as source loading.
+The bytecode backend serializes the procedure table from AST statement nodes
+into a loadable text format. The bytecode runner reloads that artifact and
+executes the same procedure contracts as source loading.
 
 ## Generated C And x86-64 ASM
 
@@ -85,8 +101,11 @@ The 8086 backend emits MASM/TASM-style source with:
 | `plankac_8086_board_heap` | chess board heap |
 | `plankac_8086_list_new` | list ABI entry |
 | `plankac_8086_list_push` | list append ABI entry |
+| `plankac_8086_set_add` | set insert ABI entry |
 | `plankac_8086_pair_make` | pair ABI entry |
 | `plankac_8086_record_set` | record write ABI entry |
+| `plankac_8086_relation_select` | relation selection ABI entry |
+| `plankac_8086_predicate_where` | predicate comparison ABI entry |
 | `plankac_8086_board_piece` | board read ABI entry |
 | `plankac_8086_dispatch_compound` | compound dispatch ABI entry |
 

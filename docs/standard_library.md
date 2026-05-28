@@ -7,7 +7,7 @@ Current profile:
 
 ```text
 29 files
-148 procedures
+150 procedures
 ```
 
 This page summarizes the callable procedures by domain. The complete numbered
@@ -107,15 +107,24 @@ pair, pair_left, pair_right, pair_equal
 set_new, set_add, set_contains, set_size, set_union
 set_intersection, set_difference, set_subset, set_equal
 set_cartesian, set_exists_greater, set_forall_less
+set_select_where, set_count_where, set_exists_where, set_forall_where
 relation_domain, relation_range, relation_has_pair
 relation_compose, relation_inverse, relation_image
 list_select_greater, list_count_equal, list_exists_equal
-list_forall_greater, list_zip_pairs, list_pair
+list_forall_greater, list_select_where, list_count_where
+list_exists_where, list_forall_where, list_zip_pairs, list_pair
 pair_left_list_len, pair_right_list_len
 relation_select_domain, relation_select_range
 relation_exists_range_equal, relation_forall_domain_greater
+relation_domain_select_where, relation_domain_count_where
+relation_domain_exists_where, relation_domain_forall_where
+relation_range_select_where, relation_range_count_where
+relation_range_exists_where, relation_range_forall_where
 relation_signature
 SELECT, COUNT, EXISTS, FORALL
+SETSELECT, SETCOUNT, SETEXISTS, SETFORALL
+DOMAINSELECT, DOMAINCOUNT, DOMAINEXISTS, DOMAINFORALL
+RANGESELECT, RANGECOUNT, RANGEEXISTS, RANGEFORALL
 ```
 
 ## Records And Structured Values

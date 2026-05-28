@@ -51,6 +51,8 @@ jobs:
             "CHANGELOG.md",
             "README.en.md",
             "docs/release_artifacts_note.md",
+            "build/plankac.evidence.json",
+            "build/max3.evidence.json",
             "build/plankac.exe",
             "build/plankac_conformance.exe",
             "build/plankac_api_demo.exe",
@@ -97,6 +99,7 @@ jobs:
           case "$tag" in v*) ;; *) echo "Release tag must start with v" >&2; exit 1 ;; esac
           mkdir -p dist/PlankaC-"$tag"-linux-x64
           cp VERSION LICENSE CHANGELOG.md README.en.md docs/release_artifacts_note.md dist/PlankaC-"$tag"-linux-x64/
+          cp build/plankac.evidence.json build/max3.evidence.json dist/PlankaC-"$tag"-linux-x64/
           cp build/plankac build/plankac_conformance build/plankac_api_demo build/plankac_abi_demo dist/PlankaC-"$tag"-linux-x64/
           cp build/plankagui_export build/plankacube_export build/plankahost_demo dist/PlankaC-"$tag"-linux-x64/
           tar -czf dist/PlankaC-"$tag"-linux-x64.tar.gz -C dist PlankaC-"$tag"-linux-x64

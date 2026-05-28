@@ -5,9 +5,10 @@
 ### Abstract
 
 PlankaC is a substantial executable Plankalkuel-profile implementation in C.
-It provides a parser, interpreter, typed IR, text bytecode, generated C,
-generated x86-64 assembly, 8086/DOS-oriented assembly emission, embedding API,
-host APIs for `.plk` applications, and a conformance corpus.
+It provides a parser, interpreter, statement/expression AST boundary, typed IR,
+text bytecode, generated C, generated x86-64 assembly, 8086/DOS-oriented
+assembly emission, embedding API, host APIs for `.plk` applications, and a
+conformance corpus.
 
 The project does not claim to be a complete historical reconstruction of
 Plankalkuel. Its purpose is narrower and more testable: preserve a
@@ -36,7 +37,8 @@ The repository is split into compiler and runtime layers:
 - `c/notation`: linear and PAGE/table two-dimensional notation support;
 - `c/analyzer`: static checks and structural schema checks;
 - `c/values`: tagged values, bit packing, and fixed-point helpers;
-- `c/ir`: typed intermediate representation;
+- `c/ir`: statement AST, expression AST summaries, typed intermediate
+  representation, and evidence packets;
 - `c/backends`: bytecode, lowering report, generated C, x86-64 ASM, 8086 ASM;
 - `c/models`: chess board and game-state helpers;
 - `c/targets`: CLI, Windows GUI, Win16, and DOS hosts;
@@ -45,7 +47,7 @@ The repository is split into compiler and runtime layers:
 The practical compiler path is:
 
 ```text
-.plk source -> parser/analyzer -> procedure table -> typed IR/bytecode -> C/ASM/native runner
+.plk source -> parser/analyzer -> procedure table -> AST -> typed IR/bytecode -> C/ASM/native runner
 ```
 
 ### Implemented Profile
@@ -66,6 +68,7 @@ behavior, documentation, and conformance coverage.
 PlankaC emits several artifacts:
 
 - text bytecode reloadable by the PlankaC runner;
+- readable AST with statement classes and expression summaries;
 - readable typed IR;
 - lowering reports for backend inspection;
 - generated C runners;
@@ -114,9 +117,10 @@ clarity.
 ### Zusammenfassung
 
 PlankaC ist eine substanzielle ausfuehrbare Plankalkuel-Profil-Implementierung
-in C. Das Projekt enthaelt Parser, Interpreter, typed IR, Text-Bytecode,
-generiertes C, generiertes x86-64-ASM, 8086/DOS-nahes ASM, Einbettungs-API,
-Host-APIs fuer `.plk`-Anwendungen und einen Conformance-Corpus.
+in C. Das Projekt enthaelt Parser, Interpreter, eine Statement-/Expression-
+AST-Grenze, typed IR, Text-Bytecode, generiertes C, generiertes x86-64-ASM,
+8086/DOS-nahes ASM, Einbettungs-API, Host-APIs fuer `.plk`-Anwendungen und
+einen Conformance-Corpus.
 
 Das Projekt behauptet nicht, eine vollstaendige historische Rekonstruktion des
 Plankalkuels zu sein. Der Anspruch ist enger und besser pruefbar: ein
@@ -143,7 +147,7 @@ Analyzer, Values, IR, Backends, Models, Targets und Graphics. Der wichtige
 Pfad ist:
 
 ```text
-.plk-Quelle -> Parser/Analyzer -> Prozedurtabelle -> typed IR/Bytecode -> C/ASM/native runner
+.plk-Quelle -> Parser/Analyzer -> Prozedurtabelle -> AST -> typed IR/Bytecode -> C/ASM/native runner
 ```
 
 ### Profil
@@ -161,7 +165,7 @@ Dokumentation und Conformance-Abdeckung haben.
 
 ### Backends und Pruefung
 
-PlankaC erzeugt Bytecode, typed IR, Lowering-Reports, C, x86-64-ASM und
+PlankaC erzeugt AST, Bytecode, typed IR, Lowering-Reports, C, x86-64-ASM und
 8086/DOS-nahes ASM. Windows und Linux werden in CI gebaut. Die lokalen
 Einstiege sind `build.bat`, `make ci` und der Conformance-Runner.
 

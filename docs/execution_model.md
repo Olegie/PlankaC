@@ -174,13 +174,13 @@ build/plankac.exe native-asm build/plankac_native_asm
 Expected result:
 
 ```text
-PlankaC OK: 29 files, 148 procedures
+PlankaC OK: 29 files, 150 procedures
 R0=30
 R0=0 R1=1
 R0=1
 R0=120
 Bytecode written: build/plankamath.pbc
-Bytecode OK: 148 procedures
+Bytecode OK: 150 procedures
 R0=2
 IR written: build/plankac.ir
 Lowering written: build/plankac.lowering

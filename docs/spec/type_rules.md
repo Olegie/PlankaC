@@ -48,12 +48,15 @@ The analyzer tracks schemas for compound families:
 | --- | --- |
 | list/set | pushed element markers must stay compatible |
 | pair | left and right sides form a stable pair schema |
-| relation | domain/range are inferred from pair lists |
+| relation | domain/range are inferred from pair lists and checked when pairs are pushed into a relation list |
 | record | each field key keeps a stable value family |
 | vector/matrix | operations require vector/matrix family markers |
 
 Schema checks are interprocedural where procedure signatures expose enough
 marker information. Runtime checks still guard malformed handle values.
+When a relation list receives pair handles, the analyzer carries the pair
+left/right families into the relation domain/range schema. A later pair with
+an incompatible domain or range is rejected during source loading.
 
 ## Contracts And Assertions
 

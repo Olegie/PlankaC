@@ -268,6 +268,8 @@ P303 chess_position_signature_session
 P320 relation_range_selection_session
 P321 relation_quantifier_session
 P322 relation_signature_session
+P323 predicate_generalized_session
+P324 predicate_relation_syntax_session
 ```
 
 ## Complete Game-State Chess Checks

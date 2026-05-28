@@ -6,7 +6,7 @@ The loader reads a list of `.plk` sources and builds a procedure table. During
 loading it also validates duplicate procedures, type markers, recursive calls,
 interprocedure call contracts, structural schemas, PAGE documents, and typed IR.
 
-The default profile currently loads 29 source files and 148 procedures.
+The default profile currently loads 29 source files and 150 procedures.
 
 ## Frames
 

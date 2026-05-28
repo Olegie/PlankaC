@@ -792,7 +792,8 @@ static int plc_predicate_starts_with(const char *text, const char *keyword,
     return 1;
 }
 
-static const char *plc_predicate_find_operator(const char *text, char op)
+static const char *plc_predicate_find_comparison(const char *text,
+    int *op_code, int *op_len)
 {
     int paren_depth;
     int bracket_depth;
@@ -808,8 +809,37 @@ static const char *plc_predicate_find_operator(const char *text, char op)
             ++bracket_depth;
         } else if (*text == ']' && bracket_depth > 0) {
             --bracket_depth;
-        } else if (*text == op && paren_depth == 0 && bracket_depth == 0) {
-            return text;
+        } else if (paren_depth == 0 && bracket_depth == 0) {
+            if (text[0] == '!' && text[1] == '=') {
+                *op_code = PLC_CMP_NE;
+                *op_len = 2;
+                return text;
+            }
+            if (text[0] == '<' && text[1] == '=') {
+                *op_code = PLC_CMP_LE;
+                *op_len = 2;
+                return text;
+            }
+            if (text[0] == '>' && text[1] == '=') {
+                *op_code = PLC_CMP_GE;
+                *op_len = 2;
+                return text;
+            }
+            if (*text == '=') {
+                *op_code = PLC_CMP_EQ;
+                *op_len = 1;
+                return text;
+            }
+            if (*text == '<') {
+                *op_code = PLC_CMP_LT;
+                *op_len = 1;
+                return text;
+            }
+            if (*text == '>') {
+                *op_code = PLC_CMP_GT;
+                *op_len = 1;
+                return text;
+            }
         }
         ++text;
     }
@@ -825,42 +855,68 @@ static int plc_eval_predicate_text(const PLC_PROGRAM *program,
     const char *call_name;
     char left_text[PLC_MAX_LINE];
     char right_text[PLC_MAX_LINE];
-    double args[2];
+    double args[3];
+    int op_code;
+    int op_len;
 
     call_name = 0;
     body = 0;
     op = 0;
+    op_code = 0;
+    op_len = 0;
     if (plc_predicate_starts_with(text, "SELECT", &body)) {
-        op = plc_predicate_find_operator(body, '>');
-        call_name = "list_select_greater";
+        call_name = "list_select_where";
     } else if (plc_predicate_starts_with(text, "FORALL", &body)) {
-        op = plc_predicate_find_operator(body, '>');
-        call_name = "list_forall_greater";
+        call_name = "list_forall_where";
     } else if (plc_predicate_starts_with(text, "EXISTS", &body)) {
-        op = plc_predicate_find_operator(body, '=');
-        call_name = "list_exists_equal";
+        call_name = "list_exists_where";
     } else if (plc_predicate_starts_with(text, "COUNT", &body)) {
-        op = plc_predicate_find_operator(body, '=');
-        call_name = "list_count_equal";
+        call_name = "list_count_where";
+    } else if (plc_predicate_starts_with(text, "SETSELECT", &body)) {
+        call_name = "set_select_where";
+    } else if (plc_predicate_starts_with(text, "SETFORALL", &body)) {
+        call_name = "set_forall_where";
+    } else if (plc_predicate_starts_with(text, "SETEXISTS", &body)) {
+        call_name = "set_exists_where";
+    } else if (plc_predicate_starts_with(text, "SETCOUNT", &body)) {
+        call_name = "set_count_where";
+    } else if (plc_predicate_starts_with(text, "DOMAINSELECT", &body)) {
+        call_name = "relation_domain_select_where";
+    } else if (plc_predicate_starts_with(text, "DOMAINFORALL", &body)) {
+        call_name = "relation_domain_forall_where";
+    } else if (plc_predicate_starts_with(text, "DOMAINEXISTS", &body)) {
+        call_name = "relation_domain_exists_where";
+    } else if (plc_predicate_starts_with(text, "DOMAINCOUNT", &body)) {
+        call_name = "relation_domain_count_where";
+    } else if (plc_predicate_starts_with(text, "RANGESELECT", &body)) {
+        call_name = "relation_range_select_where";
+    } else if (plc_predicate_starts_with(text, "RANGEFORALL", &body)) {
+        call_name = "relation_range_forall_where";
+    } else if (plc_predicate_starts_with(text, "RANGEEXISTS", &body)) {
+        call_name = "relation_range_exists_where";
+    } else if (plc_predicate_starts_with(text, "RANGECOUNT", &body)) {
+        call_name = "relation_range_count_where";
     } else {
         return -1;
     }
+    op = plc_predicate_find_comparison(body, &op_code, &op_len);
     if (op == 0) {
         plc_set_error(err, err_size, "bad predicate expression");
         return 0;
     }
     plc_copy_range(left_text, sizeof(left_text), body, op);
     plc_trim_in_place(left_text);
-    strncpy(right_text, op + 1, sizeof(right_text) - 1);
+    strncpy(right_text, op + op_len, sizeof(right_text) - 1);
     right_text[sizeof(right_text) - 1] = '\0';
     plc_trim_in_place(right_text);
     if (!plc_eval_expr_text(program, frame, depth, left_text,
             &args[0], err, err_size)
             || !plc_eval_expr_text(program, frame, depth, right_text,
-                &args[1], err, err_size)) {
+                &args[2], err, err_size)) {
         return 0;
     }
-    return plc_call_proc(program, frame, call_name, args, 2, out,
+    args[1] = (double)op_code;
+    return plc_call_proc(program, frame, call_name, args, 3, out,
         depth + 1, err, err_size);
 }
 

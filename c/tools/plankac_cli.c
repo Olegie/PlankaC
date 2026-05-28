@@ -240,7 +240,12 @@ static void plc_print_usage(void)
     printf("  bytecode <output.pbc>\n");
     printf("  checkbc <input.pbc>\n");
     printf("  runbc <input.pbc> <procedure|Pnumber> [args...]\n");
+    printf("  ast <output.ast>\n");
+    printf("  astfile <extra.plk> <output.ast>\n");
     printf("  ir <output.ir>\n");
+    printf("  irfile <extra.plk> <output.ir>\n");
+    printf("  evidence <output.json>\n");
+    printf("  evidencefile <extra.plk> <output.json>\n");
     printf("  lowering <output.txt>\n");
     printf("  cgen <output.c>\n");
     printf("  asmgen <output.S>\n");
@@ -416,6 +421,86 @@ int main(int argc, char **argv)
             return 1;
         }
         printf("IR written: %s\n", argv[2]);
+        return 0;
+    }
+
+    if (strcmp(argv[1], "ast") == 0) {
+        if (argc < 3) {
+            printf("Missing AST output path.\n");
+            return 1;
+        }
+        if (!plc_emit_ast(&program, argv[2], err, sizeof(err))) {
+            printf("AST failed: %s\n", err);
+            return 1;
+        }
+        printf("AST written: %s\n", argv[2]);
+        return 0;
+    }
+
+    if (strcmp(argv[1], "astfile") == 0) {
+        if (argc < 4) {
+            printf("Usage: astfile <extra.plk> <output.ast>\n");
+            return 1;
+        }
+        if (!plc_load_program_with_file(&program, argv[2],
+                err, sizeof(err))) {
+            printf("PlankaC file load failed: %s\n", err);
+            return 1;
+        }
+        if (!plc_emit_ast(&program, argv[3], err, sizeof(err))) {
+            printf("AST failed: %s\n", err);
+            return 1;
+        }
+        printf("AST written: %s\n", argv[3]);
+        return 0;
+    }
+
+    if (strcmp(argv[1], "irfile") == 0) {
+        if (argc < 4) {
+            printf("Usage: irfile <extra.plk> <output.ir>\n");
+            return 1;
+        }
+        if (!plc_load_program_with_file(&program, argv[2],
+                err, sizeof(err))) {
+            printf("PlankaC file load failed: %s\n", err);
+            return 1;
+        }
+        if (!plc_emit_ir(&program, argv[3], err, sizeof(err))) {
+            printf("IR failed: %s\n", err);
+            return 1;
+        }
+        printf("IR written: %s\n", argv[3]);
+        return 0;
+    }
+
+    if (strcmp(argv[1], "evidence") == 0) {
+        if (argc < 3) {
+            printf("Missing evidence output path.\n");
+            return 1;
+        }
+        if (!plc_emit_evidence(&program, argv[2], err, sizeof(err))) {
+            printf("Evidence failed: %s\n", err);
+            return 1;
+        }
+        printf("Evidence written: %s\n", argv[2]);
+        return 0;
+    }
+
+    if (strcmp(argv[1], "evidencefile") == 0) {
+        if (argc < 4) {
+            printf("Usage: evidencefile <extra.plk> <output.json>\n");
+            return 1;
+        }
+        if (!plc_load_program_with_file(&program, argv[2],
+                err, sizeof(err))) {
+            printf("PlankaC file load failed: %s\n", err);
+            return 1;
+        }
+        if (!plc_emit_evidence(&program, argv[3], err, sizeof(err))) {
+            printf("Evidence failed: %s\n", err);
+            return 1;
+        }
+        printf("Evidence written: %s\n", argv[3]);
         return 0;
     }
 

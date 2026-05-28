@@ -8,6 +8,8 @@ typedef struct PLC_SCHEMA_ENTRY {
     int element_family;
     int left_family;
     int right_family;
+    int domain_family;
+    int range_family;
 } PLC_SCHEMA_ENTRY;
 
 typedef struct PLC_SCHEMA_FIELD {
@@ -54,11 +56,14 @@ static int plc_schema_builtin_family(const char *name)
     if (strcmp(name, "list_new") == 0 || strcmp(name, "list_push") == 0
             || strcmp(name, "list_concat") == 0
             || strcmp(name, "list_select_greater") == 0
+            || strcmp(name, "list_select_where") == 0
             || strcmp(name, "list_zip_pairs") == 0
             || strcmp(name, "relation_domain") == 0
             || strcmp(name, "relation_range") == 0
             || strcmp(name, "relation_select_domain") == 0
             || strcmp(name, "relation_select_range") == 0
+            || strcmp(name, "relation_domain_select_where") == 0
+            || strcmp(name, "relation_range_select_where") == 0
             || strcmp(name, "relation_inverse") == 0
             || strcmp(name, "relation_image") == 0
             || strcmp(name, "set_cartesian") == 0
@@ -68,7 +73,8 @@ static int plc_schema_builtin_family(const char *name)
     if (strcmp(name, "set_new") == 0 || strcmp(name, "set_add") == 0
             || strcmp(name, "set_union") == 0
             || strcmp(name, "set_intersection") == 0
-            || strcmp(name, "set_difference") == 0) {
+            || strcmp(name, "set_difference") == 0
+            || strcmp(name, "set_select_where") == 0) {
         return PLC_TYPE_FAMILY_SET;
     }
     if (strcmp(name, "record_new") == 0 || strcmp(name, "record_set") == 0
@@ -109,12 +115,20 @@ static int plc_schema_builtin_family(const char *name)
             || strcmp(name, "relation_has_pair") == 0
             || strcmp(name, "relation_exists_range_equal") == 0
             || strcmp(name, "relation_forall_domain_greater") == 0
+            || strcmp(name, "relation_domain_exists_where") == 0
+            || strcmp(name, "relation_domain_forall_where") == 0
+            || strcmp(name, "relation_range_exists_where") == 0
+            || strcmp(name, "relation_range_forall_where") == 0
             || strcmp(name, "record_has") == 0
             || strcmp(name, "record_has_path2") == 0
             || strcmp(name, "record_shape_equal") == 0
             || strcmp(name, "bits_get") == 0
             || strcmp(name, "list_exists_equal") == 0
             || strcmp(name, "list_forall_greater") == 0
+            || strcmp(name, "list_exists_where") == 0
+            || strcmp(name, "list_forall_where") == 0
+            || strcmp(name, "set_exists_where") == 0
+            || strcmp(name, "set_forall_where") == 0
             || strcmp(name, "chess_legal_move") == 0
             || strcmp(name, "chess_legal_rook_move") == 0
             || strcmp(name, "chess_side_in_check") == 0
@@ -191,6 +205,8 @@ static PLC_SCHEMA_ENTRY *plc_schema_entry(PLC_SCHEMA_ENTRY *entries,
     entry->element_family = PLC_TYPE_FAMILY_UNKNOWN;
     entry->left_family = PLC_TYPE_FAMILY_UNKNOWN;
     entry->right_family = PLC_TYPE_FAMILY_UNKNOWN;
+    entry->domain_family = PLC_TYPE_FAMILY_UNKNOWN;
+    entry->range_family = PLC_TYPE_FAMILY_UNKNOWN;
     ++(*count);
     return entry;
 }
@@ -259,14 +275,28 @@ static int plc_schema_expr_family(const PLC_PROGRAM *program,
     const PLC_PROC *proc;
     int family;
 
-    if (plc_line_starts_with(expr, "SELECT")) {
+    if (plc_line_starts_with(expr, "SELECT")
+            || plc_line_starts_with(expr, "DOMAINSELECT")
+            || plc_line_starts_with(expr, "RANGESELECT")) {
         return PLC_TYPE_FAMILY_LIST;
     }
+    if (plc_line_starts_with(expr, "SETSELECT")) {
+        return PLC_TYPE_FAMILY_SET;
+    }
     if (plc_line_starts_with(expr, "EXISTS")
-            || plc_line_starts_with(expr, "FORALL")) {
+            || plc_line_starts_with(expr, "FORALL")
+            || plc_line_starts_with(expr, "SETEXISTS")
+            || plc_line_starts_with(expr, "SETFORALL")
+            || plc_line_starts_with(expr, "DOMAINEXISTS")
+            || plc_line_starts_with(expr, "DOMAINFORALL")
+            || plc_line_starts_with(expr, "RANGEEXISTS")
+            || plc_line_starts_with(expr, "RANGEFORALL")) {
         return PLC_TYPE_FAMILY_BOOLEAN;
     }
-    if (plc_line_starts_with(expr, "COUNT")) {
+    if (plc_line_starts_with(expr, "COUNT")
+            || plc_line_starts_with(expr, "SETCOUNT")
+            || plc_line_starts_with(expr, "DOMAINCOUNT")
+            || plc_line_starts_with(expr, "RANGECOUNT")) {
         return PLC_TYPE_FAMILY_NUMERIC;
     }
     family = plc_schema_first_marker_family(expr);
@@ -309,6 +339,39 @@ static int plc_schema_set_container_element(const PLC_PROC *proc,
     }
     sprintf(err, "P%d %s line %d: %s element schema mismatch",
         proc->number, proc->name, stmt->line_no, kind);
+    return 0;
+}
+
+static int plc_schema_family_compatible(int existing, int family)
+{
+    if (existing == PLC_TYPE_FAMILY_UNKNOWN || family == PLC_TYPE_FAMILY_UNKNOWN
+            || existing == family) {
+        return 1;
+    }
+    if (existing == PLC_TYPE_FAMILY_NUMERIC
+            && family == PLC_TYPE_FAMILY_BOOLEAN) {
+        return 1;
+    }
+    return 0;
+}
+
+static int plc_schema_set_relation_side(const PLC_PROC *proc,
+    const PLC_STMT *stmt, int *slot, int family, const char *side,
+    char *err, unsigned err_size)
+{
+    (void)err_size;
+    if (family == PLC_TYPE_FAMILY_UNKNOWN) {
+        return 1;
+    }
+    if (*slot == PLC_TYPE_FAMILY_UNKNOWN) {
+        *slot = family;
+        return 1;
+    }
+    if (plc_schema_family_compatible(*slot, family)) {
+        return 1;
+    }
+    sprintf(err, "P%d %s line %d: relation %s schema mismatch",
+        proc->number, proc->name, stmt->line_no, side);
     return 0;
 }
 
@@ -440,6 +503,25 @@ static int plc_schema_analyze_statement(const PLC_PROGRAM *program,
                 strcmp(name, "list_push") == 0 ? "list" : "set",
                 err, err_size)) {
             return 0;
+        }
+        if (element_family == PLC_TYPE_FAMILY_PAIR
+                && plc_schema_ref_key(args[1], target_key,
+                    sizeof(target_key))) {
+            PLC_SCHEMA_ENTRY *pair_entry;
+
+            pair_entry = plc_schema_find_entry(entries, *entry_count,
+                target_key);
+            if (pair_entry != 0) {
+                if (!plc_schema_set_relation_side(proc, stmt,
+                        &container->domain_family, pair_entry->left_family,
+                        "domain", err, err_size)
+                        || !plc_schema_set_relation_side(proc, stmt,
+                            &container->range_family,
+                            pair_entry->right_family, "range",
+                            err, err_size)) {
+                    return 0;
+                }
+            }
         }
     }
     if (strcmp(name, "pair") == 0 && argc == 2 && target != 0) {

@@ -20,39 +20,43 @@ static const char *plc_page_row_body(const char *row, const char *prefix)
     return 0;
 }
 
-static int plc_page_row_kind(const char *row)
+static int plc_page_rows_overlap(const PLC_2D_ROW_MODEL *expr,
+    const PLC_2D_ROW_MODEL *typed)
 {
-    const char *p;
+    int expr_first;
+    int expr_last;
+    int i;
 
-    p = row;
-    while (*p == ' ' || *p == '\t') {
-        ++p;
+    if (expr->cell_count <= 0 || typed->cell_count <= 0) {
+        return 0;
     }
-    if (p[0] == 'V' && p[1] == '|') {
-        return 'V';
-    }
-    if (p[0] == 'S' && p[1] == '|') {
-        return 'S';
-    }
-    if (p[0] == '|') {
-        return '|';
+    expr_first = expr->cells[0].col_start;
+    expr_last = expr->cells[expr->cell_count - 1].col_end;
+    for (i = 0; i < typed->cell_count; ++i) {
+        if (typed->cells[i].col_end >= expr_first
+                && typed->cells[i].col_start <= expr_last) {
+            return 1;
+        }
     }
     return 0;
 }
 
-static int plc_page_nearest_row(char rows[][PLC_MAX_LINE], int row_count,
+static int plc_page_nearest_overlapping_row(const PLC_2D_DOCUMENT *document,
     int expr_index, int kind)
 {
+    const PLC_2D_ROW_MODEL *expr;
     int best;
     int best_distance;
     int i;
 
+    expr = &document->rows[expr_index];
     best = -1;
     best_distance = 99999;
-    for (i = 0; i < row_count; ++i) {
+    for (i = 0; i < document->row_count; ++i) {
         int distance;
 
-        if (plc_page_row_kind(rows[i]) != kind) {
+        if (document->rows[i].kind != kind
+                || !plc_page_rows_overlap(expr, &document->rows[i])) {
             continue;
         }
         distance = i > expr_index ? i - expr_index : expr_index - i;
@@ -68,6 +72,7 @@ int plc_expand_2d_page(char rows[][PLC_MAX_LINE], int row_count,
     char statements[][PLC_MAX_LINE], int *statement_count,
     int max_statements, char *err, unsigned err_size)
 {
+    PLC_2D_DOCUMENT document;
     int i;
 
     if (statement_count == 0) {
@@ -75,6 +80,9 @@ int plc_expand_2d_page(char rows[][PLC_MAX_LINE], int row_count,
         return 0;
     }
     if (!plc_validate_2d_document(rows, row_count, err, err_size)) {
+        return 0;
+    }
+    if (!plc_build_2d_document(rows, row_count, &document, err, err_size)) {
         return 0;
     }
     *statement_count = 0;
@@ -85,7 +93,7 @@ int plc_expand_2d_page(char rows[][PLC_MAX_LINE], int row_count,
         const char *v_body;
         const char *s_body;
 
-        if (plc_page_row_kind(rows[i]) != '|') {
+        if (document.rows[i].kind != '|') {
             continue;
         }
         if (*statement_count >= max_statements) {
@@ -93,8 +101,8 @@ int plc_expand_2d_page(char rows[][PLC_MAX_LINE], int row_count,
                 "two-dimensional page produced too many statements");
             return 0;
         }
-        v_index = plc_page_nearest_row(rows, row_count, i, 'V');
-        s_index = plc_page_nearest_row(rows, row_count, i, 'S');
+        v_index = plc_page_nearest_overlapping_row(&document, i, 'V');
+        s_index = plc_page_nearest_overlapping_row(&document, i, 'S');
         if (v_index < 0 || s_index < 0) {
             plc_set_error(err, err_size,
                 "two-dimensional page needs V| and S| rows");

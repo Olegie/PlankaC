@@ -889,6 +889,22 @@ static int expect_extended_features(void)
         return 0;
     }
 
+    ok = plankac_context_run(ctx, "predicate_generalized_session", 0, 0,
+        &result, err, sizeof(err));
+    if (!ok || !nearly(result.value[0], 6.0)) {
+        printf("FAIL predicate_generalized_session: %s\n", err);
+        plankac_destroy(ctx);
+        return 0;
+    }
+
+    ok = plankac_context_run(ctx, "predicate_relation_syntax_session", 0, 0,
+        &result, err, sizeof(err));
+    if (!ok || !nearly(result.value[0], 8.0)) {
+        printf("FAIL predicate_relation_syntax_session: %s\n", err);
+        plankac_destroy(ctx);
+        return 0;
+    }
+
     ok = plankac_context_run(ctx, "chess_en_passant_session", 0, 0,
         &result, err, sizeof(err));
     if (!ok || !nearly(result.value[0], 1.0)) {
@@ -960,6 +976,7 @@ static int expect_native_bridge(void)
 {
     PLANKAC_CONTEXT *ctx;
     PLANKAC_RESULT result;
+    PLANKAC_TYPED_RESULT typed_result;
     PLANKAC_NATIVE_INFO info;
     const char *sources[2];
     const char *arg_types[2];
@@ -1009,8 +1026,116 @@ static int expect_native_bridge(void)
         plankac_destroy(ctx);
         return 0;
     }
+    ok = plankac_context_run_typed(ctx, "host_bridge", args, 2,
+        &typed_result, err, sizeof(err));
+    if (!ok || typed_result.count != 2
+            || typed_result.value[1].tag != PLANKAC_VALUE_BIT
+            || typed_result.value[1].raw != 0L) {
+        printf("FAIL native_bridge typed run: %s\n", err);
+        plankac_destroy(ctx);
+        return 0;
+    }
     printf("OK   native_bridge\n");
     plankac_destroy(ctx);
+    return 1;
+}
+
+static int expect_evidence_api(void)
+{
+    PLANKAC_CONTEXT *ctx;
+    FILE *in;
+    const char *sources[2];
+    char err[256];
+    char text[512];
+    size_t n;
+    int ok;
+
+    ctx = plankac_create();
+    if (ctx == 0) {
+        printf("FAIL evidence_api: no context\n");
+        return 0;
+    }
+    sources[0] = "examples/max3.plk";
+    sources[1] = 0;
+    if (!plankac_context_load_sources(ctx, sources, err, sizeof(err))) {
+        printf("FAIL evidence_api load: %s\n", err);
+        plankac_destroy(ctx);
+        return 0;
+    }
+    if (!plankac_context_write_evidence(ctx,
+            "build/conformance_evidence.json", err, sizeof(err))) {
+        printf("FAIL evidence_api write: %s\n", err);
+        plankac_destroy(ctx);
+        return 0;
+    }
+    plankac_destroy(ctx);
+
+    in = fopen("build/conformance_evidence.json", "r");
+    if (in == 0) {
+        printf("FAIL evidence_api open\n");
+        return 0;
+    }
+    n = fread(text, 1, sizeof(text) - 1, in);
+    fclose(in);
+    text[n] = '\0';
+    ok = strstr(text, "plankac-evidence-v1") != 0
+        && strstr(text, "\"fingerprint\"") != 0
+        && strstr(text, "\"procedures\"") != 0;
+    if (!ok) {
+        printf("FAIL evidence_api content\n");
+        return 0;
+    }
+    printf("OK   evidence_api\n");
+    return 1;
+}
+
+static int expect_ast_api(void)
+{
+    PLANKAC_CONTEXT *ctx;
+    FILE *in;
+    const char *sources[2];
+    char err[256];
+    char text[4096];
+    size_t n;
+    int ok;
+
+    ctx = plankac_create();
+    if (ctx == 0) {
+        printf("FAIL ast_api: no context\n");
+        return 0;
+    }
+    sources[0] = "examples/max3.plk";
+    sources[1] = 0;
+    if (!plankac_context_load_sources(ctx, sources, err, sizeof(err))) {
+        printf("FAIL ast_api load: %s\n", err);
+        plankac_destroy(ctx);
+        return 0;
+    }
+    if (!plankac_context_write_ast(ctx,
+            "build/conformance_ast.txt", err, sizeof(err))) {
+        printf("FAIL ast_api write: %s\n", err);
+        plankac_destroy(ctx);
+        return 0;
+    }
+    plankac_destroy(ctx);
+
+    in = fopen("build/conformance_ast.txt", "r");
+    if (in == 0) {
+        printf("FAIL ast_api open\n");
+        return 0;
+    }
+    n = fread(text, 1, sizeof(text) - 1, in);
+    fclose(in);
+    text[n] = '\0';
+    ok = strstr(text, "PLANKAC-AST 1") != 0
+        && strstr(text, "expression_nodes") != 0
+        && strstr(text, "op=CALL") != 0
+        && strstr(text, "root=CALL") != 0;
+    if (!ok) {
+        printf("FAIL ast_api content\n");
+        return 0;
+    }
+    printf("OK   ast_api\n");
     return 1;
 }
 
@@ -1060,6 +1185,9 @@ int main(void)
     ok = expect_run_file_result("valid_page_table_document",
             "tests/conformance/valid/page_table_document.plk",
             "page_table_document", 5.0) && ok;
+    ok = expect_run_file_result("valid_page_multi_table_document",
+            "tests/conformance/valid/page_multi_table_document.plk",
+            "page_multi_table_document", 14.0) && ok;
     ok = expect_run_file_result("valid_max3_profile",
             "tests/conformance/valid/max3_profile.plk",
             "valid_max3_profile", 9.0) && ok;
@@ -1071,7 +1199,7 @@ int main(void)
             "relation_edge_cases", 3.0) && ok;
     ok = expect_run_file_result("backend_predicate_equivalence",
             "tests/conformance/backend_equivalence/predicate_backend.plk",
-            "predicate_backend_equivalence", 3.0) && ok;
+            "predicate_backend_equivalence", 14.0) && ok;
     ok = expect_run_file_result("backend_chess_equivalence",
             "tests/conformance/backend_equivalence/chess_backend.plk",
             "chess_backend_equivalence", 1.0) && ok;
@@ -1139,6 +1267,9 @@ int main(void)
     ok = expect_load_fail("bad_schema_record_mismatch",
             "tests/conformance/bad_schema_record_mismatch.plk",
             "record field schema mismatch") && ok;
+    ok = expect_load_fail("bad_relation_domain_schema",
+            "tests/conformance/invalid/bad_relation_domain_schema.plk",
+            "relation domain schema mismatch") && ok;
     ok = expect_run_fail("bad_statement",
             "tests/conformance/bad_statement.plk",
             "bad_statement",
@@ -1161,6 +1292,8 @@ int main(void)
             "divide by zero") && ok;
     ok = expect_extended_features() && ok;
     ok = expect_native_bridge() && ok;
+    ok = expect_evidence_api() && ok;
+    ok = expect_ast_api() && ok;
     ok = expect_bytecode_runner() && ok;
 
     if (!ok) {

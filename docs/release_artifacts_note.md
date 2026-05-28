@@ -12,6 +12,9 @@ Release assets are the right place for binaries:
   exporters, and API demos built by CI.
 - `PlankaC-<tag>-source.tar.gz` is a clean source archive generated from the
   tagged commit.
+- `plankac.evidence.json` and `max3.evidence.json` inside the binary bundles
+  are machine-readable profiles of the standard source corpus and the tutorial
+  corpus.
 - `SHA256SUMS` records checksums for every release asset.
 
 The Win16 and DOS targets are platform builds. They are produced with Open

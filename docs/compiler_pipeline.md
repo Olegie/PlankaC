@@ -7,7 +7,9 @@ and native executables:
 .plk source
     -> parser and analyzer
     -> loaded procedure table
-    -> textual IR/bytecode
+    -> procedure AST
+    -> expression AST summaries
+    -> typed IR / bytecode
     -> IR reload
     -> generated C / generated x86-64 ASM / 8086 ASM source
     -> native executable through an external C toolchain
@@ -18,8 +20,10 @@ only write several files from the original source table; it writes `.pbc`,
 loads that `.pbc` back as the compiler IR, and emits the C/ASM artifacts from
 the reloaded IR program.
 
-For inspection, `plankac ir <output.ir>` emits the typed statement IR with
-operation class, type families, call shape, and lowering class.
+For inspection, `plankac ast <output.ast>` emits the statement AST and
+expression AST summaries. `plankac ir <output.ir>` emits the typed statement IR
+built from that AST boundary, with operation class, type families, call shape,
+expression-node counts, and lowering class.
 `plankac lowering <output.txt>` writes the backend lowering plan used to see
 which statements are direct scalar expressions and which ones route through
 compound/runtime entry points for C, x86-64 ASM, and 8086 ASM.
@@ -37,16 +41,15 @@ build\plankac_pipeline.pbc
 build\plankac_pipeline.c
 build\plankac_pipeline.S
 build\plankac_pipeline_8086.asm
-build\plankac.lowering
 ```
 
 Expected console shape:
 
 ```text
 Compiler pipeline OK
-source: 29 files, 148 procedures
+source: 29 files, 150 procedures
 ir: build\plankac_pipeline.pbc
-ir procedures: 148
+ir procedures: 150
 c: build\plankac_pipeline.c
 asm: build\plankac_pipeline.S
 asm8086: build\plankac_pipeline_8086.asm
@@ -91,7 +94,8 @@ handles, math helpers, and output formatting.
 
 | Stage | Artifact | Role |
 | --- | --- | --- |
-| IR | `.pbc` | readable compiler artifact, reloadable by PlankaC |
+| AST | `.ast` / in memory | statement and expression classification layer before typed IR construction |
+| IR | `.ir` / `.pbc` | readable typed stream plus reloadable bytecode artifact |
 | lowering report | `.lowering` / `.txt` | typed backend plan for scalar, call, contract, control, and compound operations |
 | C backend | `.c` | portable runner with embedded IR/bytecode |
 | x86-64 ASM backend | `.S` | generated native procedure functions plus dispatcher |
@@ -105,6 +109,8 @@ handles, math helpers, and output formatting.
 
 ```text
 plankac.exe compile build\plankac_pipeline
+plankac.exe ast build\plankac.ast
+plankac.exe ir build\plankac.ir
 plankac.exe lowering build\plankac.lowering
 plankac.exe native-c build\plankac_native_c
 plankac_native_c.exe set_session

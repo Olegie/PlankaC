@@ -7,9 +7,10 @@
 [![CI](https://github.com/Olegie/PlankaC/actions/workflows/ci.yml/badge.svg)](https://github.com/Olegie/PlankaC/actions/workflows/ci.yml)
 
 PlankaC is a substantial executable Plankalkuel-profile implementation in C:
-parser, interpreter, typed IR, bytecode writer, bytecode runner, C backend
-emitter, native ASM backend, 8086 ASM emitter, and embedding API for a linear
-Plankalkuel notation. PlankaMath is the bundled example profile: a calculator
+parser, interpreter, AST layer, typed IR, bytecode writer, bytecode runner,
+C backend emitter, native ASM backend, 8086 ASM emitter, and embedding API
+with typed results for a linear Plankalkuel notation. PlankaMath is the
+bundled example profile: a calculator
 plus `.plk` plans for indexed values, nested fields, lists, pairs, sets,
 relations, complex values, 3D vectors, 4x4 matrices, rotation, projection,
 loops, assertions, and chess structures.
@@ -25,6 +26,7 @@ loops, assertions, and chess structures.
 | `graphics/` | PlankaGUI: graphical interfaces from `.plk` procedures |
 | `asm/` | 8086 helper routine |
 | `docs/` | language reference, standard library, compiler guide, examples, porting notes, execution model |
+| `docs/research/` | reproducible research track and evidence protocol |
 
 Important files:
 
@@ -59,7 +61,8 @@ Important files:
 | `c/notation/` | two-dimensional Plankalkuel table rows, document validation, and page/table expansion |
 | `c/analyzer/` | static program checks, interprocedure checks, and structural schema inference |
 | `c/values/` | bit packing, tagged PLC values, and fixed-point raw-value helpers |
-| `c/ir/` | typed IR for compiler and backend boundaries |
+| `c/ir/` | AST, typed IR, and evidence data for compiler and backend boundaries |
+| `c/ir/plankac_evidence.c` | deterministic evidence packets for source/profile/backend stability |
 | `c/models/` | board-level chess legality, legal move count, castling path, promotion, en passant, stalemate, signatures, material, capture search, and mate checks |
 | `c/backends/` | bytecode, lowering report, C backend, x86-64 ASM, and 8086/DOS ASM |
 | `c/targets/` | CLI, DOS, Win16, and Windows GUI hosts |
@@ -95,6 +98,7 @@ the host API is described in `docs/plankahost_api.md`.
 | [`ABI And Embedding API`](docs/abi.md) | C hosts calling PlankaC procedures and `.plk` source calling registered C functions |
 | [`Max3 Tutorial`](docs/tutorials/max3_to_native.md) | one `.plk` file through interpreter, bytecode, generated C, generated ASM, and native runners |
 | [`Technical Report`](docs/technical_report.md) | English/German report on scope, architecture, source basis, backends, and verification |
+| [`Research Track`](docs/research/README.md) | testable hypotheses, evidence protocol, and failure conditions |
 | [`Release Guide`](docs/release_guide.md) | versioning, tags, release assets, checksums, and binary policy |
 | [`German Project Page`](docs/de/plankac.md) | calm German description of the project and its boundaries |
 | [`External Review Request`](docs/review_request.md) | text for asking language/history people for technical review |
@@ -194,12 +198,14 @@ relations, complex values, 3D vectors, 4x4 matrices, rotation, projection, loops
 assertions, procedure calls, and multi-result procedures such as
 `divide_checked`.
 
-It also has a compiler pipeline: source is emitted as readable IR/bytecode,
-the IR is loaded back, and C/ASM artifacts are emitted from that IR. The
-native commands link generated C or generated x86-64 assembly into executable
-programs:
+It also has a compiler pipeline: source is emitted as readable AST, typed IR,
+and bytecode, the bytecode is loaded back, and C/ASM artifacts are emitted from
+that boundary. The native commands link generated C or generated x86-64
+assembly into executable programs:
 
 ```text
+build\plankac.exe ast build\plankac.ast
+build\plankac.exe ir build\plankac.ir
 build\plankac.exe compile build\plankac_pipeline
 build\plankac.exe native-c build\plankac_native_c
 build\plankac_native_c.exe set_session
@@ -208,6 +214,18 @@ build\plankac_native_asm.exe add 12 8
 ```
 
 The exact execution model is described in `docs/execution_model.md`.
+
+For research and external review, PlankaC can emit a deterministic evidence
+packet for the loaded source profile:
+
+```text
+build\plankac.exe evidence build\plankac.evidence.json
+build\plankac.exe evidencefile examples\max3.plk build\max3.evidence.json
+```
+
+The packet records the procedure catalog, V/C/Z/R bank usage, type-family
+counts, statement classes, backend contract surface, and a source-profile
+fingerprint. The protocol is described in `docs/research/evidence_protocol.md`.
 
 The 3D layer is marked as a PlankaC extension. It extends
 the implemented profile with vectors, matrices, rotations, transforms, and projection
@@ -254,12 +272,15 @@ gcc -Wall -Wextra -std=c89 -Ic\include -Ic\internal -c c\analyzer\plankac_schema
 gcc -Wall -Wextra -std=c89 -Ic\include -Ic\internal -c c\values\plankac_bits.c -o build\plankac_bits.o
 gcc -Wall -Wextra -std=c89 -Ic\include -Ic\internal -c c\values\plankac_value.c -o build\plankac_value.o
 gcc -Wall -Wextra -std=c89 -Ic\include -Ic\internal -c c\models\plankac_chess_model.c -o build\plankac_chess_model.o
+gcc -Wall -Wextra -std=c89 -Ic\include -Ic\internal -c c\ir\plankac_ast.c -o build\plankac_ast.o
 gcc -Wall -Wextra -std=c89 -Ic\include -Ic\internal -c c\ir\plankac_ir.c -o build\plankac_ir.o
+gcc -Wall -Wextra -std=c89 -Ic\include -Ic\internal -c c\ir\plankac_evidence.c -o build\plankac_evidence.o
+gcc -Wall -Wextra -std=c89 -Ic\include -Ic\internal -c c\backends\plankac_lowering.c -o build\plankac_lowering.o
 gcc -Wall -Wextra -std=c89 -Ic\include -Ic\internal -c c\backends\plankac_bytecode.c -o build\plankac_bytecode.o
 gcc -Wall -Wextra -std=c89 -Ic\include -Ic\internal -c c\backends\plankac_asm8086.c -o build\plankac_asm8086.o
 gcc -Wall -Wextra -std=c89 -Ic\include -Ic\internal -c c\core\plankac_runtime.c -o build\plankac_runtime.o
 gcc -Wall -Wextra -std=c89 -Ic\include -Ic\internal -c c\backends\plankac_native_runtime.c -o build\plankac_native_runtime.o
-ar rcs build\libplankac.a build\plankac_common.o build\plankac_types.o build\plankac_2d.o build\plankac_document.o build\plankac_page.o build\plankac_analyzer.o build\plankac_schema.o build\plankac_bits.o build\plankac_value.o build\plankac_chess_model.o build\plankac_ir.o build\plankac_source.o build\plankac_expr.o build\plankac_bytecode.o build\plankac_asm8086.o build\plankac_runtime.o build\plankac_native_runtime.o
+ar rcs build\libplankac.a build\plankac_common.o build\plankac_types.o build\plankac_2d.o build\plankac_document.o build\plankac_page.o build\plankac_analyzer.o build\plankac_schema.o build\plankac_bits.o build\plankac_value.o build\plankac_chess_model.o build\plankac_ast.o build\plankac_ir.o build\plankac_evidence.o build\plankac_lowering.o build\plankac_source.o build\plankac_expr.o build\plankac_bytecode.o build\plankac_asm8086.o build\plankac_runtime.o build\plankac_native_runtime.o
 gcc -Wall -Wextra -std=c89 -Ic\include examples\c_api_demo.c build\libplankac.a -o build\plankac_api_demo.exe -lm
 gcc -Wall -Wextra -std=c89 -Ic\include examples\c_abi_demo.c build\libplankac.a -o build\plankac_abi_demo.exe -lm
 gcc -Wall -Wextra -std=c89 -Ic\include tests\plankac_conformance.c build\libplankac.a -o build\plankac_conformance.exe -lm
@@ -268,7 +289,7 @@ gcc -Wall -Wextra -std=c89 -Ic\include tests\plankac_conformance.c build\libplan
 Manual Windows GUI build:
 
 ```powershell
-gcc -mwindows build\plankac_common.o build\plankac_types.o build\plankac_2d.o build\plankac_document.o build\plankac_page.o build\plankac_analyzer.o build\plankac_schema.o build\plankac_bits.o build\plankac_value.o build\plankac_chess_model.o build\plankac_ir.o build\plankac_source.o build\plankac_expr.o build\plankac_bytecode.o build\plankac_asm8086.o build\plankac_runtime.o build\plankamath.o build\windows_gui.o -o build\PlankaMath.exe -lm
+gcc -mwindows build\plankac_common.o build\plankac_types.o build\plankac_2d.o build\plankac_document.o build\plankac_page.o build\plankac_analyzer.o build\plankac_schema.o build\plankac_bits.o build\plankac_value.o build\plankac_chess_model.o build\plankac_ast.o build\plankac_ir.o build\plankac_evidence.o build\plankac_lowering.o build\plankac_source.o build\plankac_expr.o build\plankac_bytecode.o build\plankac_asm8086.o build\plankac_runtime.o build\plankamath.o build\windows_gui.o -o build\PlankaMath.exe -lm
 ```
 
 Real Win16 GUI build for Windows 3.x:
@@ -304,7 +325,7 @@ Primary PlankaC source check:
 Expected output:
 
 ```text
-PlankaC OK: 29 files, 148 procedures
+PlankaC OK: 29 files, 150 procedures
 ```
 
 Compact fallback runner check:
@@ -367,7 +388,10 @@ Run the `.plk` interpreter:
 .\build\plankac.exe bytecode build\plankamath.pbc
 .\build\plankac.exe checkbc build\plankamath.pbc
 .\build\plankac.exe runbc build\plankamath.pbc set_session
+.\build\plankac.exe ast build\plankac.ast
+.\build\plankac.exe astfile examples\max3.plk build\max3.ast
 .\build\plankac.exe ir build\plankac.ir
+.\build\plankac.exe irfile examples\max3.plk build\max3.ir
 .\build\plankac.exe cgen build\plankac_generated.c
 .\build\plankac.exe asmgen build\plankac_asm_runtime.S
 .\build\plankac.exe asm8086 build\plankac_8086.asm
@@ -381,18 +405,21 @@ Run the `.plk` interpreter:
 Expected output:
 
 ```text
-PlankaC OK: 29 files, 148 procedures
+PlankaC OK: 29 files, 150 procedures
 R0=30
 R0=0 R1=1
 R0=1
 R0=120
 R0=2403.500000
-PlankaC file OK: 30 files, 151 procedures
+PlankaC file OK: 30 files, 153 procedures
 R0=9
 Bytecode written: build\plankamath.pbc
-Bytecode OK: 148 procedures
+Bytecode OK: 150 procedures
 R0=2
+AST written: build\plankac.ast
+AST written: build\max3.ast
 IR written: build\plankac.ir
+IR written: build\max3.ir
 C backend written: build\plankac_generated.c
 ASM runtime written: build\plankac_asm_runtime.S
 8086 ASM written: build\plankac_8086.asm

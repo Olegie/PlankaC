@@ -42,7 +42,7 @@ build\plankac.exe check
 Expected profile:
 
 ```text
-PlankaC OK: 29 files, 148 procedures
+PlankaC OK: 29 files, 150 procedures
 ```
 
 Check one additional application file:
@@ -137,11 +137,34 @@ It registers `host_mad` in C, loads `examples\host_abi.plk`, and runs
 
 ## Bytecode
 
+Emit the readable AST boundary:
+
+```bat
+build\plankac.exe ast build\plankac.ast
+build\plankac.exe astfile examples\max3.plk build\max3.ast
+```
+
+The AST file records statement classes and expression AST summaries for guard,
+value, and target-list positions. It is the inspection point before typed IR
+and bytecode emission.
+
 Emit readable typed IR:
 
 ```bat
 build\plankac.exe ir build\plankac.ir
+build\plankac.exe irfile examples\max3.plk build\max3.ir
 ```
+
+Emit a machine-readable evidence packet:
+
+```bat
+build\plankac.exe evidence build\plankac.evidence.json
+build\plankac.exe evidencefile examples\max3.plk build\max3.evidence.json
+```
+
+The evidence packet records a deterministic source fingerprint, catalog,
+statement-class counts, V/C/Z/R bank usage, type-family counts, and backend
+contract metadata. It is documented in `research/evidence_protocol.md`.
 
 Emit readable bytecode:
 

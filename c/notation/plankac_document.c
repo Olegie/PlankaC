@@ -118,6 +118,36 @@ static int plc_doc_nearest_row(const PLC_2D_DOCUMENT *document,
 }
 
 static int plc_doc_rows_overlap(const PLC_2D_ROW_MODEL *expr,
+    const PLC_2D_ROW_MODEL *typed);
+
+static int plc_doc_nearest_overlapping_row(const PLC_2D_DOCUMENT *document,
+    int expr_index, int kind)
+{
+    const PLC_2D_ROW_MODEL *expr;
+    int best;
+    int best_distance;
+    int i;
+
+    expr = &document->rows[expr_index];
+    best = -1;
+    best_distance = 99999;
+    for (i = 0; i < document->row_count; ++i) {
+        int distance;
+
+        if (document->rows[i].kind != kind
+                || !plc_doc_rows_overlap(expr, &document->rows[i])) {
+            continue;
+        }
+        distance = i > expr_index ? i - expr_index : expr_index - i;
+        if (distance < best_distance) {
+            best = i;
+            best_distance = distance;
+        }
+    }
+    return best;
+}
+
+static int plc_doc_rows_overlap(const PLC_2D_ROW_MODEL *expr,
     const PLC_2D_ROW_MODEL *typed)
 {
     int expr_first;
@@ -219,6 +249,8 @@ int plc_validate_2d_document(char rows[][PLC_MAX_LINE], int row_count,
         if (row->kind == '|') {
             int v_index;
             int s_index;
+            int any_v_index;
+            int any_s_index;
             int arrow_column;
 
             arrow_column = plc_doc_arrow_column(rows[i]);
@@ -232,17 +264,18 @@ int plc_validate_2d_document(char rows[][PLC_MAX_LINE], int row_count,
                     row->row, row->col);
                 return 0;
             }
-            v_index = plc_doc_nearest_row(&document, i, 'V');
-            s_index = plc_doc_nearest_row(&document, i, 'S');
+            v_index = plc_doc_nearest_overlapping_row(&document, i, 'V');
+            s_index = plc_doc_nearest_overlapping_row(&document, i, 'S');
             if (v_index < 0 || s_index < 0) {
+                any_v_index = plc_doc_nearest_row(&document, i, 'V');
+                any_s_index = plc_doc_nearest_row(&document, i, 'S');
+                if (any_v_index >= 0 && any_s_index >= 0) {
+                    sprintf(err,
+                        "PAGE row %d column %d: detached index/type row",
+                        row->row, row->col);
+                    return 0;
+                }
                 sprintf(err, "PAGE row %d column %d: missing V| or S| row",
-                    row->row, row->col);
-                return 0;
-            }
-            if (!plc_doc_rows_overlap(row, &document.rows[v_index])
-                    || !plc_doc_rows_overlap(row, &document.rows[s_index])) {
-                sprintf(err,
-                    "PAGE row %d column %d: detached index/type row",
                     row->row, row->col);
                 return 0;
             }

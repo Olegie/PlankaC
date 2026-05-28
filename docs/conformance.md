@@ -8,6 +8,7 @@ Source fixtures:
 ```text
 tests/conformance/valid_edge.plk
 tests/conformance/valid/page_table_document.plk
+tests/conformance/valid/page_multi_table_document.plk
 tests/conformance/valid/max3_profile.plk
 tests/conformance/runtime/tagged_fixed_runtime.plk
 tests/conformance/runtime/relation_edge_cases.plk
@@ -37,6 +38,7 @@ tests/conformance/bad_divide_zero.plk
 tests/conformance/invalid/bad_page_without_type.plk
 tests/conformance/invalid/bad_page_detached_rows.plk
 tests/conformance/invalid/bad_result_type_mismatch.plk
+tests/conformance/invalid/bad_relation_domain_schema.plk
 examples/host_abi.plk
 examples/max3.plk
 ```
@@ -76,6 +78,7 @@ The suite checks:
 - missing type rows in executable two-dimensional notation;
 - PAGE document diagnostics with row/column recovery;
 - valid PAGE table loading from the `valid/` conformance tree;
+- multi-table PAGE loading with coordinate-bound index/type rows;
 - detached PAGE row diagnostics for spatially invalid table rows;
 - standalone max-of-three procedures based on the linear Plankalkuel example
   shape;
@@ -86,11 +89,13 @@ The suite checks:
 - unknown procedure calls;
 - failed assertions;
 - invalid `CONST` targets;
+- relation domain/range schema mismatches;
 - failed contract requirements;
 - direct arithmetic divide-by-zero exceptions;
 - relation edge cases for inverse and composition behavior;
 - backend-equivalence fixtures covering predicate and chess procedures;
 - registered native C callback execution through `examples/host_abi.plk`;
+- typed C API result conversion through `PLANKAC_TYPED_RESULT`;
 - typed IR emission through `plankac ir`;
 - backend lowering report emission through `plankac lowering`;
 - compiler pipeline output through `plankac compile`, including IR reload and

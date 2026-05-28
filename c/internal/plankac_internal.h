@@ -61,6 +61,32 @@
 #define PLC_IR_OP_ENSURE 8
 #define PLC_IR_OP_STOPIF 9
 #define PLC_IR_OP_CONST 10
+#define PLC_AST_OP_EVAL 1
+#define PLC_AST_OP_CALL 2
+#define PLC_AST_OP_GUARD_EVAL 3
+#define PLC_AST_OP_GUARD_CALL 4
+#define PLC_AST_OP_LOOP 5
+#define PLC_AST_OP_ASSERT 6
+#define PLC_AST_OP_REQUIRE 7
+#define PLC_AST_OP_ENSURE 8
+#define PLC_AST_OP_STOPIF 9
+#define PLC_AST_OP_CONST 10
+#define PLC_EXPR_AST_EMPTY 0
+#define PLC_EXPR_AST_LITERAL 1
+#define PLC_EXPR_AST_REF 2
+#define PLC_EXPR_AST_CALL 3
+#define PLC_EXPR_AST_UNARY 4
+#define PLC_EXPR_AST_BINARY 5
+#define PLC_EXPR_AST_PREDICATE 6
+#define PLC_EXPR_AST_GROUP 7
+#define PLC_EXPR_AST_TARGET_LIST 8
+#define PLC_EXPR_AST_UNKNOWN 9
+#define PLC_CMP_EQ 1
+#define PLC_CMP_NE 2
+#define PLC_CMP_LT 3
+#define PLC_CMP_LE 4
+#define PLC_CMP_GT 5
+#define PLC_CMP_GE 6
 
 typedef struct PLC_TYPE_SPEC {
     int family;
@@ -97,7 +123,7 @@ typedef struct PLC_NATIVE_PROC {
     void *user_data;
 } PLC_NATIVE_PROC;
 
-typedef struct PLC_TAGGED_VALUE {
+typedef struct PLC_VALUE {
     int tag;
     int family;
     int bits;
@@ -105,7 +131,9 @@ typedef struct PLC_TAGGED_VALUE {
     long raw;
     int handle;
     double number;
-} PLC_TAGGED_VALUE;
+} PLC_VALUE;
+
+typedef PLC_VALUE PLC_TAGGED_VALUE;
 
 typedef struct PLC_VALUE_SHADOW {
     char bank;
@@ -116,6 +144,43 @@ typedef struct PLC_VALUE_SHADOW {
     char field[PLC_MAX_FIELD_NAME];
     PLC_TAGGED_VALUE value;
 } PLC_VALUE_SHADOW;
+
+typedef struct PLC_EXPR_AST_SUMMARY {
+    int root_kind;
+    int node_count;
+    int max_depth;
+    int call_count;
+    int ref_count;
+    int literal_count;
+    int predicate_count;
+    int operator_count;
+    int unknown_count;
+} PLC_EXPR_AST_SUMMARY;
+
+typedef struct PLC_AST_STMT {
+    int proc_number;
+    char proc_name[PLC_MAX_NAME];
+    int source_line;
+    int op;
+    int arrow_count;
+    int argc;
+    int results;
+    char callee[PLC_MAX_NAME];
+    char source[PLC_MAX_LINE];
+    char guard[PLC_MAX_LINE];
+    char value[PLC_MAX_LINE];
+    char target[PLC_MAX_LINE];
+    PLC_EXPR_AST_SUMMARY guard_expr;
+    PLC_EXPR_AST_SUMMARY value_expr;
+    PLC_EXPR_AST_SUMMARY target_expr;
+} PLC_AST_STMT;
+
+typedef struct PLC_AST_PROGRAM {
+    PLC_AST_STMT stmts[PLC_IR_MAX_STMTS];
+    int stmt_count;
+    int proc_count;
+    int source_count;
+} PLC_AST_PROGRAM;
 
 typedef struct PLC_IR_STMT {
     int proc_number;
@@ -132,6 +197,13 @@ typedef struct PLC_IR_STMT {
     char value[PLC_MAX_LINE];
     char target[PLC_MAX_LINE];
     char lowering[PLC_MAX_NAME];
+    int expr_nodes;
+    int expr_depth;
+    int expr_calls;
+    int expr_refs;
+    int expr_literals;
+    int expr_predicates;
+    int expr_unknowns;
 } PLC_IR_STMT;
 
 typedef struct PLC_IR_PROGRAM {
@@ -324,11 +396,22 @@ int plc_frame_store_tagged(PLC_FRAME *frame, const PLC_REF *ref,
 int plc_frame_load_tagged(const PLC_FRAME *frame, const PLC_REF *ref,
     PLC_TAGGED_VALUE *out);
 
+int plc_ast_build_program(const PLC_PROGRAM *program, PLC_AST_PROGRAM *ast,
+    char *err, unsigned err_size);
+int plc_ast_validate_program(const PLC_AST_PROGRAM *ast,
+    char *err, unsigned err_size);
+const char *plc_ast_op_name(int op);
+const char *plc_expr_ast_kind_name(int kind);
+int plc_emit_ast(const PLC_PROGRAM *program, const char *path,
+    char *err, unsigned err_size);
+
 int plc_ir_build_program(const PLC_PROGRAM *program, PLC_IR_PROGRAM *ir,
     char *err, unsigned err_size);
 int plc_ir_validate_program(const PLC_IR_PROGRAM *ir,
     char *err, unsigned err_size);
 int plc_emit_ir(const PLC_PROGRAM *program, const char *path,
+    char *err, unsigned err_size);
+int plc_emit_evidence(const PLC_PROGRAM *program, const char *path,
     char *err, unsigned err_size);
 int plc_emit_lowering_report(const PLC_PROGRAM *program, const char *path,
     char *err, unsigned err_size);

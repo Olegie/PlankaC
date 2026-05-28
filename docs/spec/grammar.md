@@ -34,7 +34,12 @@ ensure         = "ENSURE" , guard ;
 stopif         = "STOPIF" , guard ;
 
 predicate-statement
-               = ("SELECT" | "COUNT" | "EXISTS" | "FORALL") ,
+               = ("SELECT" | "COUNT" | "EXISTS" | "FORALL"
+                 | "SETSELECT" | "SETCOUNT" | "SETEXISTS" | "SETFORALL"
+                 | "DOMAINSELECT" | "DOMAINCOUNT"
+                 | "DOMAINEXISTS" | "DOMAINFORALL"
+                 | "RANGESELECT" | "RANGECOUNT"
+                 | "RANGEEXISTS" | "RANGEFORALL") ,
                  expression , predicate-op , expression , "=>" , target-list ;
 
 page           = "PAGE" , { page-row } , "ENDPAGE" ;
@@ -56,8 +61,9 @@ subscript      = "[" , number , [ "," , number ] , "]" ;
 field          = "." , identifier ;
 type-marker    = "[:" , [ family ] , bits , "." , scale , "]" ;
 
-binary-op      = "+" | "-" | "*" | "/" | "%" | "=" | "<" | ">" | "&" | "|" ;
-predicate-op   = "=" | "<" | ">" ;
+binary-op      = "+" | "-" | "*" | "/" | "%" | "=" | "!="
+               | "<" | "<=" | ">" | ">=" | "&" | "|" ;
+predicate-op   = "=" | "!=" | "<" | "<=" | ">" | ">=" ;
 identifier     = letter , { letter | digit | "_" } ;
 number         = digit , { digit } , [ "." , digit , { digit } ] ;
 ```
@@ -78,7 +84,9 @@ use the name or the numbered form.
 
 `PAGE` documents accept several executable expression rows with nearby `V|`
 and `S|` rows. The document loader keeps row and column diagnostics before the
-rows are expanded into linear statements.
+rows are expanded into linear statements. A page may contain more than one
+table block; an expression row binds to overlapping index/type rows by
+coordinate, not merely to the first rows in the page.
 
 ```text
 PAGE

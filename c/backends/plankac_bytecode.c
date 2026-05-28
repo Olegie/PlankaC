@@ -178,13 +178,104 @@ int plc_emit_bytecode_stmt(FILE *fp, const PLC_PROC *proc,
     return 0;
 }
 
+static const char *plc_bytecode_loop_guard(const char *guard)
+{
+    if (plc_line_starts_with(guard, "LOOP")) {
+        return plc_skip_space(plc_skip_space(guard) + 4);
+    }
+    return guard;
+}
+
+static int plc_emit_bytecode_ast_stmt(FILE *fp, const PLC_AST_STMT *stmt,
+    char *err, unsigned err_size)
+{
+    char call_name[PLC_MAX_NAME];
+    char call_args[PLC_MAX_LINE];
+
+    (void)err_size;
+    if (stmt->op == PLC_AST_OP_CONST) {
+        fprintf(fp, "  CONST ");
+        plc_write_quoted(fp, stmt->target);
+        fprintf(fp, " = ");
+        plc_write_quoted(fp, stmt->value);
+        fprintf(fp, "\n");
+        return 1;
+    }
+    if (stmt->op == PLC_AST_OP_ASSERT || stmt->op == PLC_AST_OP_REQUIRE
+            || stmt->op == PLC_AST_OP_ENSURE
+            || stmt->op == PLC_AST_OP_STOPIF) {
+        fprintf(fp, "  %s ", plc_ast_op_name(stmt->op));
+        plc_write_quoted(fp, stmt->guard);
+        fprintf(fp, "\n");
+        return 1;
+    }
+    if (stmt->op == PLC_AST_OP_LOOP) {
+        fprintf(fp, "  LOOP ");
+        plc_write_quoted(fp, plc_bytecode_loop_guard(stmt->guard));
+        fprintf(fp, " ");
+        plc_write_quoted(fp, stmt->value);
+        fprintf(fp, " -> ");
+        plc_write_quoted(fp, stmt->target);
+        fprintf(fp, "\n");
+        return 1;
+    }
+    if (stmt->op == PLC_AST_OP_CALL || stmt->op == PLC_AST_OP_GUARD_CALL) {
+        if (!plc_is_top_call(stmt->value, call_name, sizeof(call_name),
+                call_args, sizeof(call_args))) {
+            sprintf(err, "P%d %s line %d: AST call missing expression",
+                stmt->proc_number, stmt->proc_name, stmt->source_line);
+            return 0;
+        }
+        if (stmt->op == PLC_AST_OP_GUARD_CALL) {
+            fprintf(fp, "  GCALL ");
+            plc_write_quoted(fp, stmt->guard);
+            fprintf(fp, " ");
+        } else {
+            fprintf(fp, "  CALL ");
+        }
+        fprintf(fp, "%s ", call_name);
+        plc_write_quoted(fp, call_args);
+        fprintf(fp, " -> ");
+        plc_write_quoted(fp, stmt->target);
+        fprintf(fp, "\n");
+        return 1;
+    }
+    if (stmt->op == PLC_AST_OP_GUARD_EVAL) {
+        fprintf(fp, "  GEVAL ");
+        plc_write_quoted(fp, stmt->guard);
+        fprintf(fp, " ");
+        plc_write_quoted(fp, stmt->value);
+        fprintf(fp, " -> ");
+        plc_write_quoted(fp, stmt->target);
+        fprintf(fp, "\n");
+        return 1;
+    }
+    if (stmt->op == PLC_AST_OP_EVAL) {
+        fprintf(fp, "  EVAL ");
+        plc_write_quoted(fp, stmt->value);
+        fprintf(fp, " -> ");
+        plc_write_quoted(fp, stmt->target);
+        fprintf(fp, "\n");
+        return 1;
+    }
+    sprintf(err, "P%d %s line %d: unknown AST bytecode op",
+        stmt->proc_number, stmt->proc_name, stmt->source_line);
+    return 0;
+}
+
 int plc_emit_bytecode(const PLC_PROGRAM *program, const char *path,
     char *err, unsigned err_size)
 {
+    static PLC_AST_PROGRAM ast;
     FILE *fp;
     int i;
     int j;
+    int ast_index;
 
+    if (!plc_ast_build_program(program, &ast, err, err_size)
+            || !plc_ast_validate_program(&ast, err, err_size)) {
+        return 0;
+    }
     fp = fopen(path, "w");
     if (fp == 0) {
         sprintf(err, "cannot open bytecode output: %s", path);
@@ -199,8 +290,12 @@ int plc_emit_bytecode(const PLC_PROGRAM *program, const char *path,
         proc = &program->procs[i];
         fprintf(fp, "PROC P%d %s ARGC %d RESULTS %d\n",
             proc->number, proc->name, proc->argc, proc->results);
+        ast_index = 0;
+        for (j = 0; j < i; ++j) {
+            ast_index += program->procs[j].stmt_count;
+        }
         for (j = 0; j < proc->stmt_count; ++j) {
-            if (!plc_emit_bytecode_stmt(fp, proc, &proc->stmts[j],
+            if (!plc_emit_bytecode_ast_stmt(fp, &ast.stmts[ast_index + j],
                     err, err_size)) {
                 fclose(fp);
                 return 0;
@@ -717,7 +812,8 @@ static int plc_asm_predicate_starts_with(const char *text,
     return 1;
 }
 
-static const char *plc_asm_predicate_find_operator(const char *text, char op)
+static const char *plc_asm_predicate_find_comparison(const char *text,
+    int *op_code, int *op_len)
 {
     int paren_depth;
     int bracket_depth;
@@ -733,8 +829,37 @@ static const char *plc_asm_predicate_find_operator(const char *text, char op)
             ++bracket_depth;
         } else if (*text == ']' && bracket_depth > 0) {
             --bracket_depth;
-        } else if (*text == op && paren_depth == 0 && bracket_depth == 0) {
-            return text;
+        } else if (paren_depth == 0 && bracket_depth == 0) {
+            if (text[0] == '!' && text[1] == '=') {
+                *op_code = PLC_CMP_NE;
+                *op_len = 2;
+                return text;
+            }
+            if (text[0] == '<' && text[1] == '=') {
+                *op_code = PLC_CMP_LE;
+                *op_len = 2;
+                return text;
+            }
+            if (text[0] == '>' && text[1] == '=') {
+                *op_code = PLC_CMP_GE;
+                *op_len = 2;
+                return text;
+            }
+            if (*text == '=') {
+                *op_code = PLC_CMP_EQ;
+                *op_len = 1;
+                return text;
+            }
+            if (*text == '<') {
+                *op_code = PLC_CMP_LT;
+                *op_len = 1;
+                return text;
+            }
+            if (*text == '>') {
+                *op_code = PLC_CMP_GT;
+                *op_len = 1;
+                return text;
+            }
         }
         ++text;
     }
@@ -748,6 +873,8 @@ static int plc_asm_emit_predicate_value(PLC_ASM_COMPILER *ctx,
     const char *op;
     const char *end;
     const char *call_name;
+    int op_code;
+    int op_len;
     char left[PLC_MAX_LINE];
     char right[PLC_MAX_LINE];
     char args_text[PLC_MAX_LINE * 2];
@@ -755,40 +882,64 @@ static int plc_asm_emit_predicate_value(PLC_ASM_COMPILER *ctx,
     body = 0;
     op = 0;
     call_name = 0;
+    op_code = 0;
+    op_len = 0;
     if (plc_asm_predicate_starts_with(*pp, "SELECT", &body)) {
-        op = plc_asm_predicate_find_operator(body, '>');
-        call_name = "list_select_greater";
+        call_name = "list_select_where";
     } else if (plc_asm_predicate_starts_with(*pp, "FORALL", &body)) {
-        op = plc_asm_predicate_find_operator(body, '>');
-        call_name = "list_forall_greater";
+        call_name = "list_forall_where";
     } else if (plc_asm_predicate_starts_with(*pp, "EXISTS", &body)) {
-        op = plc_asm_predicate_find_operator(body, '=');
-        call_name = "list_exists_equal";
+        call_name = "list_exists_where";
     } else if (plc_asm_predicate_starts_with(*pp, "COUNT", &body)) {
-        op = plc_asm_predicate_find_operator(body, '=');
-        call_name = "list_count_equal";
+        call_name = "list_count_where";
+    } else if (plc_asm_predicate_starts_with(*pp, "SETSELECT", &body)) {
+        call_name = "set_select_where";
+    } else if (plc_asm_predicate_starts_with(*pp, "SETFORALL", &body)) {
+        call_name = "set_forall_where";
+    } else if (plc_asm_predicate_starts_with(*pp, "SETEXISTS", &body)) {
+        call_name = "set_exists_where";
+    } else if (plc_asm_predicate_starts_with(*pp, "SETCOUNT", &body)) {
+        call_name = "set_count_where";
+    } else if (plc_asm_predicate_starts_with(*pp, "DOMAINSELECT", &body)) {
+        call_name = "relation_domain_select_where";
+    } else if (plc_asm_predicate_starts_with(*pp, "DOMAINFORALL", &body)) {
+        call_name = "relation_domain_forall_where";
+    } else if (plc_asm_predicate_starts_with(*pp, "DOMAINEXISTS", &body)) {
+        call_name = "relation_domain_exists_where";
+    } else if (plc_asm_predicate_starts_with(*pp, "DOMAINCOUNT", &body)) {
+        call_name = "relation_domain_count_where";
+    } else if (plc_asm_predicate_starts_with(*pp, "RANGESELECT", &body)) {
+        call_name = "relation_range_select_where";
+    } else if (plc_asm_predicate_starts_with(*pp, "RANGEFORALL", &body)) {
+        call_name = "relation_range_forall_where";
+    } else if (plc_asm_predicate_starts_with(*pp, "RANGEEXISTS", &body)) {
+        call_name = "relation_range_exists_where";
+    } else if (plc_asm_predicate_starts_with(*pp, "RANGECOUNT", &body)) {
+        call_name = "relation_range_count_where";
     } else {
         return -1;
     }
+    op = plc_asm_predicate_find_comparison(body, &op_code, &op_len);
     if (op == 0) {
         plc_set_error(ctx->err, ctx->err_size, "bad ASM predicate");
         return 0;
     }
-    end = op + 1;
+    end = op + op_len;
     while (*end != '\0') {
         ++end;
     }
     plc_copy_range(left, sizeof(left), body, op);
     plc_trim_in_place(left);
-    plc_copy_range(right, sizeof(right), op + 1, end);
+    plc_copy_range(right, sizeof(right), op + op_len, end);
     plc_trim_in_place(right);
-    if (strlen(left) + strlen(right) + 4 >= sizeof(args_text)) {
+    if (strlen(left) + strlen(right) + 16 >= sizeof(args_text)) {
         plc_set_error(ctx->err, ctx->err_size, "ASM predicate too long");
         return 0;
     }
     strcpy(args_text, "(");
     strcat(args_text, left);
     strcat(args_text, ",");
+    sprintf(args_text + strlen(args_text), "%d,", op_code);
     strcat(args_text, right);
     strcat(args_text, ")");
     if (!plc_asm_emit_call_value(ctx, call_name, args_text, 0)) {

@@ -234,7 +234,19 @@ static int plc_asm8086_proc_is_compound(const PLC_PROC *proc)
                 || plc_line_starts_with(text, "SELECT")
                 || plc_line_starts_with(text, "EXISTS")
                 || plc_line_starts_with(text, "FORALL")
-                || plc_line_starts_with(text, "COUNT")) {
+                || plc_line_starts_with(text, "COUNT")
+                || plc_line_starts_with(text, "SETSELECT")
+                || plc_line_starts_with(text, "SETEXISTS")
+                || plc_line_starts_with(text, "SETFORALL")
+                || plc_line_starts_with(text, "SETCOUNT")
+                || plc_line_starts_with(text, "DOMAINSELECT")
+                || plc_line_starts_with(text, "DOMAINEXISTS")
+                || plc_line_starts_with(text, "DOMAINFORALL")
+                || plc_line_starts_with(text, "DOMAINCOUNT")
+                || plc_line_starts_with(text, "RANGESELECT")
+                || plc_line_starts_with(text, "RANGEEXISTS")
+                || plc_line_starts_with(text, "RANGEFORALL")
+                || plc_line_starts_with(text, "RANGECOUNT")) {
             return 1;
         }
     }
@@ -287,8 +299,11 @@ static void plc_asm8086_emit_compound_api_publics(FILE *out)
 {
     fprintf(out, "PUBLIC plankac_8086_list_new\n");
     fprintf(out, "PUBLIC plankac_8086_list_push\n");
+    fprintf(out, "PUBLIC plankac_8086_set_add\n");
     fprintf(out, "PUBLIC plankac_8086_pair_make\n");
     fprintf(out, "PUBLIC plankac_8086_record_set\n");
+    fprintf(out, "PUBLIC plankac_8086_relation_select\n");
+    fprintf(out, "PUBLIC plankac_8086_predicate_where\n");
     fprintf(out, "PUBLIC plankac_8086_board_piece\n");
     fprintf(out, "PUBLIC plankac_8086_dispatch_compound\n");
 }
@@ -315,6 +330,15 @@ static void plc_asm8086_emit_compound_api(FILE *out)
     fprintf(out, "    ret 4\n");
     fprintf(out, "plankac_8086_list_push ENDP\n\n");
 
+    fprintf(out, "plankac_8086_set_add PROC NEAR\n");
+    fprintf(out, "    push bp\n");
+    fprintf(out, "    mov bp, sp\n");
+    fprintf(out, "    mov ax, [bp+4]\n");
+    fprintf(out, "    xor dx, dx\n");
+    fprintf(out, "    pop bp\n");
+    fprintf(out, "    ret 4\n");
+    fprintf(out, "plankac_8086_set_add ENDP\n\n");
+
     fprintf(out, "plankac_8086_pair_make PROC NEAR\n");
     fprintf(out, "    push bp\n");
     fprintf(out, "    mov bp, sp\n");
@@ -332,6 +356,24 @@ static void plc_asm8086_emit_compound_api(FILE *out)
     fprintf(out, "    pop bp\n");
     fprintf(out, "    ret 6\n");
     fprintf(out, "plankac_8086_record_set ENDP\n\n");
+
+    fprintf(out, "plankac_8086_relation_select PROC NEAR\n");
+    fprintf(out, "    push bp\n");
+    fprintf(out, "    mov bp, sp\n");
+    fprintf(out, "    mov ax, [bp+4]\n");
+    fprintf(out, "    xor dx, dx\n");
+    fprintf(out, "    pop bp\n");
+    fprintf(out, "    ret 6\n");
+    fprintf(out, "plankac_8086_relation_select ENDP\n\n");
+
+    fprintf(out, "plankac_8086_predicate_where PROC NEAR\n");
+    fprintf(out, "    push bp\n");
+    fprintf(out, "    mov bp, sp\n");
+    fprintf(out, "    xor ax, ax\n");
+    fprintf(out, "    xor dx, dx\n");
+    fprintf(out, "    pop bp\n");
+    fprintf(out, "    ret 6\n");
+    fprintf(out, "plankac_8086_predicate_where ENDP\n\n");
 
     fprintf(out, "plankac_8086_board_piece PROC NEAR\n");
     fprintf(out, "    push bp\n");

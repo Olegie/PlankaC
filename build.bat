@@ -20,7 +20,7 @@ if errorlevel 1 (
 if not exist build mkdir build
 
 set PLANKAC_INC=-Ic\include -Ic\internal
-set PLANKAC_LIB_SOURCES=c\core\plankac_common.c c\types\plankac_types.c c\notation\plankac_2d.c c\notation\plankac_document.c c\notation\plankac_page.c c\analyzer\plankac_analyzer.c c\analyzer\plankac_schema.c c\values\plankac_bits.c c\values\plankac_value.c c\models\plankac_chess_model.c c\ir\plankac_ir.c c\backends\plankac_lowering.c c\core\plankac_source.c c\core\plankac_expr.c c\backends\plankac_bytecode.c c\backends\plankac_asm8086.c c\core\plankac_runtime.c
+set PLANKAC_LIB_SOURCES=c\core\plankac_common.c c\types\plankac_types.c c\notation\plankac_2d.c c\notation\plankac_document.c c\notation\plankac_page.c c\analyzer\plankac_analyzer.c c\analyzer\plankac_schema.c c\values\plankac_bits.c c\values\plankac_value.c c\models\plankac_chess_model.c c\ir\plankac_ast.c c\ir\plankac_ir.c c\ir\plankac_evidence.c c\backends\plankac_lowering.c c\core\plankac_source.c c\core\plankac_expr.c c\backends\plankac_bytecode.c c\backends\plankac_asm8086.c c\core\plankac_runtime.c
 set PLANKAC_NATIVE_SOURCE=c\backends\plankac_native_runtime.c
 set PLANKAC_CLI_SOURCES=%PLANKAC_LIB_SOURCES% c\tools\plankac_cli.c
 set PLANKAGUI_CORE=graphics\c\plankagui_scene.c graphics\c\plankagui_raster.c graphics\c\plankagui_font.c graphics\c\plankagui_png.c graphics\c\plankagui_render.c
@@ -63,7 +63,11 @@ gcc -Wall -Wextra -std=c89 %PLANKAC_INC% -c c\values\plankac_value.c -o build\pl
 if errorlevel 1 exit /b 1
 gcc -Wall -Wextra -std=c89 %PLANKAC_INC% -c c\models\plankac_chess_model.c -o build\plankac_chess_model.o
 if errorlevel 1 exit /b 1
+gcc -Wall -Wextra -std=c89 %PLANKAC_INC% -c c\ir\plankac_ast.c -o build\plankac_ast.o
+if errorlevel 1 exit /b 1
 gcc -Wall -Wextra -std=c89 %PLANKAC_INC% -c c\ir\plankac_ir.c -o build\plankac_ir.o
+if errorlevel 1 exit /b 1
+gcc -Wall -Wextra -std=c89 %PLANKAC_INC% -c c\ir\plankac_evidence.c -o build\plankac_evidence.o
 if errorlevel 1 exit /b 1
 gcc -Wall -Wextra -std=c89 %PLANKAC_INC% -c c\backends\plankac_lowering.c -o build\plankac_lowering.o
 if errorlevel 1 exit /b 1
@@ -79,7 +83,7 @@ gcc -Wall -Wextra -std=c89 %PLANKAC_INC% -c c\core\plankac_runtime.c -o build\pl
 if errorlevel 1 exit /b 1
 gcc -Wall -Wextra -std=c89 %PLANKAC_INC% -c %PLANKAC_NATIVE_SOURCE% -o build\plankac_native_runtime.o
 if errorlevel 1 exit /b 1
-ar rcs build\libplankac.a build\plankac_common.o build\plankac_types.o build\plankac_2d.o build\plankac_document.o build\plankac_page.o build\plankac_analyzer.o build\plankac_schema.o build\plankac_bits.o build\plankac_value.o build\plankac_chess_model.o build\plankac_ir.o build\plankac_lowering.o build\plankac_source.o build\plankac_expr.o build\plankac_bytecode.o build\plankac_asm8086.o build\plankac_runtime.o build\plankac_native_runtime.o
+ar rcs build\libplankac.a build\plankac_common.o build\plankac_types.o build\plankac_2d.o build\plankac_document.o build\plankac_page.o build\plankac_analyzer.o build\plankac_schema.o build\plankac_bits.o build\plankac_value.o build\plankac_chess_model.o build\plankac_ast.o build\plankac_ir.o build\plankac_evidence.o build\plankac_lowering.o build\plankac_source.o build\plankac_expr.o build\plankac_bytecode.o build\plankac_asm8086.o build\plankac_runtime.o build\plankac_native_runtime.o
 if errorlevel 1 exit /b 1
 
 echo Building PlankaC API demo...
@@ -123,7 +127,7 @@ gcc -Wall -Wextra -std=c89 %PLANKAC_INC% -c c\legacy\plankamath.c -o build\plank
 if errorlevel 1 exit /b 1
 gcc -Wall -Wextra -std=c89 %PLANKAC_INC% -c c\targets\windows_gui.c -o build\windows_gui.o
 if errorlevel 1 exit /b 1
-gcc -mwindows build\plankac_common.o build\plankac_types.o build\plankac_2d.o build\plankac_document.o build\plankac_page.o build\plankac_analyzer.o build\plankac_schema.o build\plankac_bits.o build\plankac_value.o build\plankac_chess_model.o build\plankac_ir.o build\plankac_lowering.o build\plankac_source.o build\plankac_expr.o build\plankac_bytecode.o build\plankac_asm8086.o build\plankac_runtime.o build\plankamath.o build\windows_gui.o -o build\PlankaMath.exe -lm
+gcc -mwindows build\plankac_common.o build\plankac_types.o build\plankac_2d.o build\plankac_document.o build\plankac_page.o build\plankac_analyzer.o build\plankac_schema.o build\plankac_bits.o build\plankac_value.o build\plankac_chess_model.o build\plankac_ast.o build\plankac_ir.o build\plankac_evidence.o build\plankac_lowering.o build\plankac_source.o build\plankac_expr.o build\plankac_bytecode.o build\plankac_asm8086.o build\plankac_runtime.o build\plankamath.o build\windows_gui.o -o build\PlankaMath.exe -lm
 if errorlevel 1 exit /b 1
 
 echo Running checks...
@@ -142,7 +146,13 @@ if errorlevel 1 exit /b 1
 build\plankac.exe bytecode build\plankamath.pbc
 if errorlevel 1 exit /b 1
 
+build\plankac.exe ast build\plankac.ast
+if errorlevel 1 exit /b 1
+
 build\plankac.exe ir build\plankac.ir
+if errorlevel 1 exit /b 1
+
+build\plankac.exe evidence build\plankac.evidence.json
 if errorlevel 1 exit /b 1
 
 build\plankac.exe lowering build\plankac.lowering
@@ -167,6 +177,33 @@ build\plankac.exe checkfile examples\max3.plk
 if errorlevel 1 exit /b 1
 
 build\plankac.exe runfile examples\max3.plk max3_demo
+if errorlevel 1 exit /b 1
+
+build\plankac.exe astfile examples\max3.plk build\max3.ast
+if errorlevel 1 exit /b 1
+
+build\plankac.exe irfile examples\max3.plk build\max3.ir
+if errorlevel 1 exit /b 1
+
+build\plankac.exe evidencefile examples\max3.plk build\max3.evidence.json
+if errorlevel 1 exit /b 1
+
+findstr /c:"plankac-evidence-v1" build\plankac.evidence.json >nul
+if errorlevel 1 exit /b 1
+
+findstr /c:"fingerprint" build\max3.evidence.json >nul
+if errorlevel 1 exit /b 1
+
+findstr /c:"PLANKAC-AST 1" build\plankac.ast >nul
+if errorlevel 1 exit /b 1
+
+findstr /c:"expression_nodes" build\plankac.ast >nul
+if errorlevel 1 exit /b 1
+
+findstr /c:"op=CALL" build\max3.ast >nul
+if errorlevel 1 exit /b 1
+
+findstr /c:"expr_nodes" build\max3.ir >nul
 if errorlevel 1 exit /b 1
 
 build\plankahost_demo.exe graphics\src\plankagui.plk

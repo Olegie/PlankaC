@@ -10,11 +10,11 @@ come from the current tree, not from a project pitch.
 | Loaded PlankaC source profile | 29 files |
 | Repository `src/*.plk` files | 25 files |
 | Graphics `.plk` profiles | 2 files |
-| Loaded procedures | 148 procedures |
-| C and graphics source/header modules | 45 files |
-| Conformance fixture files | 33 files |
+| Loaded procedures | 150 procedures |
+| C and graphics source/header modules | 47 files |
+| Conformance fixture files | 35 files |
 | Main host language | C89-oriented C |
-| Main compiler artifacts | typed IR, bytecode, generated C, x86-64 ASM, 8086/DOS ASM |
+| Main compiler artifacts | AST, typed IR, bytecode, generated C, x86-64 ASM, 8086/DOS ASM |
 | 16-bit targets | Win16 GUI, DOS runner |
 
 ## Procedure Mix
@@ -24,7 +24,7 @@ pie showData
     title Procedure profile by domain
     "Core calculator, math, examples, self-checks" : 43
     "Data structures and value algebra" : 18
-    "Relations, sets, predicates" : 21
+    "Relations, sets, predicates" : 23
     "Chess model and board game" : 27
     "3D geometry extension" : 14
     "Complex values" : 5
@@ -42,20 +42,20 @@ and backend/conformance checks.
 ```mermaid
 pie showData
     title C implementation lines by module directory
-    "core" : 5929
-    "backends" : 3343
-    "graphics" : 3250
-    "targets" : 1456
-    "legacy" : 515
-    "analyzer" : 909
-    "models" : 686
-    "tools" : 463
-    "notation" : 521
-    "ir" : 339
-    "internal" : 371
-    "values" : 289
-    "types" : 214
-    "include" : 176
+    "core" : 6704
+    "backends" : 3817
+    "graphics" : 3578
+    "targets" : 1641
+    "legacy" : 570
+    "analyzer" : 1080
+    "models" : 746
+    "tools" : 542
+    "notation" : 607
+    "ir" : 970
+    "internal" : 450
+    "values" : 319
+    "types" : 224
+    "include" : 240
 ```
 
 The dominant implementation mass is concentrated in the expected subsystems:
@@ -86,7 +86,8 @@ flowchart LR
     Analyzer --> Table["Procedure table"]
 
     Table --> Run["Interpreter"]
-    Table --> TIR["Typed IR"]
+    Table --> AST["Procedure AST"]
+    AST --> TIR["Typed IR"]
     TIR --> BC["Text bytecode"]
     TIR --> Lower["Backend lowering report"]
     Table --> CGen["Generated C"]
@@ -106,7 +107,7 @@ flowchart LR
 | Output | Command | Artifact | Directness |
 | --- | --- | --- | --- |
 | Interpreter | `plankac run <proc>` | no generated file | direct execution of loaded `.plk` profile |
-| Typed IR | `plankac ir out.ir` | readable `.ir` | statement-level typed compiler contract |
+| AST/Typed IR | `plankac ir out.ir` | readable `.ir` | statement-level compiler contract built through the AST layer |
 | Lowering report | `plankac lowering out.txt` | readable `.lowering` | backend plan for scalar and compound statements |
 | Bytecode | `plankac bytecode out.pbc` | readable `.pbc` | compiler artifact, reloadable by PlankaC |
 | Compiler pipeline | `plankac compile build/out` | `.pbc`, `.c`, `.S`, `_8086.asm` | source-to-IR-to-backends route |
@@ -194,10 +195,10 @@ build\plankac_conformance.exe
 Expected high-level result:
 
 ```text
-PlankaC OK: 29 files, 148 procedures
-PlankaC file OK: 30 files, 151 procedures
+PlankaC OK: 29 files, 150 procedures
+PlankaC file OK: 30 files, 153 procedures
 R0=9
-Bytecode OK: 148 procedures
+Bytecode OK: 150 procedures
 IR written: build\plankac.ir
 Lowering written: build\plankac.lowering
 8086 ASM written: build\plankac_8086.asm

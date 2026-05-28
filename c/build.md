@@ -12,7 +12,7 @@ c/notation/  executable two-dimensional table notation and PAGE documents
 c/analyzer/  static program checks and structural schema checks
 c/values/    bit, fixed-point, and tagged value helpers
 c/models/    chess board/game model helpers
-c/ir/        typed IR builder and emitter
+c/ir/        AST, typed IR, and evidence emitters
 c/backends/  bytecode, lowering reports, C backend, x86-64 ASM, 8086/DOS ASM, helper runtime
 c/targets/   CLI, DOS, Win16, and modern Windows hosts
 c/legacy/    compact PlankaMath fallback runtime
@@ -41,8 +41,8 @@ generated x86-64 ASM, and linked native executables.
 Current smoke-test output includes:
 
 ```text
-PlankaC OK: 29 files, 148 procedures
-Bytecode OK: 148 procedures
+PlankaC OK: 29 files, 150 procedures
+Bytecode OK: 150 procedures
 host_bridge(6, 6) -> R0=42 R1=0
 Compiler pipeline OK
 native-c: build\plankac_native_c.exe
@@ -72,13 +72,15 @@ gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/analyzer/plankac_schema
 gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/values/plankac_bits.c -o build/plankac_bits.o
 gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/values/plankac_value.c -o build/plankac_value.o
 gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/models/plankac_chess_model.c -o build/plankac_chess_model.o
+gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/ir/plankac_ast.c -o build/plankac_ast.o
 gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/ir/plankac_ir.c -o build/plankac_ir.o
+gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/ir/plankac_evidence.c -o build/plankac_evidence.o
 gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/backends/plankac_lowering.c -o build/plankac_lowering.o
 gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/backends/plankac_bytecode.c -o build/plankac_bytecode.o
 gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/backends/plankac_asm8086.c -o build/plankac_asm8086.o
 gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/core/plankac_runtime.c -o build/plankac_runtime.o
 gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/backends/plankac_native_runtime.c -o build/plankac_native_runtime.o
-ar rcs build/libplankac.a build/plankac_common.o build/plankac_types.o build/plankac_2d.o build/plankac_document.o build/plankac_page.o build/plankac_analyzer.o build/plankac_schema.o build/plankac_bits.o build/plankac_value.o build/plankac_chess_model.o build/plankac_ir.o build/plankac_lowering.o build/plankac_source.o build/plankac_expr.o build/plankac_bytecode.o build/plankac_asm8086.o build/plankac_runtime.o build/plankac_native_runtime.o
+ar rcs build/libplankac.a build/plankac_common.o build/plankac_types.o build/plankac_2d.o build/plankac_document.o build/plankac_page.o build/plankac_analyzer.o build/plankac_schema.o build/plankac_bits.o build/plankac_value.o build/plankac_chess_model.o build/plankac_ast.o build/plankac_ir.o build/plankac_evidence.o build/plankac_lowering.o build/plankac_source.o build/plankac_expr.o build/plankac_bytecode.o build/plankac_asm8086.o build/plankac_runtime.o build/plankac_native_runtime.o
 gcc -Wall -Wextra -std=c89 -Ic/include examples/c_api_demo.c build/libplankac.a -o build/plankac_api_demo.exe -lm
 gcc -Wall -Wextra -std=c89 -Ic/include examples/c_abi_demo.c build/libplankac.a -o build/plankac_abi_demo.exe -lm
 ```

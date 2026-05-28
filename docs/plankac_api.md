@@ -32,13 +32,15 @@ gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/analyzer/plankac_schema
 gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/values/plankac_bits.c -o build/plankac_bits.o
 gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/values/plankac_value.c -o build/plankac_value.o
 gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/models/plankac_chess_model.c -o build/plankac_chess_model.o
+gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/ir/plankac_ast.c -o build/plankac_ast.o
 gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/ir/plankac_ir.c -o build/plankac_ir.o
+gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/ir/plankac_evidence.c -o build/plankac_evidence.o
 gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/backends/plankac_lowering.c -o build/plankac_lowering.o
 gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/backends/plankac_bytecode.c -o build/plankac_bytecode.o
 gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/backends/plankac_asm8086.c -o build/plankac_asm8086.o
 gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/core/plankac_runtime.c -o build/plankac_runtime.o
 gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/backends/plankac_native_runtime.c -o build/plankac_native_runtime.o
-ar rcs build/libplankac.a build/plankac_common.o build/plankac_types.o build/plankac_2d.o build/plankac_document.o build/plankac_page.o build/plankac_analyzer.o build/plankac_schema.o build/plankac_bits.o build/plankac_value.o build/plankac_chess_model.o build/plankac_ir.o build/plankac_lowering.o build/plankac_source.o build/plankac_expr.o build/plankac_bytecode.o build/plankac_asm8086.o build/plankac_runtime.o build/plankac_native_runtime.o
+ar rcs build/libplankac.a build/plankac_common.o build/plankac_types.o build/plankac_2d.o build/plankac_document.o build/plankac_page.o build/plankac_analyzer.o build/plankac_schema.o build/plankac_bits.o build/plankac_value.o build/plankac_chess_model.o build/plankac_ast.o build/plankac_ir.o build/plankac_evidence.o build/plankac_lowering.o build/plankac_source.o build/plankac_expr.o build/plankac_bytecode.o build/plankac_asm8086.o build/plankac_runtime.o build/plankac_native_runtime.o
 ```
 
 Link an application:
@@ -56,7 +58,7 @@ build/plankac_api_demo.exe
 Expected output:
 
 ```text
-procedures: 148
+procedures: 150
 found P140 complex_norm_session args=0 results=1
 P0 type_sheet args=0 results=1
   first types: V0=- R0=[:1.1]
@@ -69,6 +71,7 @@ P12 multiply args=2 results=1
 P13 negate args=1 results=1
   first types: V0=[:32.16] R0=[:32.16]
 divide_checked(84, 0) -> R0=0 R1=1
+typed divide status -> tag=2 raw=1 type=[:1.1]
 add(12, 8) -> R0=20
 P140 complex_norm_session() -> R0=25
 three_d_pipeline_session() -> R0=120
@@ -86,6 +89,7 @@ int main(void)
 {
     PLANKAC_CONTEXT *ctx;
     PLANKAC_RESULT result;
+    PLANKAC_TYPED_RESULT typed_result;
     double args[2];
     char err[256];
 
@@ -103,6 +107,12 @@ int main(void)
     args[1] = 8.0;
     if (!plankac_context_run(ctx, "add", args, 2,
             &result, err, sizeof(err))) {
+        plankac_destroy(ctx);
+        return 1;
+    }
+
+    if (!plankac_context_run_typed(ctx, "add", args, 2,
+            &typed_result, err, sizeof(err))) {
         plankac_destroy(ctx);
         return 1;
     }
@@ -184,22 +194,30 @@ plankac_context_native_count()
 plankac_context_get_native()
 plankac_context_find_native()
 plankac_context_run()
+plankac_context_run_typed()
 plankac_context_run_number()
+plankac_context_run_number_typed()
 plankac_context_summary()
 plankac_context_write_bytecode()
 plankac_context_write_c_backend()
 plankac_context_write_asm_runtime()
 plankac_context_write_asm_image()
 plankac_context_write_asm8086_runtime()
+plankac_context_write_ast()
 plankac_context_write_ir()
+plankac_context_write_evidence()
 plankac_context_write_lowering_report()
 plankac_write_asm8086_runtime()
+plankac_write_ast()
 plankac_write_ir()
+plankac_write_evidence()
 plankac_write_lowering_report()
 plankac_register_native()
 plankac_native_count()
 plankac_get_native()
 plankac_find_native()
+plankac_run_typed()
+plankac_run_number_typed()
 plankac_format()
 ```
 
@@ -210,6 +228,18 @@ PlankaMath GUI, but new embedding code should prefer the context API.
 strings collected from procedure headers, for example `[:32.16]` or `[:1.1]`.
 That is enough for host programs to list procedure signatures before
 calling them.
+
+Use `PLANKAC_TYPED_RESULT` when the host needs the value model rather than
+only ABI doubles. `plankac_context_run_typed` and `plankac_run_typed` return
+`tag`, `family`, `bits`, `scale`, `raw`, `handle`, `number`, and `type_text`
+for each result slot. Boolean `[:1.1]` results return `PLANKAC_VALUE_BIT`;
+fixed-point markers return `PLANKAC_VALUE_FIXED`; compound families return
+`PLANKAC_VALUE_HANDLE`.
+
+Use `plankac_context_write_ast` or `plankac_write_ast` when a host wants the
+compiler inspection artifact. The AST output includes statement operation
+classes and expression-node summaries. It is useful for editors, workbenches,
+diagnostic tools, and backend comparison tests.
 
 ## PlankaHost API
 

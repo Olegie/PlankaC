@@ -10,7 +10,7 @@ The current loaded profile is:
 
 ```text
 29 source files
-148 procedures
+150 procedures
 ```
 
 ## Source Files
@@ -130,6 +130,17 @@ SELECT Z0[:L32.0] > 4[:32.0] => Z1[:L32.0]
 COUNT Z0[:L32.0] = 5[:32.0] => Z2[:32.0]
 EXISTS Z0[:L32.0] = 9[:32.0] => Z3[:1.1]
 FORALL Z1[:L32.0] > 4[:32.0] => Z4[:1.1]
+```
+
+The predicate operators are `=`, `!=`, `<`, `<=`, `>`, and `>=`. The same
+predicate form is available for sets and relation components:
+
+```text
+SETCOUNT Z0[:S32.0] >= 3[:32.0] => Z5[:32.0]
+SETFORALL Z0[:S32.0] > 0[:32.0] => Z6[:1.1]
+DOMAINCOUNT Z7[:L32.0] >= 2[:32.0] => Z8[:32.0]
+RANGEEXISTS Z7[:L32.0] = 10[:32.0] => Z9[:1.1]
+RANGESELECT Z7[:L32.0] >= 8[:32.0] => Z10[:L32.0]
 ```
 
 Relations also expose library-level predicate and schema helpers:
@@ -285,16 +296,17 @@ Aligned executable rows, swapped `V|`/`S|` order, and spaced cell alignment are
 accepted.
 
 Several executable rows can also be grouped into a page/table block. Each
-expression row is bound to the nearest `V|` and `S|` rows in the block:
+expression row is bound to overlapping `V|` and `S|` rows by coordinate, so a
+single `PAGE` can contain more than one table block:
 
 ```text
 PAGE
 V|1   2    0
 S|32.16 32.16 32.16
 |A + B => R
-|C * D => R
-S|32.16 32.16 32.16
-V|3   4    0
+                        V|3   4    5
+                        S|32.16 32.16 32.16
+                        |A + B => R
 ENDPAGE
 ```
 

@@ -11,8 +11,9 @@ PlankaC evaluates procedures inside a frame. A frame contains four named banks:
 
 Every bank supports scalar slots, indexed slots, two-dimensional indexed slots,
 and field paths. Compound values are represented by typed handles into frame
-heaps. The public result ABI still transports numeric values, while the runtime
-stores assigned values through active tagged PLC entries beside bank storage.
+heaps. The compatibility result ABI still transports numeric values. Hosts that
+need the value model use the typed result API, which returns the same tag, raw
+fixed value, handle, bit width, scale, family, and marker text used internally.
 
 ## Tagged Values
 
@@ -30,10 +31,11 @@ tag, family, bits, scale, raw, handle, number
 | `handle` | reference to list, set, pair, record, complex, vector, matrix, or board storage |
 | `exception` | reserved for arithmetic/status values |
 
-The interpreter writes the ordinary numeric bank value and a tagged PLC entry
-at the same time. Reads prefer the tagged entry when it exists, then convert
-back through the ABI number. That keeps the C ABI simple while giving the
-compiler, IR, and analyzers a bit-aware value surface.
+The interpreter writes the ordinary numeric bank value and a tagged `PLC_VALUE`
+entry at the same time. Reads prefer the tagged entry when it exists, then
+convert back through the ABI number. `plankac_context_run_typed` and
+`plankac_run_typed` expose that value shape through the public C API as
+`PLANKAC_TYPED_RESULT`.
 
 ## Fixed-Point Values
 

@@ -17,7 +17,9 @@ PLANKAC_LIB_SOURCES := \
 	c/values/plankac_bits.c \
 	c/values/plankac_value.c \
 	c/models/plankac_chess_model.c \
+	c/ir/plankac_ast.c \
 	c/ir/plankac_ir.c \
+	c/ir/plankac_evidence.c \
 	c/backends/plankac_lowering.c \
 	c/core/plankac_source.c \
 	c/core/plankac_expr.c \
@@ -99,7 +101,9 @@ $(BUILD)/plankahost_demo: graphics/c/plankahost_demo.c $(PLANKAHOST_CORE) $(BUIL
 
 generated: all
 	$(BUILD)/plankac bytecode $(BUILD)/plankamath.pbc
+	$(BUILD)/plankac ast $(BUILD)/plankac.ast
 	$(BUILD)/plankac ir $(BUILD)/plankac.ir
+	$(BUILD)/plankac evidence $(BUILD)/plankac.evidence.json
 	$(BUILD)/plankac lowering $(BUILD)/plankac.lowering
 	$(BUILD)/plankac cgen $(BUILD)/plankac_generated.c
 	$(BUILD)/plankac asmgen $(BUILD)/plankac_asm_runtime.S
@@ -115,6 +119,15 @@ check: generated
 	$(BUILD)/plankac runfile graphics/src/plankagui.plk app_kind
 	$(BUILD)/plankac runfile graphics/src/plankacube.plk app_kind
 	$(BUILD)/plankac runfile examples/max3.plk max3_demo
+	$(BUILD)/plankac astfile examples/max3.plk $(BUILD)/max3.ast
+	$(BUILD)/plankac irfile examples/max3.plk $(BUILD)/max3.ir
+	$(BUILD)/plankac evidencefile examples/max3.plk $(BUILD)/max3.evidence.json
+	grep -q "PLANKAC-AST 1" $(BUILD)/plankac.ast
+	grep -q "expression_nodes" $(BUILD)/plankac.ast
+	grep -q "op=CALL" $(BUILD)/max3.ast
+	grep -q "expr_nodes" $(BUILD)/max3.ir
+	grep -q "plankac-evidence-v1" $(BUILD)/plankac.evidence.json
+	grep -q "fingerprint" $(BUILD)/max3.evidence.json
 	$(BUILD)/plankahost_demo graphics/src/plankagui.plk
 	$(BUILD)/plankahost_demo graphics/src/plankacube.plk
 	$(BUILD)/plankac compile $(BUILD)/plankac_pipeline

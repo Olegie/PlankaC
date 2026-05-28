@@ -1,8 +1,8 @@
 # From `max3.plk` To Compiler Artifacts
 
 This tutorial uses one focused source file and follows the same path that CI
-checks: parse `.plk`, run it, emit bytecode, emit C, emit ASM, and link native
-executables.
+checks: parse `.plk`, inspect AST/IR, run it, emit bytecode, emit C, emit ASM,
+and link native executables.
 
 Source file:
 
@@ -42,6 +42,8 @@ Emit compiler artifacts:
 
 ```text
 build\plankac.exe bytecode build\plankamath.pbc
+build\plankac.exe astfile examples\max3.plk build\max3.ast
+build\plankac.exe irfile examples\max3.plk build\max3.ir
 build\plankac.exe cgen build\plankac_generated.c
 build\plankac.exe asmgen build\plankac_asm_runtime.S
 build\plankac.exe asm8086 build\plankac_8086.asm
@@ -79,7 +81,7 @@ The demo is intentionally plain. Its purpose is not to show every language
 feature. Its purpose is to show the toolchain boundary:
 
 ```text
-.plk source -> parser/analyzer -> procedure table -> bytecode/IR -> C/ASM -> native executable
+.plk source -> parser/analyzer -> procedure table -> AST -> typed IR/bytecode -> C/ASM -> native executable
 ```
 
 That path is the useful part for people who want to write their own `.plk`

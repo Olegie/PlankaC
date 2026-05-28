@@ -16,11 +16,33 @@ extern "C" {
 #define PLANKAC_MAX_NAME 64
 #define PLANKAC_MAX_TYPE_TEXT 24
 #define PLANKAC_MAX_NATIVE 32
+#define PLANKAC_VALUE_EMPTY 0
+#define PLANKAC_VALUE_NUMERIC 1
+#define PLANKAC_VALUE_BIT 2
+#define PLANKAC_VALUE_FIXED 3
+#define PLANKAC_VALUE_HANDLE 4
+#define PLANKAC_VALUE_EXCEPTION 5
 
 typedef struct PLANKAC_RESULT {
     double value[PLANKAC_MAX_RESULTS];
     int count;
 } PLANKAC_RESULT;
+
+typedef struct PLANKAC_VALUE {
+    int tag;
+    int family;
+    int bits;
+    int scale;
+    long raw;
+    int handle;
+    double number;
+    char type_text[PLANKAC_MAX_TYPE_TEXT];
+} PLANKAC_VALUE;
+
+typedef struct PLANKAC_TYPED_RESULT {
+    PLANKAC_VALUE value[PLANKAC_MAX_RESULTS];
+    int count;
+} PLANKAC_TYPED_RESULT;
 
 typedef int (*PLANKAC_NATIVE_FN)(void *user_data,
     const double *args, int argc, PLANKAC_RESULT *result,
@@ -73,8 +95,14 @@ int plankac_context_find_native(PLANKAC_CONTEXT *ctx, const char *name,
 int plankac_context_run(PLANKAC_CONTEXT *ctx, const char *name,
     const double *args, int argc, PLANKAC_RESULT *result,
     char *err, unsigned err_size);
+int plankac_context_run_typed(PLANKAC_CONTEXT *ctx, const char *name,
+    const double *args, int argc, PLANKAC_TYPED_RESULT *result,
+    char *err, unsigned err_size);
 int plankac_context_run_number(PLANKAC_CONTEXT *ctx, int number,
     const double *args, int argc, PLANKAC_RESULT *result,
+    char *err, unsigned err_size);
+int plankac_context_run_number_typed(PLANKAC_CONTEXT *ctx, int number,
+    const double *args, int argc, PLANKAC_TYPED_RESULT *result,
     char *err, unsigned err_size);
 int plankac_context_summary(PLANKAC_CONTEXT *ctx,
     char *out, unsigned out_size);
@@ -88,7 +116,11 @@ int plankac_context_write_asm_image(PLANKAC_CONTEXT *ctx,
     const char *path, char *err, unsigned err_size);
 int plankac_context_write_asm8086_runtime(PLANKAC_CONTEXT *ctx,
     const char *path, char *err, unsigned err_size);
+int plankac_context_write_ast(PLANKAC_CONTEXT *ctx,
+    const char *path, char *err, unsigned err_size);
 int plankac_context_write_ir(PLANKAC_CONTEXT *ctx,
+    const char *path, char *err, unsigned err_size);
+int plankac_context_write_evidence(PLANKAC_CONTEXT *ctx,
     const char *path, char *err, unsigned err_size);
 int plankac_context_write_lowering_report(PLANKAC_CONTEXT *ctx,
     const char *path, char *err, unsigned err_size);
@@ -107,15 +139,21 @@ int plankac_get_native(int index, PLANKAC_NATIVE_INFO *info);
 int plankac_find_native(const char *name, PLANKAC_NATIVE_INFO *info);
 int plankac_run(const char *name, const double *args, int argc,
     PLANKAC_RESULT *result, char *err, unsigned err_size);
+int plankac_run_typed(const char *name, const double *args, int argc,
+    PLANKAC_TYPED_RESULT *result, char *err, unsigned err_size);
 int plankac_run_number(int number, const double *args, int argc,
     PLANKAC_RESULT *result, char *err, unsigned err_size);
+int plankac_run_number_typed(int number, const double *args, int argc,
+    PLANKAC_TYPED_RESULT *result, char *err, unsigned err_size);
 int plankac_write_bytecode(const char *path, char *err, unsigned err_size);
 int plankac_write_c_backend(const char *path, char *err, unsigned err_size);
 int plankac_write_asm_runtime(const char *path, char *err, unsigned err_size);
 int plankac_write_asm_image(const char *path, char *err, unsigned err_size);
 int plankac_write_asm8086_runtime(const char *path,
     char *err, unsigned err_size);
+int plankac_write_ast(const char *path, char *err, unsigned err_size);
 int plankac_write_ir(const char *path, char *err, unsigned err_size);
+int plankac_write_evidence(const char *path, char *err, unsigned err_size);
 int plankac_write_lowering_report(const char *path,
     char *err, unsigned err_size);
 void plankac_format(double value, char *out, unsigned out_size);

@@ -15,6 +15,12 @@
 #define PLC_NATIVE_MAX_RECORD_FIELDS 64
 #define PLC_NATIVE_MAX_VEC3 128
 #define PLC_NATIVE_MAX_MAT4 64
+#define PLC_NATIVE_CMP_EQ 1
+#define PLC_NATIVE_CMP_NE 2
+#define PLC_NATIVE_CMP_LT 3
+#define PLC_NATIVE_CMP_LE 4
+#define PLC_NATIVE_CMP_GT 5
+#define PLC_NATIVE_CMP_GE 6
 
 typedef struct PLC_NATIVE_FRAME {
     struct PLC_NATIVE_FRAME *heap_owner;
@@ -261,6 +267,26 @@ static int plc_native_list_contains(PLC_NATIVE_FRAME *frame,
         }
     }
     return 0;
+}
+
+static int plc_native_compare_where(double left, int op_code, double right)
+{
+    switch (op_code) {
+    case PLC_NATIVE_CMP_EQ:
+        return fabs(left - right) < 0.0000001;
+    case PLC_NATIVE_CMP_NE:
+        return fabs(left - right) >= 0.0000001;
+    case PLC_NATIVE_CMP_LT:
+        return left < right;
+    case PLC_NATIVE_CMP_LE:
+        return left <= right || fabs(left - right) < 0.0000001;
+    case PLC_NATIVE_CMP_GT:
+        return left > right;
+    case PLC_NATIVE_CMP_GE:
+        return left >= right || fabs(left - right) < 0.0000001;
+    default:
+        return 0;
+    }
 }
 
 static int plc_native_new_complex(PLC_NATIVE_FRAME *frame,
@@ -563,6 +589,65 @@ double plc_native_builtin(void *opaque, const char *name,
         }
         return (double)out_id;
     }
+    if ((strcmp(name, "list_select_where") == 0
+            || strcmp(name, "list_count_where") == 0
+            || strcmp(name, "list_exists_where") == 0
+            || strcmp(name, "list_forall_where") == 0
+            || strcmp(name, "set_select_where") == 0
+            || strcmp(name, "set_count_where") == 0
+            || strcmp(name, "set_exists_where") == 0
+            || strcmp(name, "set_forall_where") == 0) && argc == 3) {
+        int count_value;
+        int ok;
+        int is_select;
+        int is_count;
+        int is_forall;
+        int is_set;
+
+        list_id = (int)args[0];
+        if (!plc_native_list_ok(frame, list_id)) {
+            return 0.0;
+        }
+        is_select = strstr(name, "_select_") != 0;
+        is_count = strstr(name, "_count_") != 0;
+        is_forall = strstr(name, "_forall_") != 0;
+        is_set = strncmp(name, "set_", 4) == 0;
+        count_value = 0;
+        ok = is_forall ? 1 : 0;
+        out_id = -1;
+        if (is_select) {
+            out_id = plc_native_new_list(frame);
+            if (out_id < 0) {
+                return 0.0;
+            }
+        }
+        for (i = 0; i < frame->list_sizes[list_id]; ++i) {
+            double value;
+
+            value = frame->lists[list_id][i];
+            if (plc_native_compare_where(value, (int)args[1], args[2])) {
+                ++count_value;
+                if (!is_forall) {
+                    ok = 1;
+                }
+                if (is_select
+                        && (!is_set
+                            || !plc_native_list_contains(frame, out_id, value))
+                        && !plc_native_list_push_value(frame, out_id, value)) {
+                    return 0.0;
+                }
+            } else if (is_forall) {
+                ok = 0;
+            }
+        }
+        if (is_select) {
+            return (double)out_id;
+        }
+        if (is_count) {
+            return (double)count_value;
+        }
+        return ok ? 1.0 : 0.0;
+    }
     if (strcmp(name, "pair") == 0 && argc == 2) {
         if (frame->pair_count >= PLC_NATIVE_MAX_PAIRS) {
             return 0.0;
@@ -710,6 +795,70 @@ double plc_native_builtin(void *opaque, const char *name,
             }
         }
         return 0.0;
+    }
+    if ((strcmp(name, "relation_domain_select_where") == 0
+            || strcmp(name, "relation_domain_count_where") == 0
+            || strcmp(name, "relation_domain_exists_where") == 0
+            || strcmp(name, "relation_domain_forall_where") == 0
+            || strcmp(name, "relation_range_select_where") == 0
+            || strcmp(name, "relation_range_count_where") == 0
+            || strcmp(name, "relation_range_exists_where") == 0
+            || strcmp(name, "relation_range_forall_where") == 0) && argc == 3) {
+        int count_value;
+        int ok;
+        int is_domain;
+        int is_select;
+        int is_count;
+        int is_forall;
+
+        list_id = (int)args[0];
+        if (!plc_native_list_ok(frame, list_id)) {
+            return 0.0;
+        }
+        is_domain = strncmp(name, "relation_domain_", 16) == 0;
+        is_select = strstr(name, "_select_") != 0;
+        is_count = strstr(name, "_count_") != 0;
+        is_forall = strstr(name, "_forall_") != 0;
+        count_value = 0;
+        ok = is_forall ? 1 : 0;
+        out_id = -1;
+        if (is_select) {
+            out_id = plc_native_new_list(frame);
+            if (out_id < 0) {
+                return 0.0;
+            }
+        }
+        for (i = 0; i < frame->list_sizes[list_id]; ++i) {
+            double value;
+
+            pair_id = (int)frame->lists[list_id][i];
+            if (pair_id < 0 || pair_id >= frame->pair_count) {
+                return 0.0;
+            }
+            value = is_domain
+                ? frame->pair_left[pair_id]
+                : frame->pair_right[pair_id];
+            if (plc_native_compare_where(value, (int)args[1], args[2])) {
+                ++count_value;
+                if (!is_forall) {
+                    ok = 1;
+                }
+                if (is_select
+                        && !plc_native_list_push_value(frame, out_id,
+                            (double)pair_id)) {
+                    return 0.0;
+                }
+            } else if (is_forall) {
+                ok = 0;
+            }
+        }
+        if (is_select) {
+            return (double)out_id;
+        }
+        if (is_count) {
+            return (double)count_value;
+        }
+        return ok ? 1.0 : 0.0;
     }
     if ((strcmp(name, "set_cartesian") == 0
             || strcmp(name, "relation_compose") == 0) && argc == 2) {

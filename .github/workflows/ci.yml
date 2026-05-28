@@ -35,6 +35,8 @@ jobs:
           name: windows-generated-artifacts
           path: |
             build/plankac.ir
+            build/plankac.evidence.json
+            build/max3.evidence.json
             build/plankamath.pbc
             build/plankac.lowering
             build/plankac_generated.c
@@ -63,6 +65,8 @@ jobs:
           name: linux-generated-artifacts
           path: |
             build/plankac.ir
+            build/plankac.evidence.json
+            build/max3.evidence.json
             build/plankamath.pbc
             build/plankac.lowering
             build/plankac_generated.c

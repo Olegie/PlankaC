@@ -12,12 +12,13 @@ implementation details and verification.
 | `language_reference.md` | Source syntax, procedure model, variables, expressions, calls, guards, loops, assertions, and type markers |
 | `standard_library.md` | Built-in procedures and the bundled `.plk` procedure profile |
 | `compiler_guide.md` | Command-line tools, bytecode, lowering, generated C, x86-64 ASM, 8086 ASM, and verification commands |
-| `compiler_pipeline.md` | Stable `.plk -> IR/bytecode -> lowering -> C/ASM -> native executable` route |
+| `compiler_pipeline.md` | Stable `.plk -> AST -> typed IR/bytecode -> lowering -> C/ASM -> native executable` route |
 | `examples.md` | Small source and command examples for arithmetic, guards, data structures, relations, chess, graphics, and 3D |
 | `porting_guide.md` | Embedding, platform targets, Win16/DOS notes, host integration, and constraints |
 | `abi.md` | C ABI for calling PlankaC from C and registered C functions from `.plk` |
 | `tutorials/max3_to_native.md` | End-to-end `.plk` tutorial from source to bytecode, generated C, generated ASM, and native runners |
 | `technical_report.md` | English/German technical report on scope, source basis, architecture, backends, and verification |
+| `research/README.md` | reproducible research track: hypotheses, evidence protocol, and failure conditions |
 | `de/plankac.md` | German project page |
 
 ## Reading Order
@@ -57,4 +58,6 @@ porting_guide.md -> toolchain.md -> conformance.md
 | `release_guide.md` | Tagging, binary policy, release assets, and checksum workflow |
 | `release_artifacts_note.md` | Public note for release bundles and experimental platform builds |
 | `review_request.md` | Draft issue/discussion text for outside technical review |
+| `research/evidence_protocol.md` | machine-readable evidence packet for source/profile/backend stability |
+| `research/research_questions.md` | testable research questions for the PlankaC profile |
 | `bibliography.md` | Source literature |

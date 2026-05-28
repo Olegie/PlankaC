@@ -86,7 +86,7 @@ R0=20
 R0=2403.500000
 R0=0.545000
 Bytecode written: build/plankamath.pbc
-Bytecode OK: 148 procedures
+Bytecode OK: 150 procedures
 R0=2
 IR written: build/plankac.ir
 Lowering written: build/plankac.lowering

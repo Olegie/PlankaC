@@ -129,6 +129,10 @@ static int plc_analyzer_builtin_family(const char *name)
             || strcmp(name, "exception_code") == 0
             || strcmp(name, "exception_clear") == 0
             || strcmp(name, "list_count_equal") == 0
+            || strcmp(name, "list_count_where") == 0
+            || strcmp(name, "set_count_where") == 0
+            || strcmp(name, "relation_domain_count_where") == 0
+            || strcmp(name, "relation_range_count_where") == 0
             || strcmp(name, "chess_material_score") == 0
             || strcmp(name, "chess_best_capture_score") == 0
             || strcmp(name, "chess_fen_signature") == 0
@@ -152,9 +156,15 @@ static int plc_analyzer_builtin_family(const char *name)
             || strcmp(name, "set_equal") == 0
             || strcmp(name, "set_exists_greater") == 0
             || strcmp(name, "set_forall_less") == 0
+            || strcmp(name, "set_exists_where") == 0
+            || strcmp(name, "set_forall_where") == 0
             || strcmp(name, "relation_has_pair") == 0
             || strcmp(name, "relation_exists_range_equal") == 0
             || strcmp(name, "relation_forall_domain_greater") == 0
+            || strcmp(name, "relation_domain_exists_where") == 0
+            || strcmp(name, "relation_domain_forall_where") == 0
+            || strcmp(name, "relation_range_exists_where") == 0
+            || strcmp(name, "relation_range_forall_where") == 0
             || strcmp(name, "chess_piece_attacks_square") == 0
             || strcmp(name, "list_equal") == 0
             || strcmp(name, "pair_equal") == 0
@@ -173,6 +183,8 @@ static int plc_analyzer_builtin_family(const char *name)
             || strcmp(name, "exception_raised") == 0
             || strcmp(name, "list_exists_equal") == 0
             || strcmp(name, "list_forall_greater") == 0
+            || strcmp(name, "list_exists_where") == 0
+            || strcmp(name, "list_forall_where") == 0
             || strcmp(name, "chess_legal_rook_move") == 0
             || strcmp(name, "chess_legal_move") == 0
             || strcmp(name, "chess_side_in_check") == 0
@@ -185,11 +197,14 @@ static int plc_analyzer_builtin_family(const char *name)
     if (strcmp(name, "list_new") == 0 || strcmp(name, "list_push") == 0
             || strcmp(name, "list_concat") == 0
             || strcmp(name, "list_select_greater") == 0
+            || strcmp(name, "list_select_where") == 0
             || strcmp(name, "list_zip_pairs") == 0
             || strcmp(name, "relation_domain") == 0
             || strcmp(name, "relation_range") == 0
             || strcmp(name, "relation_select_domain") == 0
             || strcmp(name, "relation_select_range") == 0
+            || strcmp(name, "relation_domain_select_where") == 0
+            || strcmp(name, "relation_range_select_where") == 0
             || strcmp(name, "relation_inverse") == 0
             || strcmp(name, "relation_image") == 0
             || strcmp(name, "set_cartesian") == 0
@@ -199,7 +214,8 @@ static int plc_analyzer_builtin_family(const char *name)
     if (strcmp(name, "set_new") == 0 || strcmp(name, "set_add") == 0
             || strcmp(name, "set_union") == 0
             || strcmp(name, "set_intersection") == 0
-            || strcmp(name, "set_difference") == 0) {
+            || strcmp(name, "set_difference") == 0
+            || strcmp(name, "set_select_where") == 0) {
         return PLC_TYPE_FAMILY_SET;
     }
     if (strcmp(name, "pair") == 0) {
@@ -240,14 +256,28 @@ static int plc_analyzer_expr_family(const PLC_PROGRAM *program,
     const PLC_PROC *proc;
     int i;
 
-    if (plc_line_starts_with(expr, "SELECT")) {
+    if (plc_line_starts_with(expr, "SELECT")
+            || plc_line_starts_with(expr, "DOMAINSELECT")
+            || plc_line_starts_with(expr, "RANGESELECT")) {
         return PLC_TYPE_FAMILY_LIST;
     }
+    if (plc_line_starts_with(expr, "SETSELECT")) {
+        return PLC_TYPE_FAMILY_SET;
+    }
     if (plc_line_starts_with(expr, "EXISTS")
-            || plc_line_starts_with(expr, "FORALL")) {
+            || plc_line_starts_with(expr, "FORALL")
+            || plc_line_starts_with(expr, "SETEXISTS")
+            || plc_line_starts_with(expr, "SETFORALL")
+            || plc_line_starts_with(expr, "DOMAINEXISTS")
+            || plc_line_starts_with(expr, "DOMAINFORALL")
+            || plc_line_starts_with(expr, "RANGEEXISTS")
+            || plc_line_starts_with(expr, "RANGEFORALL")) {
         return PLC_TYPE_FAMILY_BOOLEAN;
     }
-    if (plc_line_starts_with(expr, "COUNT")) {
+    if (plc_line_starts_with(expr, "COUNT")
+            || plc_line_starts_with(expr, "SETCOUNT")
+            || plc_line_starts_with(expr, "DOMAINCOUNT")
+            || plc_line_starts_with(expr, "RANGECOUNT")) {
         return PLC_TYPE_FAMILY_NUMERIC;
     }
     if (plc_is_top_call(expr, name, sizeof(name), args, sizeof(args))) {

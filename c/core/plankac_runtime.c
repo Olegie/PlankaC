@@ -206,6 +206,26 @@ static int plc_list_contains_value(PLC_FRAME *frame, int list_id, double value)
     return 0;
 }
 
+static int plc_compare_where(double left, int op_code, double right)
+{
+    switch (op_code) {
+    case PLC_CMP_EQ:
+        return fabs(left - right) < 0.0000001;
+    case PLC_CMP_NE:
+        return fabs(left - right) >= 0.0000001;
+    case PLC_CMP_LT:
+        return left < right;
+    case PLC_CMP_LE:
+        return left <= right || fabs(left - right) < 0.0000001;
+    case PLC_CMP_GT:
+        return left > right;
+    case PLC_CMP_GE:
+        return left >= right || fabs(left - right) < 0.0000001;
+    default:
+        return 0;
+    }
+}
+
 static int plc_new_complex(PLC_FRAME *frame, double real, double imag,
     char *err, unsigned err_size)
 {
@@ -1069,6 +1089,82 @@ int plc_call_proc(const PLC_PROGRAM *program, PLC_FRAME *caller_frame,
         out->value[0] = (double)out_list;
         return 1;
     }
+    if (strcmp(name, "list_select_where") == 0
+            || strcmp(name, "list_count_where") == 0
+            || strcmp(name, "list_exists_where") == 0
+            || strcmp(name, "list_forall_where") == 0
+            || strcmp(name, "set_select_where") == 0
+            || strcmp(name, "set_count_where") == 0
+            || strcmp(name, "set_exists_where") == 0
+            || strcmp(name, "set_forall_where") == 0) {
+        int op_code;
+        int matched;
+        int count_value;
+        int ok;
+        int is_select;
+        int is_count;
+        int is_forall;
+        int is_set;
+
+        if (caller_frame == 0) {
+            plc_set_error(err, err_size, "container predicate needs a frame");
+            return 0;
+        }
+        if (argc != 3) {
+            plc_set_error(err, err_size,
+                "container predicate expects three arguments");
+            return 0;
+        }
+        list_id = (int)args[0];
+        op_code = (int)args[1];
+        if (!plc_list_valid(heap_frame, list_id, err, err_size)) {
+            return 0;
+        }
+        is_select = strstr(name, "_select_") != 0;
+        is_count = strstr(name, "_count_") != 0;
+        is_forall = strstr(name, "_forall_") != 0;
+        is_set = strncmp(name, "set_", 4) == 0;
+        count_value = 0;
+        ok = is_forall ? 1 : 0;
+        out_list = -1;
+        if (is_select) {
+            out_list = plc_new_list(heap_frame, err, err_size);
+            if (out_list < 0) {
+                return 0;
+            }
+        }
+        for (i = 0; i < heap_frame->list_sizes[list_id]; ++i) {
+            double value;
+
+            value = heap_frame->lists[list_id][i];
+            matched = plc_compare_where(value, op_code, args[2]);
+            if (matched) {
+                ++count_value;
+                if (!is_forall) {
+                    ok = 1;
+                }
+                if (is_select
+                        && (!is_set
+                            || !plc_list_contains_value(heap_frame,
+                                out_list, value))
+                        && !plc_list_append(heap_frame, out_list, value,
+                            err, err_size)) {
+                    return 0;
+                }
+            } else if (is_forall) {
+                ok = 0;
+            }
+        }
+        out->count = 1;
+        if (is_select) {
+            out->value[0] = (double)out_list;
+        } else if (is_count) {
+            out->value[0] = (double)count_value;
+        } else {
+            out->value[0] = ok ? 1.0 : 0.0;
+        }
+        return 1;
+    }
     if (strcmp(name, "list_select_greater") == 0
             || strcmp(name, "list_count_equal") == 0
             || strcmp(name, "list_exists_equal") == 0
@@ -1549,6 +1645,86 @@ int plc_call_proc(const PLC_PROGRAM *program, PLC_FRAME *caller_frame,
         }
         out->count = 1;
         out->value[0] = (double)out_list;
+        return 1;
+    }
+    if (strcmp(name, "relation_domain_select_where") == 0
+            || strcmp(name, "relation_domain_count_where") == 0
+            || strcmp(name, "relation_domain_exists_where") == 0
+            || strcmp(name, "relation_domain_forall_where") == 0
+            || strcmp(name, "relation_range_select_where") == 0
+            || strcmp(name, "relation_range_count_where") == 0
+            || strcmp(name, "relation_range_exists_where") == 0
+            || strcmp(name, "relation_range_forall_where") == 0) {
+        int op_code;
+        int matched;
+        int count_value;
+        int ok;
+        int is_domain;
+        int is_select;
+        int is_count;
+        int is_forall;
+
+        if (caller_frame == 0) {
+            plc_set_error(err, err_size, "relation predicate needs a frame");
+            return 0;
+        }
+        if (argc != 3) {
+            plc_set_error(err, err_size,
+                "relation predicate expects three arguments");
+            return 0;
+        }
+        list_id = (int)args[0];
+        op_code = (int)args[1];
+        if (!plc_list_valid(heap_frame, list_id, err, err_size)) {
+            return 0;
+        }
+        is_domain = strncmp(name, "relation_domain_", 16) == 0;
+        is_select = strstr(name, "_select_") != 0;
+        is_count = strstr(name, "_count_") != 0;
+        is_forall = strstr(name, "_forall_") != 0;
+        count_value = 0;
+        ok = is_forall ? 1 : 0;
+        out_list = -1;
+        if (is_select) {
+            out_list = plc_new_list(heap_frame, err, err_size);
+            if (out_list < 0) {
+                return 0;
+            }
+        }
+        for (i = 0; i < heap_frame->list_sizes[list_id]; ++i) {
+            double value;
+
+            pair_id = (int)heap_frame->lists[list_id][i];
+            if (pair_id < 0 || pair_id >= heap_frame->pair_count) {
+                plc_set_error(err, err_size, "bad pair id in relation");
+                return 0;
+            }
+            value = is_domain
+                ? heap_frame->pair_left[pair_id]
+                : heap_frame->pair_right[pair_id];
+            matched = plc_compare_where(value, op_code, args[2]);
+            if (matched) {
+                ++count_value;
+                if (!is_forall) {
+                    ok = 1;
+                }
+                if (is_select
+                        && !plc_list_append(heap_frame, out_list,
+                            (double)pair_id, err, err_size)) {
+                    return 0;
+                }
+            } else if (is_forall) {
+                ok = 0;
+            }
+        }
+        out->count = 1;
+        if (is_select) {
+            out->value[0] = (double)out_list;
+        } else if (is_count) {
+            out->value[0] = (double)count_value;
+        } else {
+            out->value[0] = ok ? 1.0 : 0.0;
+        }
         return 1;
     }
     if (strcmp(name, "relation_exists_range_equal") == 0
@@ -3259,6 +3435,53 @@ static int plankac_context_run_proc(PLANKAC_CONTEXT *ctx,
     return PLANKAC_OK;
 }
 
+static void plankac_fill_public_value(PLANKAC_VALUE *out, double value,
+    const char *type_marker)
+{
+    PLC_TAGGED_VALUE tagged;
+
+    if (out == 0) {
+        return;
+    }
+    memset(out, 0, sizeof(*out));
+    plc_tagged_from_double(&tagged, value, type_marker);
+    out->tag = tagged.tag;
+    out->family = tagged.family;
+    out->bits = tagged.bits;
+    out->scale = tagged.scale;
+    out->raw = tagged.raw;
+    out->handle = tagged.handle;
+    out->number = tagged.number;
+    if (type_marker != 0) {
+        strncpy(out->type_text, type_marker, sizeof(out->type_text) - 1);
+        out->type_text[sizeof(out->type_text) - 1] = '\0';
+    }
+}
+
+static int plankac_context_run_proc_typed(PLANKAC_CONTEXT *ctx,
+    const PLC_PROC *proc, const double *args, int argc,
+    PLANKAC_TYPED_RESULT *result, char *err, unsigned err_size)
+{
+    PLANKAC_RESULT plain;
+    int i;
+
+    if (result == 0) {
+        plc_copy_error(err, err_size, "missing typed result storage");
+        return PLANKAC_ERR;
+    }
+    memset(result, 0, sizeof(*result));
+    if (!plankac_context_run_proc(ctx, proc, args, argc, &plain,
+            err, err_size)) {
+        return PLANKAC_ERR;
+    }
+    result->count = plain.count;
+    for (i = 0; i < plain.count && i < PLANKAC_MAX_RESULTS; ++i) {
+        plankac_fill_public_value(&result->value[i], plain.value[i],
+            i < proc->results ? proc->result_types[i] : "");
+    }
+    return PLANKAC_OK;
+}
+
 int plankac_context_run(PLANKAC_CONTEXT *ctx, const char *name,
     const double *args, int argc, PLANKAC_RESULT *result,
     char *err, unsigned err_size)
@@ -3277,6 +3500,27 @@ int plankac_context_run(PLANKAC_CONTEXT *ctx, const char *name,
         return PLANKAC_ERR;
     }
     return plankac_context_run_proc(ctx, proc, args, argc, result,
+        err, err_size);
+}
+
+int plankac_context_run_typed(PLANKAC_CONTEXT *ctx, const char *name,
+    const double *args, int argc, PLANKAC_TYPED_RESULT *result,
+    char *err, unsigned err_size)
+{
+    const PLC_PROC *proc;
+
+    if (ctx == 0 || !ctx->loaded) {
+        plc_copy_error(err, err_size, "PlankaC context is not loaded");
+        return PLANKAC_ERR;
+    }
+    proc = plc_find_proc(&ctx->program, name);
+    if (proc == 0) {
+        if (err_size > 0 && err != 0) {
+            sprintf(err, "unknown procedure: %s", name);
+        }
+        return PLANKAC_ERR;
+    }
+    return plankac_context_run_proc_typed(ctx, proc, args, argc, result,
         err, err_size);
 }
 
@@ -3305,6 +3549,34 @@ int plankac_context_run_number(PLANKAC_CONTEXT *ctx, int number,
         return PLANKAC_ERR;
     }
     return plankac_context_run_proc(ctx, proc, args, argc, result,
+        err, err_size);
+}
+
+int plankac_context_run_number_typed(PLANKAC_CONTEXT *ctx, int number,
+    const double *args, int argc, PLANKAC_TYPED_RESULT *result,
+    char *err, unsigned err_size)
+{
+    const PLC_PROC *proc;
+    int i;
+
+    if (ctx == 0 || !ctx->loaded) {
+        plc_copy_error(err, err_size, "PlankaC context is not loaded");
+        return PLANKAC_ERR;
+    }
+    proc = 0;
+    for (i = 0; i < ctx->program.proc_count; ++i) {
+        if (ctx->program.procs[i].number == number) {
+            proc = &ctx->program.procs[i];
+            break;
+        }
+    }
+    if (proc == 0) {
+        if (err_size > 0 && err != 0) {
+            sprintf(err, "unknown procedure number: P%d", number);
+        }
+        return PLANKAC_ERR;
+    }
+    return plankac_context_run_proc_typed(ctx, proc, args, argc, result,
         err, err_size);
 }
 
@@ -3424,6 +3696,42 @@ int plankac_context_write_ir(PLANKAC_CONTEXT *ctx,
         return PLANKAC_ERR;
     }
     if (!plc_emit_ir(&ctx->program, path, err, err_size)) {
+        return PLANKAC_ERR;
+    }
+    plc_copy_error(err, err_size, "");
+    return PLANKAC_OK;
+}
+
+int plankac_context_write_ast(PLANKAC_CONTEXT *ctx,
+    const char *path, char *err, unsigned err_size)
+{
+    if (ctx == 0 || !ctx->loaded) {
+        plc_copy_error(err, err_size, "PlankaC context is not loaded");
+        return PLANKAC_ERR;
+    }
+    if (path == 0 || path[0] == '\0') {
+        plc_copy_error(err, err_size, "missing AST output path");
+        return PLANKAC_ERR;
+    }
+    if (!plc_emit_ast(&ctx->program, path, err, err_size)) {
+        return PLANKAC_ERR;
+    }
+    plc_copy_error(err, err_size, "");
+    return PLANKAC_OK;
+}
+
+int plankac_context_write_evidence(PLANKAC_CONTEXT *ctx,
+    const char *path, char *err, unsigned err_size)
+{
+    if (ctx == 0 || !ctx->loaded) {
+        plc_copy_error(err, err_size, "PlankaC context is not loaded");
+        return PLANKAC_ERR;
+    }
+    if (path == 0 || path[0] == '\0') {
+        plc_copy_error(err, err_size, "missing evidence output path");
+        return PLANKAC_ERR;
+    }
+    if (!plc_emit_evidence(&ctx->program, path, err, err_size)) {
         return PLANKAC_ERR;
     }
     plc_copy_error(err, err_size, "");
@@ -3606,6 +3914,28 @@ static int plankac_run_proc(const PLC_PROC *proc, const double *args, int argc,
     return PLANKAC_OK;
 }
 
+static int plankac_run_proc_typed(const PLC_PROC *proc, const double *args,
+    int argc, PLANKAC_TYPED_RESULT *result, char *err, unsigned err_size)
+{
+    PLANKAC_RESULT plain;
+    int i;
+
+    if (result == 0) {
+        plc_copy_error(err, err_size, "missing typed result storage");
+        return PLANKAC_ERR;
+    }
+    memset(result, 0, sizeof(*result));
+    if (!plankac_run_proc(proc, args, argc, &plain, err, err_size)) {
+        return PLANKAC_ERR;
+    }
+    result->count = plain.count;
+    for (i = 0; i < plain.count && i < PLANKAC_MAX_RESULTS; ++i) {
+        plankac_fill_public_value(&result->value[i], plain.value[i],
+            i < proc->results ? proc->result_types[i] : "");
+    }
+    return PLANKAC_OK;
+}
+
 int plankac_run(const char *name, const double *args, int argc,
     PLANKAC_RESULT *result, char *err, unsigned err_size)
 {
@@ -3622,6 +3952,24 @@ int plankac_run(const char *name, const double *args, int argc,
         return PLANKAC_ERR;
     }
     return plankac_run_proc(proc, args, argc, result, err, err_size);
+}
+
+int plankac_run_typed(const char *name, const double *args, int argc,
+    PLANKAC_TYPED_RESULT *result, char *err, unsigned err_size)
+{
+    const PLC_PROC *proc;
+
+    if (!plankac_load(err, err_size)) {
+        return PLANKAC_ERR;
+    }
+    proc = plc_find_proc(&g_plankac_program, name);
+    if (proc == 0) {
+        if (err_size > 0 && err != 0) {
+            sprintf(err, "unknown procedure: %s", name);
+        }
+        return PLANKAC_ERR;
+    }
+    return plankac_run_proc_typed(proc, args, argc, result, err, err_size);
 }
 
 int plankac_run_number(int number, const double *args, int argc,
@@ -3647,6 +3995,31 @@ int plankac_run_number(int number, const double *args, int argc,
         return PLANKAC_ERR;
     }
     return plankac_run_proc(proc, args, argc, result, err, err_size);
+}
+
+int plankac_run_number_typed(int number, const double *args, int argc,
+    PLANKAC_TYPED_RESULT *result, char *err, unsigned err_size)
+{
+    const PLC_PROC *proc;
+    int i;
+
+    if (!plankac_load(err, err_size)) {
+        return PLANKAC_ERR;
+    }
+    proc = 0;
+    for (i = 0; i < g_plankac_program.proc_count; ++i) {
+        if (g_plankac_program.procs[i].number == number) {
+            proc = &g_plankac_program.procs[i];
+            break;
+        }
+    }
+    if (proc == 0) {
+        if (err_size > 0 && err != 0) {
+            sprintf(err, "unknown procedure number: P%d", number);
+        }
+        return PLANKAC_ERR;
+    }
+    return plankac_run_proc_typed(proc, args, argc, result, err, err_size);
 }
 
 int plankac_write_bytecode(const char *path, char *err, unsigned err_size)
@@ -3716,6 +4089,30 @@ int plankac_write_ir(const char *path, char *err, unsigned err_size)
         return PLANKAC_ERR;
     }
     if (!plc_emit_ir(&g_plankac_program, path, err, err_size)) {
+        return PLANKAC_ERR;
+    }
+    plc_copy_error(err, err_size, "");
+    return PLANKAC_OK;
+}
+
+int plankac_write_ast(const char *path, char *err, unsigned err_size)
+{
+    if (!plankac_load(err, err_size)) {
+        return PLANKAC_ERR;
+    }
+    if (!plc_emit_ast(&g_plankac_program, path, err, err_size)) {
+        return PLANKAC_ERR;
+    }
+    plc_copy_error(err, err_size, "");
+    return PLANKAC_OK;
+}
+
+int plankac_write_evidence(const char *path, char *err, unsigned err_size)
+{
+    if (!plankac_load(err, err_size)) {
+        return PLANKAC_ERR;
+    }
+    if (!plc_emit_evidence(&g_plankac_program, path, err, err_size)) {
         return PLANKAC_ERR;
     }
     plc_copy_error(err, err_size, "");

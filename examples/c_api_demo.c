@@ -6,6 +6,7 @@ int main(void)
 {
     PLANKAC_CONTEXT *ctx;
     PLANKAC_RESULT result;
+    PLANKAC_TYPED_RESULT typed_result;
     PLANKAC_PROC_INFO info;
     double args[2];
     char err[256];
@@ -53,6 +54,16 @@ int main(void)
     plankac_format(result.value[0], text, sizeof(text));
     printf("divide_checked(84, 0) -> R0=%s R1=%.0f\n",
         text, result.value[1]);
+
+    if (!plankac_context_run_typed(ctx, "divide_checked", args, 2,
+            &typed_result, err, sizeof(err))) {
+        printf("typed run failed: %s\n", err);
+        plankac_destroy(ctx);
+        return 1;
+    }
+    printf("typed divide status -> tag=%d raw=%ld type=%s\n",
+        typed_result.value[1].tag, typed_result.value[1].raw,
+        typed_result.value[1].type_text);
 
     args[0] = 12.0;
     args[1] = 8.0;
