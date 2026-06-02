@@ -31,6 +31,15 @@ divide_checked(V0[:32.16], V1[:32.16]) => R0[:32.16], R1[:1.1]
 
 `CONST` writes only into the `C` bank. Ordinary assignment to `C` is rejected.
 
+## Expression Execution
+
+Scalar expressions are parsed into the bounded expression AST and evaluated
+from that tree when all nodes are supported. This covers typed numeric
+literals, bank references, parenthesized groups, unary and binary operators,
+nested procedure calls, comparisons, Boolean operators, and predicate forms.
+The legacy recursive text evaluator remains available for compatibility when a
+source fragment is outside the AST execution subset.
+
 ## Guards, Loops, And Stops
 
 A guarded assignment has three arrow-separated parts:

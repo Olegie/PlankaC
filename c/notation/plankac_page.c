@@ -56,6 +56,7 @@ static int plc_page_nearest_overlapping_row(const PLC_2D_DOCUMENT *document,
         int distance;
 
         if (document->rows[i].kind != kind
+                || document->rows[i].block != expr->block
                 || !plc_page_rows_overlap(expr, &document->rows[i])) {
             continue;
         }

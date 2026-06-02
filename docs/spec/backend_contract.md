@@ -20,10 +20,11 @@ The AST classifies statements before typed IR construction: plain evaluation,
 calls, guarded evaluation, guarded calls, loops, contracts, `STOPIF`, and
 `CONST`.
 
-Each statement also carries expression AST summaries for guard, value, and
+Each statement also carries a bounded expression tree for guard, value, and
 target-list text. The expression layer recognizes literals, references, calls,
 unary operators, binary operators, predicate forms, grouped expressions, and
-target lists. The readable artifact is emitted with:
+target lists. The readable artifact emits both summary counters and serialized
+`tree ...` shapes:
 
 ```text
 build\plankac.exe ast build\plankac.ast
@@ -38,7 +39,8 @@ The typed IR records one node per statement:
 
 ```text
 procedure, line, op, guard family, value family, target family,
-callee, arity, result count, lowering class, expression node counts
+callee, arity, result count, lowering class, expression node counts,
+serialized expression shape
 ```
 
 Current operation classes:
@@ -69,8 +71,10 @@ build\plankac.exe lowering build\plankac.lowering
 ```
 
 The lowering report records the C, x86-64 ASM, and 8086 path selected for each
-typed IR node. Scalar expressions use direct paths; compound values use ABI or
-runtime entry points with the same procedure contract.
+typed IR node. Scalar expressions use direct paths. Calls, contracts, control
+flow, lists, sets, pairs, records, relations, predicates, chess structures,
+geometry values, and complex values are classified separately before they use
+ABI or runtime entry points with the same procedure contract.
 
 ## Bytecode
 
@@ -93,6 +97,7 @@ The 8086 backend emits MASM/TASM-style source with:
 | Symbol | Role |
 | --- | --- |
 | `plankac_8086_bytecode_image` | embedded bytecode image |
+| `plankac_8086_smoke` | DOS smoke entry called by `plankac_8086_start` |
 | `plankac_8086_compound_proc_table` | procedure table for compound procedures |
 | `plankac_8086_list_heap` | 16-bit list heap storage |
 | `plankac_8086_pair_heap` | 16-bit pair heap storage |
@@ -109,6 +114,10 @@ The 8086 backend emits MASM/TASM-style source with:
 | `plankac_8086_board_piece` | board read ABI entry |
 | `plankac_8086_dispatch_compound` | compound dispatch ABI entry |
 
-Direct arithmetic procedures return `AX` as `R0` and `DX` as status. Compound
+Direct arithmetic procedures return `AX` as `R0` and `DX` as status. The
+generated source includes a DOS start procedure and a smoke runner that calls
+the zero-argument `type_sheet` procedure when it is present. Compound
 procedures expose a 16-bit ABI surface and an embedded bytecode image so a DOS
-runtime can dispatch the full profile through a narrow, documented boundary.
+runtime can dispatch the profile through a narrow, documented boundary. The
+current 8086 artifact is source plus ABI surface; building and executing a DOS
+binary still depends on a separate 16-bit toolchain route.

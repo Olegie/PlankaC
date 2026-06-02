@@ -378,6 +378,508 @@ static int plc_expr_parse_predicate(PLC_EXPR_PARSER *parser, int depth)
         PLC_EXPR_AST_PREDICATE, depth);
 }
 
+typedef struct PLC_EXPR_TREE_PARSER {
+    const char *p;
+    PLC_EXPR_AST_TREE *tree;
+} PLC_EXPR_TREE_PARSER;
+
+static void plc_expr_tree_clear(PLC_EXPR_AST_TREE *tree)
+{
+    if (tree != 0) {
+        memset(tree, 0, sizeof(*tree));
+        tree->root = -1;
+    }
+}
+
+static int plc_expr_tree_add(PLC_EXPR_AST_TREE *tree, int kind,
+    const char *text, const char *op)
+{
+    PLC_EXPR_AST_NODE *node;
+    unsigned len;
+
+    if (tree == 0) {
+        return -1;
+    }
+    if (tree->node_count >= PLC_EXPR_AST_MAX_NODES) {
+        tree->overflow = 1;
+        return -1;
+    }
+    node = &tree->nodes[tree->node_count];
+    memset(node, 0, sizeof(*node));
+    node->kind = kind;
+    node->family = PLC_TYPE_FAMILY_UNKNOWN;
+    if (text != 0) {
+        len = (unsigned)strlen(text);
+        if (len >= sizeof(node->text)) {
+            len = sizeof(node->text) - 1;
+        }
+        memcpy(node->text, text, len);
+        node->text[len] = '\0';
+    }
+    if (op != 0) {
+        strncpy(node->op, op, sizeof(node->op) - 1);
+        node->op[sizeof(node->op) - 1] = '\0';
+    }
+    ++tree->node_count;
+    return tree->node_count - 1;
+}
+
+static void plc_expr_tree_add_child(PLC_EXPR_AST_TREE *tree, int parent,
+    int child)
+{
+    PLC_EXPR_AST_NODE *node;
+
+    if (tree == 0 || parent < 0 || child < 0
+            || parent >= tree->node_count || child >= tree->node_count) {
+        return;
+    }
+    node = &tree->nodes[parent];
+    if (node->child_count >= PLC_EXPR_AST_MAX_CHILDREN) {
+        tree->overflow = 1;
+        return;
+    }
+    node->children[node->child_count] = child;
+    ++node->child_count;
+}
+
+static void plc_expr_tree_copy_range(char *out, unsigned out_size,
+    const char *first, const char *last)
+{
+    if (out_size == 0) {
+        return;
+    }
+    if (first == 0 || last == 0 || last < first) {
+        out[0] = '\0';
+        return;
+    }
+    plc_copy_range(out, out_size, first, last);
+    plc_trim_in_place(out);
+}
+
+static int plc_expr_tree_parse_expression(PLC_EXPR_TREE_PARSER *parser,
+    int min_prec, int depth);
+
+static int plc_expr_tree_parse_primary(PLC_EXPR_TREE_PARSER *parser,
+    int depth)
+{
+    const char *p;
+    char *endptr;
+
+    (void)depth;
+    p = plc_skip_space(parser->p);
+    if (*p == '(') {
+        int child;
+        int node;
+
+        parser->p = p + 1;
+        child = plc_expr_tree_parse_expression(parser, 1, depth + 1);
+        p = plc_skip_space(parser->p);
+        if (*p == ')') {
+            parser->p = p + 1;
+        } else {
+            parser->p = p;
+            plc_expr_tree_add(parser->tree, PLC_EXPR_AST_UNKNOWN, p, 0);
+        }
+        node = plc_expr_tree_add(parser->tree, PLC_EXPR_AST_GROUP, "", 0);
+        plc_expr_tree_add_child(parser->tree, node, child);
+        return node;
+    }
+    if (*p == '-' || *p == '!') {
+        char op[2];
+        int child;
+        int node;
+
+        op[0] = *p;
+        op[1] = '\0';
+        parser->p = p + 1;
+        child = plc_expr_tree_parse_primary(parser, depth + 1);
+        node = plc_expr_tree_add(parser->tree, PLC_EXPR_AST_UNARY, "", op);
+        plc_expr_tree_add_child(parser->tree, node, child);
+        return node;
+    }
+    if (isdigit((unsigned char)*p) || *p == '.') {
+        char text[PLC_EXPR_AST_NODE_TEXT];
+        const char *last;
+
+        (void)strtod(p, &endptr);
+        if (endptr == p) {
+            text[0] = *p;
+            text[1] = '\0';
+            parser->p = p + 1;
+            return plc_expr_tree_add(parser->tree, PLC_EXPR_AST_UNKNOWN,
+                text, 0);
+        }
+        last = plc_skip_type_marker(endptr);
+        plc_expr_tree_copy_range(text, sizeof(text), p, last);
+        parser->p = last;
+        return plc_expr_tree_add(parser->tree, PLC_EXPR_AST_LITERAL,
+            text, 0);
+    }
+    if (*p == 'V' || *p == 'C' || *p == 'Z' || *p == 'R') {
+        const char *refp;
+        char text[PLC_EXPR_AST_NODE_TEXT];
+
+        refp = p;
+        if (plc_expr_parse_ref(&refp)) {
+            plc_expr_tree_copy_range(text, sizeof(text), p, refp);
+            parser->p = refp;
+            return plc_expr_tree_add(parser->tree, PLC_EXPR_AST_REF,
+                text, 0);
+        }
+    }
+    if (isalpha((unsigned char)*p) || *p == '_') {
+        char name[PLC_MAX_NAME];
+
+        if (plc_expr_parse_identifier(&p, name, sizeof(name))) {
+            p = plc_skip_space(p);
+            if (*p == '(') {
+                int node;
+
+                node = plc_expr_tree_add(parser->tree, PLC_EXPR_AST_CALL,
+                    name, 0);
+                parser->p = p + 1;
+                p = plc_skip_space(parser->p);
+                if (*p != ')') {
+                    while (1) {
+                        int child;
+
+                        child = plc_expr_tree_parse_expression(parser, 1,
+                            depth + 1);
+                        plc_expr_tree_add_child(parser->tree, node, child);
+                        p = plc_skip_space(parser->p);
+                        if (*p == ',') {
+                            parser->p = p + 1;
+                            continue;
+                        }
+                        break;
+                    }
+                }
+                p = plc_skip_space(parser->p);
+                if (*p == ')') {
+                    parser->p = p + 1;
+                } else {
+                    parser->p = p;
+                    plc_expr_tree_add(parser->tree, PLC_EXPR_AST_UNKNOWN,
+                        p, 0);
+                }
+                return node;
+            }
+            parser->p = p;
+            return plc_expr_tree_add(parser->tree, PLC_EXPR_AST_UNKNOWN,
+                name, 0);
+        }
+    }
+    if (*p != '\0') {
+        char text[2];
+
+        text[0] = *p;
+        text[1] = '\0';
+        parser->p = p + 1;
+        return plc_expr_tree_add(parser->tree, PLC_EXPR_AST_UNKNOWN,
+            text, 0);
+    }
+    parser->p = p;
+    return plc_expr_tree_add(parser->tree, PLC_EXPR_AST_EMPTY, "", 0);
+}
+
+static int plc_expr_tree_parse_expression(PLC_EXPR_TREE_PARSER *parser,
+    int min_prec, int depth)
+{
+    int left;
+
+    left = plc_expr_tree_parse_primary(parser, depth);
+    while (1) {
+        const char *op_pos;
+        char op_text[8];
+        int op_len;
+        int prec;
+        int right;
+        int node;
+
+        op_pos = plc_skip_space(parser->p);
+        op_len = 0;
+        prec = plc_expr_op_at(op_pos, &op_len);
+        if (prec == 0 || prec < min_prec) {
+            parser->p = op_pos;
+            break;
+        }
+        plc_expr_tree_copy_range(op_text, sizeof(op_text),
+            op_pos, op_pos + op_len);
+        parser->p = op_pos + op_len;
+        right = plc_expr_tree_parse_expression(parser, prec + 1,
+            depth + 1);
+        node = plc_expr_tree_add(parser->tree, PLC_EXPR_AST_BINARY,
+            "", op_text);
+        plc_expr_tree_add_child(parser->tree, node, left);
+        plc_expr_tree_add_child(parser->tree, node, right);
+        left = node;
+    }
+    return left;
+}
+
+static int plc_expr_tree_parse_predicate(PLC_EXPR_TREE_PARSER *parser,
+    int depth)
+{
+    const char *p;
+    char keyword[PLC_EXPR_AST_NODE_TEXT];
+    char op_text[8];
+    unsigned keyword_len;
+    int op_len;
+    int node;
+    int left;
+
+    p = plc_skip_space(parser->p);
+    keyword_len = 0;
+    if (!plc_expr_is_predicate_keyword(p, &keyword_len)) {
+        return -1;
+    }
+    plc_expr_tree_copy_range(keyword, sizeof(keyword),
+        p, p + keyword_len);
+    node = plc_expr_tree_add(parser->tree, PLC_EXPR_AST_PREDICATE,
+        keyword, 0);
+    parser->p = plc_skip_space(p + keyword_len);
+    left = plc_expr_tree_parse_expression(parser, 4, depth + 1);
+    plc_expr_tree_add_child(parser->tree, node, left);
+    p = plc_skip_space(parser->p);
+    op_len = 0;
+    if (plc_expr_op_at(p, &op_len) == 3) {
+        int right;
+
+        plc_expr_tree_copy_range(op_text, sizeof(op_text), p, p + op_len);
+        strncpy(parser->tree->nodes[node].op, op_text,
+            sizeof(parser->tree->nodes[node].op) - 1);
+        parser->tree->nodes[node].op[
+            sizeof(parser->tree->nodes[node].op) - 1] = '\0';
+        parser->p = plc_skip_space(p + op_len);
+        right = plc_expr_tree_parse_expression(parser, 1, depth + 1);
+        plc_expr_tree_add_child(parser->tree, node, right);
+    } else {
+        parser->p = p;
+        plc_expr_tree_add(parser->tree, PLC_EXPR_AST_UNKNOWN, p, 0);
+    }
+    return node;
+}
+
+static int plc_expr_tree_depth(const PLC_EXPR_AST_TREE *tree, int node_index,
+    int depth)
+{
+    const PLC_EXPR_AST_NODE *node;
+    int max_depth;
+    int i;
+
+    if (tree == 0 || node_index < 0 || node_index >= tree->node_count) {
+        return depth;
+    }
+    node = &tree->nodes[node_index];
+    max_depth = depth;
+    for (i = 0; i < node->child_count; ++i) {
+        int child_depth;
+
+        child_depth = plc_expr_tree_depth(tree, node->children[i],
+            depth + 1);
+        if (child_depth > max_depth) {
+            max_depth = child_depth;
+        }
+    }
+    return max_depth;
+}
+
+static void plc_expr_tree_summarize(const PLC_EXPR_AST_TREE *tree,
+    PLC_EXPR_AST_SUMMARY *summary)
+{
+    int i;
+
+    plc_expr_ast_clear(summary);
+    if (tree == 0 || summary == 0 || tree->root < 0
+            || tree->root >= tree->node_count) {
+        return;
+    }
+    summary->root_kind = tree->nodes[tree->root].kind;
+    summary->node_count = tree->node_count;
+    summary->max_depth = plc_expr_tree_depth(tree, tree->root, 1);
+    for (i = 0; i < tree->node_count; ++i) {
+        int kind;
+
+        kind = tree->nodes[i].kind;
+        if (kind == PLC_EXPR_AST_CALL) {
+            ++summary->call_count;
+        } else if (kind == PLC_EXPR_AST_REF) {
+            ++summary->ref_count;
+        } else if (kind == PLC_EXPR_AST_LITERAL) {
+            ++summary->literal_count;
+        } else if (kind == PLC_EXPR_AST_PREDICATE) {
+            ++summary->predicate_count;
+        } else if (kind == PLC_EXPR_AST_BINARY
+                || kind == PLC_EXPR_AST_UNARY) {
+            ++summary->operator_count;
+        } else if (kind == PLC_EXPR_AST_UNKNOWN) {
+            ++summary->unknown_count;
+        }
+    }
+    if (tree->overflow) {
+        ++summary->unknown_count;
+    }
+}
+
+int plc_expr_ast_build_text(const char *text, PLC_EXPR_AST_TREE *tree,
+    PLC_EXPR_AST_SUMMARY *summary)
+{
+    PLC_EXPR_TREE_PARSER parser;
+    const char *p;
+    int root;
+
+    plc_expr_tree_clear(tree);
+    if (summary != 0) {
+        plc_expr_ast_clear(summary);
+    }
+    if (tree == 0 || text == 0) {
+        return 0;
+    }
+    p = plc_skip_space(text);
+    if (plc_line_starts_with(p, "LOOP")) {
+        p = plc_skip_space(p + 4);
+    }
+    if (*p == '\0') {
+        plc_expr_tree_summarize(tree, summary);
+        return 1;
+    }
+    parser.p = p;
+    parser.tree = tree;
+    root = plc_expr_tree_parse_predicate(&parser, 1);
+    if (root < 0) {
+        root = plc_expr_tree_parse_expression(&parser, 1, 1);
+    }
+    tree->root = root;
+    p = plc_skip_space(parser.p);
+    if (*p != '\0') {
+        plc_expr_tree_add(tree, PLC_EXPR_AST_UNKNOWN, p, 0);
+    }
+    plc_expr_tree_summarize(tree, summary);
+    return 1;
+}
+
+int plc_expr_ast_build_target(const char *text, PLC_EXPR_AST_TREE *tree,
+    PLC_EXPR_AST_SUMMARY *summary)
+{
+    const char *p;
+    int root;
+
+    plc_expr_tree_clear(tree);
+    if (summary != 0) {
+        plc_expr_ast_clear(summary);
+    }
+    if (tree == 0 || text == 0) {
+        return 0;
+    }
+    root = plc_expr_tree_add(tree, PLC_EXPR_AST_TARGET_LIST, "", 0);
+    tree->root = root;
+    p = text;
+    while (*p != '\0') {
+        const char *candidate;
+        char ref_text[PLC_EXPR_AST_NODE_TEXT];
+        int child;
+
+        candidate = plc_skip_space(p);
+        if (plc_expr_parse_ref(&candidate)) {
+            plc_expr_tree_copy_range(ref_text, sizeof(ref_text),
+                p, candidate);
+            child = plc_expr_tree_add(tree, PLC_EXPR_AST_REF, ref_text, 0);
+            plc_expr_tree_add_child(tree, root, child);
+            p = candidate;
+        } else {
+            const char *start;
+
+            start = p;
+            while (*p != '\0' && *p != ',') {
+                ++p;
+            }
+            plc_expr_tree_copy_range(ref_text, sizeof(ref_text), start, p);
+            child = plc_expr_tree_add(tree, PLC_EXPR_AST_UNKNOWN,
+                ref_text, 0);
+            plc_expr_tree_add_child(tree, root, child);
+        }
+        p = plc_skip_space(p);
+        if (*p == ',') {
+            ++p;
+        }
+    }
+    plc_expr_tree_summarize(tree, summary);
+    return 1;
+}
+
+static void plc_expr_ast_append(char *out, unsigned out_size,
+    const char *text)
+{
+    unsigned used;
+    unsigned room;
+
+    if (out == 0 || out_size == 0 || text == 0) {
+        return;
+    }
+    used = (unsigned)strlen(out);
+    if (used + 1 >= out_size) {
+        return;
+    }
+    room = out_size - used - 1;
+    strncat(out, text, room);
+}
+
+static void plc_expr_ast_serialize_node(const PLC_EXPR_AST_TREE *tree,
+    int index, char *out, unsigned out_size)
+{
+    const PLC_EXPR_AST_NODE *node;
+    char text[PLC_EXPR_AST_NODE_TEXT + 32];
+    int i;
+
+    if (tree == 0 || index < 0 || index >= tree->node_count) {
+        return;
+    }
+    node = &tree->nodes[index];
+    plc_expr_ast_append(out, out_size, plc_expr_ast_kind_name(node->kind));
+    if (node->op[0] != '\0' || node->text[0] != '\0') {
+        plc_expr_ast_append(out, out_size, "[");
+        if (node->op[0] != '\0') {
+            plc_expr_ast_append(out, out_size, node->op);
+            if (node->text[0] != '\0') {
+                plc_expr_ast_append(out, out_size, ":");
+            }
+        }
+        if (node->text[0] != '\0') {
+            strncpy(text, node->text, sizeof(text) - 1);
+            text[sizeof(text) - 1] = '\0';
+            plc_expr_ast_append(out, out_size, text);
+        }
+        plc_expr_ast_append(out, out_size, "]");
+    }
+    if (node->child_count > 0) {
+        plc_expr_ast_append(out, out_size, "(");
+        for (i = 0; i < node->child_count; ++i) {
+            if (i > 0) {
+                plc_expr_ast_append(out, out_size, ",");
+            }
+            plc_expr_ast_serialize_node(tree, node->children[i],
+                out, out_size);
+        }
+        plc_expr_ast_append(out, out_size, ")");
+    }
+}
+
+void plc_expr_ast_serialize(const PLC_EXPR_AST_TREE *tree,
+    char *out, unsigned out_size)
+{
+    if (out == 0 || out_size == 0) {
+        return;
+    }
+    out[0] = '\0';
+    if (tree == 0 || tree->root < 0 || tree->root >= tree->node_count) {
+        return;
+    }
+    plc_expr_ast_serialize_node(tree, tree->root, out, out_size);
+    if (tree->overflow) {
+        plc_expr_ast_append(out, out_size, "...");
+    }
+}
+
 static void plc_expr_ast_analyze_text(const char *text,
     PLC_EXPR_AST_SUMMARY *summary)
 {
@@ -406,7 +908,7 @@ static void plc_expr_ast_analyze_text(const char *text,
         summary->root_kind = root;
     }
     p = plc_skip_space(parser.p);
-    if (*p != '\0' && *p != ')' && *p != ',') {
+    if (*p != '\0') {
         plc_expr_ast_note(summary, PLC_EXPR_AST_UNKNOWN, 1);
     }
 }
@@ -447,20 +949,34 @@ static void plc_expr_ast_analyze_target(const char *text,
 
 static void plc_ast_analyze_statement_exprs(PLC_AST_STMT *stmt)
 {
+    PLC_EXPR_AST_TREE tree;
+
     if (stmt->guard[0] != '\0') {
         plc_expr_ast_analyze_text(stmt->guard, &stmt->guard_expr);
+        plc_expr_ast_build_text(stmt->guard, &tree, 0);
+        plc_expr_ast_serialize(&tree, stmt->guard_shape,
+            sizeof(stmt->guard_shape));
     } else {
         plc_expr_ast_clear(&stmt->guard_expr);
+        stmt->guard_shape[0] = '\0';
     }
     if (stmt->value[0] != '\0') {
         plc_expr_ast_analyze_text(stmt->value, &stmt->value_expr);
+        plc_expr_ast_build_text(stmt->value, &tree, 0);
+        plc_expr_ast_serialize(&tree, stmt->value_shape,
+            sizeof(stmt->value_shape));
     } else {
         plc_expr_ast_clear(&stmt->value_expr);
+        stmt->value_shape[0] = '\0';
     }
     if (stmt->target[0] != '\0') {
         plc_expr_ast_analyze_target(stmt->target, &stmt->target_expr);
+        plc_expr_ast_build_target(stmt->target, &tree, 0);
+        plc_expr_ast_serialize(&tree, stmt->target_shape,
+            sizeof(stmt->target_shape));
     } else {
         plc_expr_ast_clear(&stmt->target_expr);
+        stmt->target_shape[0] = '\0';
     }
 }
 
@@ -740,7 +1256,8 @@ static int plc_expr_ast_summary_nodes(const PLC_EXPR_AST_SUMMARY *summary)
 }
 
 static void plc_ast_emit_expr_summary(FILE *out, const char *label,
-    const PLC_EXPR_AST_SUMMARY *summary, const char *text)
+    const PLC_EXPR_AST_SUMMARY *summary, const char *text,
+    const char *shape)
 {
     if (summary == 0 || summary->root_kind == PLC_EXPR_AST_EMPTY) {
         return;
@@ -754,6 +1271,9 @@ static void plc_ast_emit_expr_summary(FILE *out, const char *label,
         summary->unknown_count);
     if (text != 0 && text[0] != '\0') {
         fprintf(out, "    text %s\n", text);
+    }
+    if (shape != 0 && shape[0] != '\0') {
+        fprintf(out, "    tree %s\n", shape);
     }
 }
 
@@ -801,11 +1321,11 @@ int plc_emit_ast(const PLC_PROGRAM *program, const char *path,
         }
         fprintf(out, "\n");
         plc_ast_emit_expr_summary(out, "guard",
-            &stmt->guard_expr, stmt->guard);
+            &stmt->guard_expr, stmt->guard, stmt->guard_shape);
         plc_ast_emit_expr_summary(out, "value",
-            &stmt->value_expr, stmt->value);
+            &stmt->value_expr, stmt->value, stmt->value_shape);
         plc_ast_emit_expr_summary(out, "target",
-            &stmt->target_expr, stmt->target);
+            &stmt->target_expr, stmt->target, stmt->target_shape);
     }
     fclose(out);
     plc_copy_error(err, err_size, "");

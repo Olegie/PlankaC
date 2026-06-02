@@ -1,0 +1,9 @@
+# Runtime check for AST-first scalar expression execution.
+
+P1 ast_add (V0[:32.16], V1[:32.16]) => R0[:32.16]
+V0[:32.16] + V1[:32.16] => R0[:32.16]
+END
+
+P2 ast_execution_runtime () => R0[:32.16]
+(ast_add(1[:32.16], 2[:32.16]) * (3[:32.16] + 4[:32.16])) + !0[:1.1] => R0[:32.16]
+END

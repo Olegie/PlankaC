@@ -31,6 +31,9 @@ static int plc_doc_row_kind(const char *row)
     if (p[0] == '|') {
         return '|';
     }
+    if (p[0] == '-' && p[1] == '-') {
+        return '-';
+    }
     return 0;
 }
 
@@ -105,7 +108,8 @@ static int plc_doc_nearest_row(const PLC_2D_DOCUMENT *document,
     for (i = 0; i < document->row_count; ++i) {
         int distance;
 
-        if (document->rows[i].kind != kind) {
+        if (document->rows[i].kind != kind
+                || document->rows[i].block != document->rows[expr_index].block) {
             continue;
         }
         distance = i > expr_index ? i - expr_index : expr_index - i;
@@ -135,6 +139,7 @@ static int plc_doc_nearest_overlapping_row(const PLC_2D_DOCUMENT *document,
         int distance;
 
         if (document->rows[i].kind != kind
+                || document->rows[i].block != expr->block
                 || !plc_doc_rows_overlap(expr, &document->rows[i])) {
             continue;
         }
@@ -172,6 +177,7 @@ int plc_build_2d_document(char rows[][PLC_MAX_LINE], int row_count,
     PLC_2D_DOCUMENT *document, char *err, unsigned err_size)
 {
     int i;
+    int current_block;
 
     if (document == 0) {
         plc_set_error(err, err_size, "missing PAGE document output");
@@ -187,6 +193,8 @@ int plc_build_2d_document(char rows[][PLC_MAX_LINE], int row_count,
         return 0;
     }
     document->row_count = row_count;
+    current_block = 1;
+    document->block_count = 1;
     for (i = 0; i < row_count; ++i) {
         PLC_2D_ROW_MODEL *row;
         const char *body;
@@ -200,11 +208,19 @@ int plc_build_2d_document(char rows[][PLC_MAX_LINE], int row_count,
         row->kind = plc_doc_row_kind(rows[i]);
         row->row = i + 1;
         row->col = row_column;
+        row->block = current_block;
         if (body[0] == '\0') {
+            ++current_block;
+            document->block_count = current_block;
+            continue;
+        }
+        if (row->kind == '-') {
+            ++current_block;
+            document->block_count = current_block;
             continue;
         }
         if (row->kind == 0) {
-            sprintf(err, "PAGE row %d column %d: expected |, V| or S|",
+            sprintf(err, "PAGE row %d column %d: expected |, V|, S| or --",
                 i + 1, row_column);
             return 0;
         }

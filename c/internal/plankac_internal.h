@@ -81,6 +81,9 @@
 #define PLC_EXPR_AST_GROUP 7
 #define PLC_EXPR_AST_TARGET_LIST 8
 #define PLC_EXPR_AST_UNKNOWN 9
+#define PLC_EXPR_AST_MAX_NODES 64
+#define PLC_EXPR_AST_MAX_CHILDREN 8
+#define PLC_EXPR_AST_NODE_TEXT 64
 #define PLC_CMP_EQ 1
 #define PLC_CMP_NE 2
 #define PLC_CMP_LT 3
@@ -157,6 +160,22 @@ typedef struct PLC_EXPR_AST_SUMMARY {
     int unknown_count;
 } PLC_EXPR_AST_SUMMARY;
 
+typedef struct PLC_EXPR_AST_NODE {
+    int kind;
+    char op[8];
+    char text[PLC_EXPR_AST_NODE_TEXT];
+    int child_count;
+    int children[PLC_EXPR_AST_MAX_CHILDREN];
+    int family;
+} PLC_EXPR_AST_NODE;
+
+typedef struct PLC_EXPR_AST_TREE {
+    PLC_EXPR_AST_NODE nodes[PLC_EXPR_AST_MAX_NODES];
+    int node_count;
+    int root;
+    int overflow;
+} PLC_EXPR_AST_TREE;
+
 typedef struct PLC_AST_STMT {
     int proc_number;
     char proc_name[PLC_MAX_NAME];
@@ -173,6 +192,9 @@ typedef struct PLC_AST_STMT {
     PLC_EXPR_AST_SUMMARY guard_expr;
     PLC_EXPR_AST_SUMMARY value_expr;
     PLC_EXPR_AST_SUMMARY target_expr;
+    char guard_shape[PLC_MAX_LINE];
+    char value_shape[PLC_MAX_LINE];
+    char target_shape[PLC_MAX_LINE];
 } PLC_AST_STMT;
 
 typedef struct PLC_AST_PROGRAM {
@@ -204,6 +226,7 @@ typedef struct PLC_IR_STMT {
     int expr_literals;
     int expr_predicates;
     int expr_unknowns;
+    char expr_shape[PLC_MAX_LINE];
 } PLC_IR_STMT;
 
 typedef struct PLC_IR_PROGRAM {
@@ -224,6 +247,7 @@ typedef struct PLC_2D_ROW_MODEL {
     int kind;
     int row;
     int col;
+    int block;
     int cell_count;
     PLC_2D_CELL_MODEL cells[PLC_2D_MAX_CELLS];
 } PLC_2D_ROW_MODEL;
@@ -231,6 +255,7 @@ typedef struct PLC_2D_ROW_MODEL {
 typedef struct PLC_2D_DOCUMENT {
     int row_count;
     int expression_count;
+    int block_count;
     PLC_2D_ROW_MODEL rows[PLC_2D_MAX_ROWS];
 } PLC_2D_DOCUMENT;
 
@@ -253,6 +278,10 @@ typedef struct PLC_FRAME {
     double c[PLC_MAX_VARS];
     double z[PLC_MAX_VARS];
     double r[PLC_MAX_VARS];
+    PLC_TAGGED_VALUE vb[PLC_MAX_VARS];
+    PLC_TAGGED_VALUE cb[PLC_MAX_VARS];
+    PLC_TAGGED_VALUE zb[PLC_MAX_VARS];
+    PLC_TAGGED_VALUE rb[PLC_MAX_VARS];
     double va[PLC_MAX_VARS][PLC_MAX_INDEX];
     double ca[PLC_MAX_VARS][PLC_MAX_INDEX];
     double za[PLC_MAX_VARS][PLC_MAX_INDEX];
@@ -402,6 +431,12 @@ int plc_ast_validate_program(const PLC_AST_PROGRAM *ast,
     char *err, unsigned err_size);
 const char *plc_ast_op_name(int op);
 const char *plc_expr_ast_kind_name(int kind);
+int plc_expr_ast_build_text(const char *text, PLC_EXPR_AST_TREE *tree,
+    PLC_EXPR_AST_SUMMARY *summary);
+int plc_expr_ast_build_target(const char *text, PLC_EXPR_AST_TREE *tree,
+    PLC_EXPR_AST_SUMMARY *summary);
+void plc_expr_ast_serialize(const PLC_EXPR_AST_TREE *tree,
+    char *out, unsigned out_size);
 int plc_emit_ast(const PLC_PROGRAM *program, const char *path,
     char *err, unsigned err_size);
 

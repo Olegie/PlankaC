@@ -64,19 +64,9 @@ static void plc_ir_lowering_name(const char *text, char *out,
     const char *name;
 
     name = "scalar";
-    if (strstr(text, "list_") != 0 || strstr(text, "set_") != 0
-            || strstr(text, "pair") != 0 || strstr(text, "record_") != 0
-            || strstr(text, "relation_") != 0 || strstr(text, "complex") != 0
-            || strstr(text, "vec3") != 0 || strstr(text, "mat4") != 0
-            || strstr(text, "chess_") != 0
-            || plc_line_starts_with(text, "SELECT")
-            || plc_line_starts_with(text, "EXISTS")
-            || plc_line_starts_with(text, "FORALL")
-            || plc_line_starts_with(text, "COUNT")
-            || plc_line_starts_with(text, "SETSELECT")
-            || plc_line_starts_with(text, "SETEXISTS")
-            || plc_line_starts_with(text, "SETFORALL")
-            || plc_line_starts_with(text, "SETCOUNT")
+    if (strstr(text, "chess_") != 0) {
+        name = "chess";
+    } else if (strstr(text, "relation_") != 0
             || plc_line_starts_with(text, "DOMAINSELECT")
             || plc_line_starts_with(text, "DOMAINEXISTS")
             || plc_line_starts_with(text, "DOMAINFORALL")
@@ -85,11 +75,72 @@ static void plc_ir_lowering_name(const char *text, char *out,
             || plc_line_starts_with(text, "RANGEEXISTS")
             || plc_line_starts_with(text, "RANGEFORALL")
             || plc_line_starts_with(text, "RANGECOUNT")) {
-        name = "compound";
+        name = "relation";
+    } else if (plc_line_starts_with(text, "SELECT")
+            || plc_line_starts_with(text, "EXISTS")
+            || plc_line_starts_with(text, "FORALL")
+            || plc_line_starts_with(text, "COUNT")) {
+        name = "predicate";
+    } else if (strstr(text, "set_") != 0
+            || plc_line_starts_with(text, "SETSELECT")
+            || plc_line_starts_with(text, "SETEXISTS")
+            || plc_line_starts_with(text, "SETFORALL")
+            || plc_line_starts_with(text, "SETCOUNT")) {
+        name = "set";
+    } else if (strstr(text, "list_") != 0) {
+        name = "list";
+    } else if (strstr(text, "pair") != 0) {
+        name = "pair";
+    } else if (strstr(text, "record_") != 0) {
+        name = "record";
+    } else if (strstr(text, "complex") != 0) {
+        name = "complex";
+    } else if (strstr(text, "vec3") != 0 || strstr(text, "mat4") != 0
+            || strstr(text, "perspective_") != 0) {
+        name = "geometry";
     } else if (strstr(text, "(") != 0 && strstr(text, ")") != 0) {
         name = "call";
     }
     strncpy(out, name, out_size - 1);
+    out[out_size - 1] = '\0';
+}
+
+static void plc_ir_append(char *out, unsigned out_size, const char *text)
+{
+    unsigned used;
+
+    if (out == 0 || out_size == 0 || text == 0) {
+        return;
+    }
+    used = (unsigned)strlen(out);
+    if (used + 1 >= out_size) {
+        return;
+    }
+    strncat(out, text, out_size - used - 1);
+}
+
+static void plc_ir_join_expr_shapes(const PLC_AST_STMT *ast,
+    char *out, unsigned out_size)
+{
+    out[0] = '\0';
+    if (ast->guard_shape[0] != '\0') {
+        plc_ir_append(out, out_size, "guard=");
+        plc_ir_append(out, out_size, ast->guard_shape);
+    }
+    if (ast->value_shape[0] != '\0') {
+        if (out[0] != '\0') {
+            plc_ir_append(out, out_size, " | ");
+        }
+        plc_ir_append(out, out_size, "value=");
+        plc_ir_append(out, out_size, ast->value_shape);
+    }
+    if (ast->target_shape[0] != '\0') {
+        if (out[0] != '\0') {
+            plc_ir_append(out, out_size, " | ");
+        }
+        plc_ir_append(out, out_size, "target=");
+        plc_ir_append(out, out_size, ast->target_shape);
+    }
     out[out_size - 1] = '\0';
 }
 
@@ -201,6 +252,8 @@ static int plc_ir_build_statement(const PLC_PROGRAM *program,
         + ast->target_expr.predicate_count;
     stmt->expr_unknowns = ast->guard_expr.unknown_count
         + ast->value_expr.unknown_count + ast->target_expr.unknown_count;
+    plc_ir_join_expr_shapes(ast, stmt->expr_shape,
+        sizeof(stmt->expr_shape));
 
     if (stmt->op == PLC_IR_OP_ASSERT || stmt->op == PLC_IR_OP_REQUIRE
             || stmt->op == PLC_IR_OP_ENSURE) {
@@ -372,6 +425,9 @@ int plc_emit_ir(const PLC_PROGRAM *program, const char *path,
                 stmt->expr_unknowns);
         }
         fprintf(out, "\n");
+        if (stmt->expr_shape[0] != '\0') {
+            fprintf(out, "  expr %s\n", stmt->expr_shape);
+        }
         if (stmt->guard[0] != '\0') {
             fprintf(out, "  guard[%s] %s\n",
                 plc_type_family_name(stmt->guard_family), stmt->guard);

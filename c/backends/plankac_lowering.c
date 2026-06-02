@@ -33,7 +33,16 @@ static int plc_lowering_needs_heap(const PLC_IR_STMT *stmt)
             || stmt->target_family == PLC_TYPE_FAMILY_MAT4) {
         return 1;
     }
-    if (strcmp(plc_lowering_op_kind(stmt), "compound") == 0) {
+    if (strcmp(plc_lowering_op_kind(stmt), "list") == 0
+            || strcmp(plc_lowering_op_kind(stmt), "set") == 0
+            || strcmp(plc_lowering_op_kind(stmt), "pair") == 0
+            || strcmp(plc_lowering_op_kind(stmt), "record") == 0
+            || strcmp(plc_lowering_op_kind(stmt), "relation") == 0
+            || strcmp(plc_lowering_op_kind(stmt), "predicate") == 0
+            || strcmp(plc_lowering_op_kind(stmt), "chess") == 0
+            || strcmp(plc_lowering_op_kind(stmt), "geometry") == 0
+            || strcmp(plc_lowering_op_kind(stmt), "complex") == 0
+            || strcmp(plc_lowering_op_kind(stmt), "compound") == 0) {
         return 1;
     }
     return 0;

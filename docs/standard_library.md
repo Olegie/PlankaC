@@ -178,8 +178,10 @@ Sources: `src/14_two_dimensional_tables.plk`,
 `src/18_two_dimensional_general.plk`, `src/20_page_table.plk`
 
 The notation layer accepts executable `|` rows with `V|` and `S|` rows, swapped
-`V|`/`S|` order, spaced alignment, and `PAGE`/`ENDPAGE` blocks containing
-several executable rows bound to nearby index/type rows.
+`V|`/`S|` order, spaced alignment, and `PAGE`/`ENDPAGE` documents containing
+several executable rows. Blank lines or `--` separators split a page into
+table blocks, so an expression row binds only to index/type rows from the same
+block.
 
 ## Chess Structures
 

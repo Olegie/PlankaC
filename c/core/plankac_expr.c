@@ -1,5 +1,9 @@
 #include "plankac_internal.h"
 
+#define PLC_AST_EVAL_UNSUPPORTED 0
+#define PLC_AST_EVAL_OK 1
+#define PLC_AST_EVAL_FAIL -1
+
 static double plc_parse_expr(PLC_PARSER *parser, int *ok);
 
 static int plc_parse_ref(const char **pp, PLC_REF *ref)
@@ -667,8 +671,9 @@ static double plc_parse_expr(PLC_PARSER *parser, int *ok)
     return plc_parse_or(parser, ok);
 }
 
-int plc_eval_expr_text(const PLC_PROGRAM *program, PLC_FRAME *frame,
-    int depth, const char *text, double *value, char *err, unsigned err_size)
+static int plc_eval_expr_text_legacy(const PLC_PROGRAM *program,
+    PLC_FRAME *frame, int depth, const char *text, double *value,
+    char *err, unsigned err_size)
 {
     PLC_PARSER parser;
     int ok;
@@ -690,6 +695,300 @@ int plc_eval_expr_text(const PLC_PROGRAM *program, PLC_FRAME *frame,
         return 0;
     }
     return 1;
+}
+
+static int plc_ast_predicate_call_name(const char *keyword,
+    const char **call_name)
+{
+    if (strcmp(keyword, "SELECT") == 0) {
+        *call_name = "list_select_where";
+    } else if (strcmp(keyword, "FORALL") == 0) {
+        *call_name = "list_forall_where";
+    } else if (strcmp(keyword, "EXISTS") == 0) {
+        *call_name = "list_exists_where";
+    } else if (strcmp(keyword, "COUNT") == 0) {
+        *call_name = "list_count_where";
+    } else if (strcmp(keyword, "SETSELECT") == 0) {
+        *call_name = "set_select_where";
+    } else if (strcmp(keyword, "SETFORALL") == 0) {
+        *call_name = "set_forall_where";
+    } else if (strcmp(keyword, "SETEXISTS") == 0) {
+        *call_name = "set_exists_where";
+    } else if (strcmp(keyword, "SETCOUNT") == 0) {
+        *call_name = "set_count_where";
+    } else if (strcmp(keyword, "DOMAINSELECT") == 0) {
+        *call_name = "relation_domain_select_where";
+    } else if (strcmp(keyword, "DOMAINFORALL") == 0) {
+        *call_name = "relation_domain_forall_where";
+    } else if (strcmp(keyword, "DOMAINEXISTS") == 0) {
+        *call_name = "relation_domain_exists_where";
+    } else if (strcmp(keyword, "DOMAINCOUNT") == 0) {
+        *call_name = "relation_domain_count_where";
+    } else if (strcmp(keyword, "RANGESELECT") == 0) {
+        *call_name = "relation_range_select_where";
+    } else if (strcmp(keyword, "RANGEFORALL") == 0) {
+        *call_name = "relation_range_forall_where";
+    } else if (strcmp(keyword, "RANGEEXISTS") == 0) {
+        *call_name = "relation_range_exists_where";
+    } else if (strcmp(keyword, "RANGECOUNT") == 0) {
+        *call_name = "relation_range_count_where";
+    } else {
+        return 0;
+    }
+    return 1;
+}
+
+static int plc_ast_compare_code(const char *op, int *op_code)
+{
+    if (strcmp(op, "=") == 0) {
+        *op_code = PLC_CMP_EQ;
+    } else if (strcmp(op, "!=") == 0) {
+        *op_code = PLC_CMP_NE;
+    } else if (strcmp(op, "<") == 0) {
+        *op_code = PLC_CMP_LT;
+    } else if (strcmp(op, "<=") == 0) {
+        *op_code = PLC_CMP_LE;
+    } else if (strcmp(op, ">") == 0) {
+        *op_code = PLC_CMP_GT;
+    } else if (strcmp(op, ">=") == 0) {
+        *op_code = PLC_CMP_GE;
+    } else {
+        return 0;
+    }
+    return 1;
+}
+
+static int plc_eval_ast_node(const PLC_PROGRAM *program, PLC_FRAME *frame,
+    int depth, const PLC_EXPR_AST_TREE *tree, int node_index, double *value,
+    char *err, unsigned err_size)
+{
+    const PLC_EXPR_AST_NODE *node;
+
+    if (tree == 0 || node_index < 0 || node_index >= tree->node_count) {
+        return PLC_AST_EVAL_UNSUPPORTED;
+    }
+    node = &tree->nodes[node_index];
+    if (node->kind == PLC_EXPR_AST_LITERAL) {
+        char *endptr;
+        const char *p;
+
+        *value = strtod(node->text, &endptr);
+        if (endptr == node->text) {
+            return PLC_AST_EVAL_UNSUPPORTED;
+        }
+        p = plc_skip_type_marker(endptr);
+        p = plc_skip_space(p);
+        if (*p != '\0') {
+            return PLC_AST_EVAL_UNSUPPORTED;
+        }
+        return PLC_AST_EVAL_OK;
+    }
+    if (node->kind == PLC_EXPR_AST_REF) {
+        const char *p;
+        PLC_REF ref;
+        int ok;
+
+        p = node->text;
+        if (!plc_parse_ref(&p, &ref)) {
+            return PLC_AST_EVAL_UNSUPPORTED;
+        }
+        p = plc_skip_space(p);
+        if (*p != '\0') {
+            return PLC_AST_EVAL_UNSUPPORTED;
+        }
+        ok = 1;
+        *value = plc_get_ref(frame, ref, &ok, err, err_size);
+        return ok ? PLC_AST_EVAL_OK : PLC_AST_EVAL_FAIL;
+    }
+    if (node->kind == PLC_EXPR_AST_GROUP) {
+        if (node->child_count != 1) {
+            return PLC_AST_EVAL_UNSUPPORTED;
+        }
+        return plc_eval_ast_node(program, frame, depth, tree,
+            node->children[0], value, err, err_size);
+    }
+    if (node->kind == PLC_EXPR_AST_UNARY) {
+        int status;
+        double child_value;
+
+        if (node->child_count != 1) {
+            return PLC_AST_EVAL_UNSUPPORTED;
+        }
+        status = plc_eval_ast_node(program, frame, depth, tree,
+            node->children[0], &child_value, err, err_size);
+        if (status != PLC_AST_EVAL_OK) {
+            return status;
+        }
+        if (strcmp(node->op, "-") == 0) {
+            *value = 0.0 - child_value;
+        } else if (strcmp(node->op, "!") == 0) {
+            *value = child_value == 0.0 ? 1.0 : 0.0;
+        } else {
+            return PLC_AST_EVAL_UNSUPPORTED;
+        }
+        return PLC_AST_EVAL_OK;
+    }
+    if (node->kind == PLC_EXPR_AST_BINARY) {
+        int left_status;
+        int right_status;
+        double left;
+        double right;
+
+        if (node->child_count != 2) {
+            return PLC_AST_EVAL_UNSUPPORTED;
+        }
+        left_status = plc_eval_ast_node(program, frame, depth, tree,
+            node->children[0], &left, err, err_size);
+        if (left_status != PLC_AST_EVAL_OK) {
+            return left_status;
+        }
+        right_status = plc_eval_ast_node(program, frame, depth, tree,
+            node->children[1], &right, err, err_size);
+        if (right_status != PLC_AST_EVAL_OK) {
+            return right_status;
+        }
+        if (strcmp(node->op, "+") == 0) {
+            *value = left + right;
+        } else if (strcmp(node->op, "-") == 0) {
+            *value = left - right;
+        } else if (strcmp(node->op, "*") == 0) {
+            *value = left * right;
+        } else if (strcmp(node->op, "/") == 0) {
+            if (right == 0.0) {
+                plc_set_error(err, err_size,
+                    "arithmetic exception: divide by zero");
+                return PLC_AST_EVAL_FAIL;
+            }
+            *value = left / right;
+        } else if (strcmp(node->op, "%") == 0) {
+            if (right == 0.0) {
+                plc_set_error(err, err_size,
+                    "arithmetic exception: modulo by zero");
+                return PLC_AST_EVAL_FAIL;
+            }
+            *value = fmod(left, right);
+        } else if (strcmp(node->op, "^") == 0) {
+            *value = pow(left, right);
+        } else if (strcmp(node->op, "=") == 0) {
+            *value = fabs(left - right) < 0.0000001 ? 1.0 : 0.0;
+        } else if (strcmp(node->op, "!=") == 0) {
+            *value = fabs(left - right) >= 0.0000001 ? 1.0 : 0.0;
+        } else if (strcmp(node->op, "<") == 0) {
+            *value = left < right ? 1.0 : 0.0;
+        } else if (strcmp(node->op, "<=") == 0) {
+            *value = left <= right ? 1.0 : 0.0;
+        } else if (strcmp(node->op, ">") == 0) {
+            *value = left > right ? 1.0 : 0.0;
+        } else if (strcmp(node->op, ">=") == 0) {
+            *value = left >= right ? 1.0 : 0.0;
+        } else if (strcmp(node->op, "&") == 0) {
+            *value = (left != 0.0 && right != 0.0) ? 1.0 : 0.0;
+        } else if (strcmp(node->op, "|") == 0) {
+            *value = (left != 0.0 || right != 0.0) ? 1.0 : 0.0;
+        } else {
+            return PLC_AST_EVAL_UNSUPPORTED;
+        }
+        return PLC_AST_EVAL_OK;
+    }
+    if (node->kind == PLC_EXPR_AST_CALL) {
+        double args[PLC_MAX_ARGS];
+        PLC_VALUES out;
+        int i;
+
+        if (node->child_count > PLC_MAX_ARGS) {
+            plc_set_error(err, err_size, "too many call arguments");
+            return PLC_AST_EVAL_FAIL;
+        }
+        for (i = 0; i < node->child_count; ++i) {
+            int status;
+
+            status = plc_eval_ast_node(program, frame, depth, tree,
+                node->children[i], &args[i], err, err_size);
+            if (status != PLC_AST_EVAL_OK) {
+                return status;
+            }
+        }
+        if (!plc_call_proc(program, frame, node->text, args,
+                node->child_count, &out, depth + 1, err, err_size)) {
+            return PLC_AST_EVAL_FAIL;
+        }
+        if (out.count <= 0) {
+            plc_set_error(err, err_size, "call returned no value");
+            return PLC_AST_EVAL_FAIL;
+        }
+        *value = out.value[0];
+        return PLC_AST_EVAL_OK;
+    }
+    if (node->kind == PLC_EXPR_AST_PREDICATE) {
+        const char *call_name;
+        PLC_VALUES out;
+        double args[3];
+        int op_code;
+        int status;
+
+        if (node->child_count != 2
+                || !plc_ast_predicate_call_name(node->text, &call_name)
+                || !plc_ast_compare_code(node->op, &op_code)) {
+            return PLC_AST_EVAL_UNSUPPORTED;
+        }
+        status = plc_eval_ast_node(program, frame, depth, tree,
+            node->children[0], &args[0], err, err_size);
+        if (status != PLC_AST_EVAL_OK) {
+            return status;
+        }
+        status = plc_eval_ast_node(program, frame, depth, tree,
+            node->children[1], &args[2], err, err_size);
+        if (status != PLC_AST_EVAL_OK) {
+            return status;
+        }
+        args[1] = (double)op_code;
+        if (!plc_call_proc(program, frame, call_name, args, 3, &out,
+                depth + 1, err, err_size)) {
+            return PLC_AST_EVAL_FAIL;
+        }
+        if (out.count <= 0) {
+            plc_set_error(err, err_size, "call returned no value");
+            return PLC_AST_EVAL_FAIL;
+        }
+        *value = out.value[0];
+        return PLC_AST_EVAL_OK;
+    }
+    return PLC_AST_EVAL_UNSUPPORTED;
+}
+
+static int plc_eval_expr_text_ast(const PLC_PROGRAM *program, PLC_FRAME *frame,
+    int depth, const char *text, double *value, char *err, unsigned err_size)
+{
+    PLC_EXPR_AST_TREE tree;
+    PLC_EXPR_AST_SUMMARY summary;
+    int status;
+
+    if (!plc_expr_ast_build_text(text, &tree, &summary)) {
+        return PLC_AST_EVAL_UNSUPPORTED;
+    }
+    if (summary.unknown_count > 0 || tree.overflow || tree.root < 0) {
+        return PLC_AST_EVAL_UNSUPPORTED;
+    }
+    status = plc_eval_ast_node(program, frame, depth, &tree, tree.root,
+        value, err, err_size);
+    return status;
+}
+
+int plc_eval_expr_text(const PLC_PROGRAM *program, PLC_FRAME *frame,
+    int depth, const char *text, double *value, char *err, unsigned err_size)
+{
+    int ast_status;
+
+    ast_status = plc_eval_expr_text_ast(program, frame, depth, text, value,
+        err, err_size);
+    if (ast_status == PLC_AST_EVAL_OK) {
+        return 1;
+    }
+    if (ast_status == PLC_AST_EVAL_FAIL) {
+        return 0;
+    }
+    return plc_eval_expr_text_legacy(program, frame, depth, text, value,
+        err, err_size);
 }
 
 int plc_is_top_call(const char *text, char *name, unsigned name_size,
@@ -734,43 +1033,64 @@ int plc_eval_args_text(const PLC_PROGRAM *program, PLC_FRAME *frame,
     int depth, const char *text, double *args, int *argc,
     char *err, unsigned err_size)
 {
-    PLC_PARSER parser;
-    int ok;
+    const char *p;
+    const char *segment_start;
+    int paren_depth;
+    int bracket_depth;
 
-    parser.p = text;
-    parser.program = program;
-    parser.frame = frame;
-    parser.depth = depth;
-    parser.err = err;
-    parser.err_size = err_size;
-    ok = 1;
     *argc = 0;
-    parser.p = plc_skip_space(parser.p);
-    if (*parser.p == '\0') {
+    p = plc_skip_space(text);
+    if (*p == '\0') {
         return 1;
     }
-    while (*parser.p != '\0') {
-        if (*argc >= PLC_MAX_ARGS) {
-            plc_set_error(err, err_size, "too many call arguments");
-            return 0;
+    segment_start = p;
+    paren_depth = 0;
+    bracket_depth = 0;
+    while (1) {
+        if (*p == '(') {
+            ++paren_depth;
+        } else if (*p == ')' && paren_depth > 0) {
+            --paren_depth;
+        } else if (*p == '[') {
+            ++bracket_depth;
+        } else if (*p == ']' && bracket_depth > 0) {
+            --bracket_depth;
         }
-        args[*argc] = plc_parse_expr(&parser, &ok);
-        if (!ok) {
-            return 0;
+        if ((*p == ',' || *p == '\0')
+                && paren_depth == 0 && bracket_depth == 0) {
+            char segment[PLC_MAX_LINE];
+
+            if (*argc >= PLC_MAX_ARGS) {
+                plc_set_error(err, err_size, "too many call arguments");
+                return 0;
+            }
+            plc_copy_range(segment, sizeof(segment), segment_start, p);
+            plc_trim_in_place(segment);
+            if (segment[0] == '\0') {
+                plc_set_error(err, err_size, "expected expression");
+                return 0;
+            }
+            if (!plc_eval_expr_text(program, frame, depth, segment,
+                    &args[*argc], err, err_size)) {
+                return 0;
+            }
+            ++(*argc);
+            if (*p == '\0') {
+                return 1;
+            }
+            segment_start = p + 1;
         }
-        ++(*argc);
-        parser.p = plc_skip_space(parser.p);
-        if (*parser.p == ',') {
-            ++parser.p;
-            continue;
+        if (*p == '\0') {
+            break;
         }
-        if (*parser.p == '\0') {
-            return 1;
-        }
-        plc_set_error(err, err_size, "expected ',' in call arguments");
-        return 0;
+        ++p;
     }
-    return 1;
+    if (paren_depth != 0 || bracket_depth != 0) {
+        plc_set_error(err, err_size, "unclosed call argument");
+    } else {
+        plc_set_error(err, err_size, "expected ',' in call arguments");
+    }
+    return 0;
 }
 
 static int plc_predicate_starts_with(const char *text, const char *keyword,

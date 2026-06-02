@@ -10,10 +10,13 @@ PlankaC evaluates procedures inside a frame. A frame contains four named banks:
 | `R` | procedure results |
 
 Every bank supports scalar slots, indexed slots, two-dimensional indexed slots,
-and field paths. Compound values are represented by typed handles into frame
-heaps. The compatibility result ABI still transports numeric values. Hosts that
-need the value model use the typed result API, which returns the same tag, raw
-fixed value, handle, bit width, scale, family, and marker text used internally.
+and field paths. Scalar `V`, `C`, `Z`, and `R` slots have active tagged
+`PLC_VALUE` storage; the numeric bank arrays remain as the compatibility ABI.
+Indexed and field-path values keep the same tagged shadow table used by earlier
+profiles. Compound values are represented by typed handles into frame heaps.
+Hosts that need the value model use the typed result API, which returns the
+same tag, raw fixed value, handle, bit width, scale, family, and marker text
+used internally.
 
 ## Tagged Values
 
@@ -32,8 +35,10 @@ tag, family, bits, scale, raw, handle, number
 | `exception` | reserved for arithmetic/status values |
 
 The interpreter writes the ordinary numeric bank value and a tagged `PLC_VALUE`
-entry at the same time. Reads prefer the tagged entry when it exists, then
-convert back through the ABI number. `plankac_context_run_typed` and
+entry at the same time. Scalar bank reads prefer the bank-local tagged slot;
+indexed and field reads prefer their tagged shadow entries. Both routes convert
+back through the ABI number when a host asks for ordinary numeric results.
+`plankac_context_run_typed` and
 `plankac_run_typed` expose that value shape through the public C API as
 `PLANKAC_TYPED_RESULT`.
 

@@ -43,10 +43,11 @@ predicate-statement
                  expression , predicate-op , expression , "=>" , target-list ;
 
 page           = "PAGE" , { page-row } , "ENDPAGE" ;
-page-row       = expr-row | index-row | type-row ;
+page-row       = expr-row | index-row | type-row | separator-row | blank-row ;
 expr-row       = "|" , spatial-expression ;
 index-row      = "V|" , spatial-index-cells ;
 type-row       = "S|" , spatial-type-cells ;
+separator-row  = "--" , { "-" } ;
 
 target-list    = ref , { "," , ref } ;
 guard          = "(" , expression , ")" | expression ;
@@ -85,8 +86,9 @@ use the name or the numbered form.
 `PAGE` documents accept several executable expression rows with nearby `V|`
 and `S|` rows. The document loader keeps row and column diagnostics before the
 rows are expanded into linear statements. A page may contain more than one
-table block; an expression row binds to overlapping index/type rows by
-coordinate, not merely to the first rows in the page.
+table block; blank rows and `--` separator rows split blocks. An expression row
+binds to overlapping index/type rows in the same block by coordinate, not
+merely to the first rows in the page.
 
 ```text
 PAGE

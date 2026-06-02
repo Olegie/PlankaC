@@ -1130,12 +1130,62 @@ static int expect_ast_api(void)
     ok = strstr(text, "PLANKAC-AST 1") != 0
         && strstr(text, "expression_nodes") != 0
         && strstr(text, "op=CALL") != 0
-        && strstr(text, "root=CALL") != 0;
+        && strstr(text, "root=CALL") != 0
+        && strstr(text, "tree CALL[") != 0;
     if (!ok) {
         printf("FAIL ast_api content\n");
         return 0;
     }
     printf("OK   ast_api\n");
+    return 1;
+}
+
+static int expect_ir_api(void)
+{
+    PLANKAC_CONTEXT *ctx;
+    FILE *in;
+    const char *sources[2];
+    char err[256];
+    char text[4096];
+    size_t n;
+    int ok;
+
+    ctx = plankac_create();
+    if (ctx == 0) {
+        printf("FAIL ir_api: no context\n");
+        return 0;
+    }
+    sources[0] = "examples/max3.plk";
+    sources[1] = 0;
+    if (!plankac_context_load_sources(ctx, sources, err, sizeof(err))) {
+        printf("FAIL ir_api load: %s\n", err);
+        plankac_destroy(ctx);
+        return 0;
+    }
+    if (!plankac_context_write_ir(ctx,
+            "build/conformance_ir.txt", err, sizeof(err))) {
+        printf("FAIL ir_api write: %s\n", err);
+        plankac_destroy(ctx);
+        return 0;
+    }
+    plankac_destroy(ctx);
+
+    in = fopen("build/conformance_ir.txt", "r");
+    if (in == 0) {
+        printf("FAIL ir_api open\n");
+        return 0;
+    }
+    n = fread(text, 1, sizeof(text) - 1, in);
+    fclose(in);
+    text[n] = '\0';
+    ok = strstr(text, "PLANKAC-TYPED-IR 1") != 0
+        && strstr(text, "expr value=CALL[") != 0
+        && strstr(text, "target=TARGET_LIST") != 0;
+    if (!ok) {
+        printf("FAIL ir_api content\n");
+        return 0;
+    }
+    printf("OK   ir_api\n");
     return 1;
 }
 
@@ -1188,12 +1238,18 @@ int main(void)
     ok = expect_run_file_result("valid_page_multi_table_document",
             "tests/conformance/valid/page_multi_table_document.plk",
             "page_multi_table_document", 14.0) && ok;
+    ok = expect_run_file_result("valid_page_block_table_document",
+            "tests/conformance/valid/page_block_table_document.plk",
+            "page_block_table_document", 14.0) && ok;
     ok = expect_run_file_result("valid_max3_profile",
             "tests/conformance/valid/max3_profile.plk",
             "valid_max3_profile", 9.0) && ok;
     ok = expect_run_file_result("runtime_tagged_fixed",
             "tests/conformance/runtime/tagged_fixed_runtime.plk",
             "tagged_fixed_runtime", 4.0) && ok;
+    ok = expect_run_file_result("runtime_ast_execution",
+            "tests/conformance/runtime/ast_execution_runtime.plk",
+            "ast_execution_runtime", 22.0) && ok;
     ok = expect_run_file_result("runtime_relation_edge_cases",
             "tests/conformance/runtime/relation_edge_cases.plk",
             "relation_edge_cases", 3.0) && ok;
@@ -1294,6 +1350,7 @@ int main(void)
     ok = expect_native_bridge() && ok;
     ok = expect_evidence_api() && ok;
     ok = expect_ast_api() && ok;
+    ok = expect_ir_api() && ok;
     ok = expect_bytecode_runner() && ok;
 
     if (!ok) {

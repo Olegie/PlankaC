@@ -124,15 +124,65 @@ static int plc_value_shadow_matches(const PLC_VALUE_SHADOW *shadow,
     return 1;
 }
 
+static PLC_TAGGED_VALUE *plc_frame_scalar_slot(PLC_FRAME *frame,
+    const PLC_REF *ref)
+{
+    if (frame == 0 || ref == 0 || ref->has_subscript || ref->has_field
+            || ref->index < 0 || ref->index >= PLC_MAX_VARS) {
+        return 0;
+    }
+    if (ref->bank == 'V') {
+        return &frame->vb[ref->index];
+    }
+    if (ref->bank == 'C') {
+        return &frame->cb[ref->index];
+    }
+    if (ref->bank == 'Z') {
+        return &frame->zb[ref->index];
+    }
+    if (ref->bank == 'R') {
+        return &frame->rb[ref->index];
+    }
+    return 0;
+}
+
+static const PLC_TAGGED_VALUE *plc_frame_scalar_const_slot(
+    const PLC_FRAME *frame, const PLC_REF *ref)
+{
+    if (frame == 0 || ref == 0 || ref->has_subscript || ref->has_field
+            || ref->index < 0 || ref->index >= PLC_MAX_VARS) {
+        return 0;
+    }
+    if (ref->bank == 'V') {
+        return &frame->vb[ref->index];
+    }
+    if (ref->bank == 'C') {
+        return &frame->cb[ref->index];
+    }
+    if (ref->bank == 'Z') {
+        return &frame->zb[ref->index];
+    }
+    if (ref->bank == 'R') {
+        return &frame->rb[ref->index];
+    }
+    return 0;
+}
+
 int plc_frame_store_tagged(PLC_FRAME *frame, const PLC_REF *ref,
     double value, const char *type_marker, char *err, unsigned err_size)
 {
     PLC_VALUE_SHADOW *shadow;
+    PLC_TAGGED_VALUE *slot;
     int i;
 
     if (frame == 0 || ref == 0) {
         plc_set_error(err, err_size, "tagged value storage needs a frame");
         return 0;
+    }
+    slot = plc_frame_scalar_slot(frame, ref);
+    if (slot != 0) {
+        plc_tagged_from_double(slot, value, type_marker);
+        return 1;
     }
     for (i = 0; i < frame->value_shadow_count; ++i) {
         if (plc_value_shadow_matches(&frame->value_shadows[i], ref)) {
@@ -164,10 +214,16 @@ int plc_frame_store_tagged(PLC_FRAME *frame, const PLC_REF *ref,
 int plc_frame_load_tagged(const PLC_FRAME *frame, const PLC_REF *ref,
     PLC_TAGGED_VALUE *out)
 {
+    const PLC_TAGGED_VALUE *slot;
     int i;
 
     if (frame == 0 || ref == 0 || out == 0) {
         return 0;
+    }
+    slot = plc_frame_scalar_const_slot(frame, ref);
+    if (slot != 0 && slot->tag != PLC_VALUE_TAG_EMPTY) {
+        *out = *slot;
+        return 1;
     }
     for (i = 0; i < frame->value_shadow_count; ++i) {
         if (plc_value_shadow_matches(&frame->value_shadows[i], ref)) {

@@ -8,7 +8,7 @@ and native executables:
     -> parser and analyzer
     -> loaded procedure table
     -> procedure AST
-    -> expression AST summaries
+    -> bounded expression AST trees
     -> typed IR / bytecode
     -> IR reload
     -> generated C / generated x86-64 ASM / 8086 ASM source
@@ -20,13 +20,19 @@ only write several files from the original source table; it writes `.pbc`,
 loads that `.pbc` back as the compiler IR, and emits the C/ASM artifacts from
 the reloaded IR program.
 
-For inspection, `plankac ast <output.ast>` emits the statement AST and
-expression AST summaries. `plankac ir <output.ir>` emits the typed statement IR
-built from that AST boundary, with operation class, type families, call shape,
-expression-node counts, and lowering class.
+For inspection, `plankac ast <output.ast>` emits the statement AST plus a
+serialized expression tree for each guard, value expression, and target list.
+`plankac ir <output.ir>` emits the typed statement IR built from that AST
+boundary, with operation class, type families, call shape, expression-node
+counts, serialized expression shape, and lowering class.
 `plankac lowering <output.txt>` writes the backend lowering plan used to see
 which statements are direct scalar expressions and which ones route through
 compound/runtime entry points for C, x86-64 ASM, and 8086 ASM.
+
+The same bounded expression tree is also used by the runtime for scalar
+expression execution before the legacy recursive text parser is considered.
+That keeps nested calls, arithmetic, guards, comparisons, and predicate nodes
+on one parse boundary instead of a reporting-only AST.
 
 ## Artifact Pipeline
 
@@ -94,12 +100,12 @@ handles, math helpers, and output formatting.
 
 | Stage | Artifact | Role |
 | --- | --- | --- |
-| AST | `.ast` / in memory | statement and expression classification layer before typed IR construction |
+| AST | `.ast` / in memory | statement layer plus bounded expression trees before typed IR construction |
 | IR | `.ir` / `.pbc` | readable typed stream plus reloadable bytecode artifact |
-| lowering report | `.lowering` / `.txt` | typed backend plan for scalar, call, contract, control, and compound operations |
+| lowering report | `.lowering` / `.txt` | typed backend plan for scalar, call, contract, control, list, set, record, relation, predicate, chess, geometry, complex, and compound-runtime operations |
 | C backend | `.c` | portable runner with embedded IR/bytecode |
 | x86-64 ASM backend | `.S` | generated native procedure functions plus dispatcher |
-| 8086 backend | `_8086.asm` | MASM/TASM-style 16-bit source with bytecode image, direct arithmetic procedures, compound heaps, and compound procedure table |
+| 8086 backend | `_8086.asm` | MASM/TASM-style 16-bit source with bytecode image, DOS start/smoke entry, direct arithmetic procedures, compound heaps, and compound procedure table |
 | native C | `.exe` | linked executable from generated C |
 | native ASM | `.exe` | linked executable from generated x86-64 ASM |
 

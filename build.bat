@@ -221,6 +221,9 @@ if errorlevel 1 exit /b 1
 build\plankac.exe asm8086 build\plankac_8086.asm
 if errorlevel 1 exit /b 1
 
+findstr /c:"plankac_8086_smoke PROC NEAR" build\plankac_8086.asm >nul
+if errorlevel 1 exit /b 1
+
 build\plankac.exe compile build\plankac_pipeline
 if errorlevel 1 exit /b 1
 

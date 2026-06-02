@@ -394,6 +394,42 @@ static void plc_asm8086_emit_compound_api(FILE *out)
     fprintf(out, "plankac_8086_dispatch_compound ENDP\n\n");
 }
 
+static const PLC_PROC *plc_asm8086_find_smoke_proc(const PLC_PROGRAM *program)
+{
+    int i;
+
+    if (program == 0) {
+        return 0;
+    }
+    for (i = 0; i < program->proc_count; ++i) {
+        if (strcmp(program->procs[i].name, "type_sheet") == 0
+                && program->procs[i].argc == 0
+                && program->procs[i].results > 0) {
+            return &program->procs[i];
+        }
+    }
+    return 0;
+}
+
+static void plc_asm8086_emit_smoke_runner(const PLC_PROGRAM *program,
+    FILE *out)
+{
+    const PLC_PROC *proc;
+    char label[PLC_MAX_NAME + 16];
+
+    proc = plc_asm8086_find_smoke_proc(program);
+    fprintf(out, "plankac_8086_smoke PROC NEAR\n");
+    if (proc != 0) {
+        plc_asm8086_label_name(proc, label, sizeof(label));
+        fprintf(out, "    call %s\n", label);
+    } else {
+        fprintf(out, "    xor ax, ax\n");
+        fprintf(out, "    xor dx, dx\n");
+    }
+    fprintf(out, "    ret\n");
+    fprintf(out, "plankac_8086_smoke ENDP\n\n");
+}
+
 static void plc_asm8086_emit_byte(FILE *out, unsigned char value,
     int *column)
 {
@@ -477,6 +513,7 @@ int plc_emit_asm8086_runtime(const PLC_PROGRAM *program, const char *path,
     }
     fprintf(out, ".CODE\n");
     fprintf(out, "PUBLIC plankac_8086_start\n");
+    fprintf(out, "PUBLIC plankac_8086_smoke\n");
     fprintf(out, "PUBLIC plankac_8086_proc_count\n");
     fprintf(out, "PUBLIC plankac_8086_bytecode_image\n");
     fprintf(out, "PUBLIC plankac_8086_bytecode_image_end\n");
@@ -494,9 +531,11 @@ int plc_emit_asm8086_runtime(const PLC_PROGRAM *program, const char *path,
     fprintf(out, "\nplankac_8086_start PROC FAR\n");
     fprintf(out, "    mov ax, @data\n");
     fprintf(out, "    mov ds, ax\n");
+    fprintf(out, "    call plankac_8086_smoke\n");
     fprintf(out, "    mov ax, 4C00h\n");
     fprintf(out, "    int 21h\n");
     fprintf(out, "plankac_8086_start ENDP\n\n");
+    plc_asm8086_emit_smoke_runner(program, out);
     plc_asm8086_emit_compound_api(out);
 
     for (i = 0; i < program->proc_count; ++i) {

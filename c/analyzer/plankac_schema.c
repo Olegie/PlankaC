@@ -426,6 +426,29 @@ static int plc_schema_set_record_field(const PLC_PROC *proc,
     return 0;
 }
 
+static void plc_schema_join_field_path(char *out, unsigned out_size,
+    const char *left, const char *right)
+{
+    unsigned used;
+
+    if (out == 0 || out_size == 0) {
+        return;
+    }
+    out[0] = '\0';
+    if (left != 0) {
+        strncat(out, left, out_size - 1);
+    }
+    used = (unsigned)strlen(out);
+    if (used + 1 < out_size) {
+        strncat(out, ".", out_size - used - 1);
+    }
+    used = (unsigned)strlen(out);
+    if (right != 0 && used + 1 < out_size) {
+        strncat(out, right, out_size - used - 1);
+    }
+    out[out_size - 1] = '\0';
+}
+
 static int plc_schema_analyze_statement(const PLC_PROGRAM *program,
     const PLC_PROC *proc, const PLC_STMT *stmt,
     PLC_SCHEMA_ENTRY *entries, int *entry_count,
@@ -530,6 +553,71 @@ static int plc_schema_analyze_statement(const PLC_PROGRAM *program,
         target->right_family = plc_schema_expr_family(program, entries,
             *entry_count, args[1]);
     }
+    if ((strcmp(name, "list_zip_pairs") == 0
+                || strcmp(name, "set_cartesian") == 0)
+            && argc == 2 && target != 0) {
+        PLC_SCHEMA_ENTRY *left_entry;
+        PLC_SCHEMA_ENTRY *right_entry;
+        char left_key[96];
+        char right_key[96];
+
+        left_entry = 0;
+        right_entry = 0;
+        if (plc_schema_ref_key(args[0], left_key, sizeof(left_key))) {
+            left_entry = plc_schema_find_entry(entries, *entry_count,
+                left_key);
+        }
+        if (plc_schema_ref_key(args[1], right_key, sizeof(right_key))) {
+            right_entry = plc_schema_find_entry(entries, *entry_count,
+                right_key);
+        }
+        if (left_entry != 0) {
+            target->domain_family = left_entry->element_family;
+        }
+        if (right_entry != 0) {
+            target->range_family = right_entry->element_family;
+        }
+        target->element_family = PLC_TYPE_FAMILY_PAIR;
+    }
+    if (strcmp(name, "list_pair") == 0 && argc == 2 && target != 0) {
+        target->left_family = plc_schema_expr_family(program, entries,
+            *entry_count, args[0]);
+        target->right_family = plc_schema_expr_family(program, entries,
+            *entry_count, args[1]);
+    }
+    if (strcmp(name, "relation_compose") == 0
+            && argc == 2 && target != 0) {
+        PLC_SCHEMA_ENTRY *left_entry;
+        PLC_SCHEMA_ENTRY *right_entry;
+        char left_key[96];
+        char right_key[96];
+
+        left_entry = 0;
+        right_entry = 0;
+        if (plc_schema_ref_key(args[0], left_key, sizeof(left_key))) {
+            left_entry = plc_schema_find_entry(entries, *entry_count,
+                left_key);
+        }
+        if (plc_schema_ref_key(args[1], right_key, sizeof(right_key))) {
+            right_entry = plc_schema_find_entry(entries, *entry_count,
+                right_key);
+        }
+        if (left_entry != 0 && right_entry != 0
+                && !plc_schema_family_compatible(left_entry->range_family,
+                    right_entry->domain_family)) {
+            sprintf(err,
+                "P%d %s line %d: relation composition schema mismatch",
+                proc->number, proc->name, stmt->line_no);
+            return 0;
+        }
+        if (left_entry != 0) {
+            target->domain_family = left_entry->domain_family;
+        }
+        if (right_entry != 0) {
+            target->range_family = right_entry->range_family;
+        }
+        target->element_family = PLC_TYPE_FAMILY_PAIR;
+    }
     if (strcmp(name, "record_set") == 0 && argc == 3
             && plc_schema_ref_key(args[0], first_key, sizeof(first_key))) {
         char field[96];
@@ -542,6 +630,43 @@ static int plc_schema_analyze_statement(const PLC_PROGRAM *program,
             *entry_count, args[2]);
         if (!plc_schema_set_record_field(proc, stmt, fields, field_count,
                 first_key, field, value_family, err, err_size)) {
+            return 0;
+        }
+    }
+    if (strcmp(name, "record_set_path2") == 0 && argc == 4
+            && plc_schema_ref_key(args[0], first_key, sizeof(first_key))) {
+        char field[96];
+        int value_family;
+
+        plc_schema_join_field_path(field, sizeof(field), args[1], args[2]);
+        plc_trim_in_place(field);
+        value_family = plc_schema_expr_family(program, entries,
+            *entry_count, args[3]);
+        if (!plc_schema_set_record_field(proc, stmt, fields, field_count,
+                first_key, field, value_family, err, err_size)) {
+            return 0;
+        }
+    }
+    if ((strcmp(name, "record_get_path2") == 0
+                || strcmp(name, "record_has_path2") == 0)
+            && argc == 3 && target != 0
+            && plc_schema_ref_key(args[0], first_key, sizeof(first_key))) {
+        PLC_SCHEMA_FIELD *field_entry;
+        char field[96];
+
+        plc_schema_join_field_path(field, sizeof(field), args[1], args[2]);
+        plc_trim_in_place(field);
+        field_entry = plc_schema_find_field(fields, *field_count,
+            first_key, field);
+        if (field_entry != 0
+                && strcmp(name, "record_get_path2") == 0
+                && !plc_schema_assign_family(target, field_entry->family,
+                    err, err_size)) {
+            return 0;
+        }
+        if (strcmp(name, "record_has_path2") == 0
+                && !plc_schema_assign_family(target,
+                    PLC_TYPE_FAMILY_BOOLEAN, err, err_size)) {
             return 0;
         }
     }
