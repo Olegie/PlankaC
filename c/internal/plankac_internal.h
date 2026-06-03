@@ -112,8 +112,9 @@ typedef struct PLC_PROC {
     int results;
     char arg_types[PLC_MAX_ARGS][PLC_MAX_TYPE_TEXT];
     char result_types[PLC_MAX_RESULTS][PLC_MAX_TYPE_TEXT];
-    PLC_STMT stmts[PLC_MAX_STMTS];
+    PLC_STMT *stmts;
     int stmt_count;
+    int stmt_capacity;
 } PLC_PROC;
 
 typedef struct PLC_NATIVE_PROC {
@@ -131,7 +132,7 @@ typedef struct PLC_VALUE {
     int family;
     int bits;
     int scale;
-    long raw;
+    long long raw;
     int handle;
     double number;
 } PLC_VALUE;
@@ -360,6 +361,10 @@ int plc_is_program_line(const char *line);
 int plc_is_end_line(const char *line);
 const char *plc_matching_paren(const char *open);
 int plc_count_refs(const char *first, const char *last, char bank);
+void plc_proc_free(PLC_PROC *proc);
+void plc_program_free(PLC_PROGRAM *program);
+int plc_proc_add_stmt(PLC_PROC *proc, const char *text, int line_no,
+    char *err, unsigned err_size);
 
 int plc_parse_header(const char *line, PLC_PROC *proc,
     char *err, unsigned err_size);
@@ -453,11 +458,12 @@ int plc_emit_lowering_report(const PLC_PROGRAM *program, const char *path,
 
 unsigned long plc_bit_pack4(int a, int b, int c, int d);
 int plc_bit_get_word(unsigned long word, int index);
-long plc_fixed_raw_from_double(double value, int scale);
-double plc_fixed_double_from_raw(long raw, int scale);
-long plc_fixed_raw_add(long left, long right);
-long plc_fixed_raw_mul(long left, long right, int scale);
-int plc_fixed_raw_div_checked(long left, long right, int scale, long *out);
+long long plc_fixed_raw_from_double(double value, int scale);
+double plc_fixed_double_from_raw(long long raw, int scale);
+long long plc_fixed_raw_add(long long left, long long right);
+long long plc_fixed_raw_mul(long long left, long long right, int scale);
+int plc_fixed_raw_div_checked(long long left, long long right, int scale,
+    long long *out);
 double plc_fixed_quantize_bits(double value, int scale);
 double plc_fixed_add_bits(double left, double right, int scale);
 double plc_fixed_mul_bits(double left, double right, int scale);
@@ -503,6 +509,8 @@ int plc_emit_asm_image(const PLC_PROGRAM *program, const char *path,
 int plc_emit_asm_runtime(const PLC_PROGRAM *program, const char *path,
     char *err, unsigned err_size);
 int plc_emit_asm8086_runtime(const PLC_PROGRAM *program, const char *path,
+    char *err, unsigned err_size);
+int plc_emit_doscom(const PLC_PROGRAM *program, const char *path,
     char *err, unsigned err_size);
 
 int plc_execute_proc(const PLC_PROGRAM *program, const PLC_PROC *proc,

@@ -11,8 +11,8 @@ implementation details and verification.
 | `spec/index.md` | formal language specification: grammar, value model, type rules, execution rules, errors, and backend contract |
 | `language_reference.md` | Source syntax, procedure model, variables, expressions, calls, guards, loops, assertions, and type markers |
 | `standard_library.md` | Built-in procedures and the bundled `.plk` procedure profile |
-| `compiler_guide.md` | Command-line tools, bytecode, lowering, generated C, x86-64 ASM, 8086 ASM, and verification commands |
-| `compiler_pipeline.md` | Stable `.plk -> AST -> typed IR/bytecode -> lowering -> C/ASM -> native executable` route |
+| `compiler_guide.md` | Command-line tools, bytecode, lowering, generated C, x86-64 ASM, 8086 ASM, DOS COM bootstrap, PlankaC DOS runner, and verification commands |
+| `compiler_pipeline.md` | Stable `.plk -> AST -> typed IR/bytecode -> lowering -> C/ASM/DOS artifacts -> native executable` route |
 | `examples.md` | Small source and command examples for arithmetic, guards, data structures, relations, chess, graphics, and 3D |
 | `porting_guide.md` | Embedding, platform targets, Win16/DOS notes, host integration, and constraints |
 | `abi.md` | C ABI for calling PlankaC from C and registered C functions from `.plk` |
@@ -52,6 +52,7 @@ porting_guide.md -> toolchain.md -> conformance.md
 | `plankac_api.md` | C embedding API |
 | `plankahost_api.md` | Shared `.plk` application host API |
 | `plankac_bytecode.md` | Text bytecode format and runner |
+| `dos_backend.md` | DOS-oriented ASM route, built-in COM bootstrap emitter, and PlankaC DOS runner |
 | `plankac_modules.md` | C module list |
 | `program_catalog.md` | Numbered procedure catalog |
 | `conformance.md` | Valid and invalid parser/runtime fixtures |

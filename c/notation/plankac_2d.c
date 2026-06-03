@@ -144,9 +144,9 @@ int plc_expand_2d_statement(const char *expr_row, const char *index_row,
             continue;
         }
         if (plc_2d_is_symbol(expr)) {
-            char ref[128];
+            char ref[PLC_MAX_LINE];
             char bank;
-            char marker[PLC_MAX_TYPE_TEXT + 4];
+            char marker[PLC_MAX_LINE];
             int column;
             int index_cell;
             int type_cell;
@@ -165,7 +165,15 @@ int plc_expand_2d_statement(const char *expr_row, const char *index_row,
             } else {
                 sprintf(marker, "[:%s]", type_cells[type_cell].text);
             }
-            sprintf(ref, "%c%s%s", bank, index_cells[index_cell].text, marker);
+            if (1 + strlen(index_cells[index_cell].text) + strlen(marker) + 1
+                    >= sizeof(ref)) {
+                plc_set_error(err, err_size, "two-dimensional row too long");
+                return 0;
+            }
+            ref[0] = bank;
+            ref[1] = '\0';
+            strcat(ref, index_cells[index_cell].text);
+            strcat(ref, marker);
             if (n + strlen(ref) + 1 >= out_size) {
                 plc_set_error(err, err_size, "two-dimensional row too long");
                 return 0;

@@ -7,8 +7,9 @@
 PlankaC is a substantial executable Plankalkuel-profile implementation in C.
 It provides a parser, interpreter, statement/expression AST boundary, typed IR,
 text bytecode, generated C, generated x86-64 assembly, 8086/DOS-oriented
-assembly emission, embedding API, host APIs for `.plk` applications, and a
-conformance corpus.
+assembly emission, a built-in DOS COM bootstrap emitter, a PlankaC DOS runner
+route, embedding API, host APIs for `.plk` applications, and a conformance
+corpus.
 
 The project does not claim to be a complete historical reconstruction of
 Plankalkuel. Its purpose is narrower and more testable: preserve a
@@ -39,7 +40,8 @@ The repository is split into compiler and runtime layers:
 - `c/values`: tagged values, bit packing, and fixed-point helpers;
 - `c/ir`: statement AST, expression AST summaries, typed intermediate
   representation, and evidence packets;
-- `c/backends`: bytecode, lowering report, generated C, x86-64 ASM, 8086 ASM;
+- `c/backends`: bytecode, lowering report, generated C, x86-64 ASM, 8086 ASM,
+  and `c/backends/dos` binary DOS artifacts;
 - `c/models`: chess board and game-state helpers;
 - `c/targets`: CLI, Windows GUI, Win16, and DOS hosts;
 - `graphics/c`: PlankaHost, PlankaGUI, PlankaCube, raster and export layers.
@@ -47,7 +49,7 @@ The repository is split into compiler and runtime layers:
 The practical compiler path is:
 
 ```text
-.plk source -> parser/analyzer -> procedure table -> AST -> typed IR/bytecode -> C/ASM/native runner
+.plk source -> parser/analyzer -> procedure table -> AST -> typed IR/bytecode -> C/ASM/DOS artifacts
 ```
 
 ### Implemented Profile
@@ -74,12 +76,15 @@ PlankaC emits several artifacts:
 - generated C runners;
 - generated x86-64 ASM runners linked with the runtime on the Windows/MinGW
   ABI path;
-- 8086/DOS-oriented assembly source.
+- 8086/DOS-oriented assembly source;
+- assembler-free DOS COM bootstrap images with embedded bytecode;
+- a PlankaC DOS runner route through Open Watcom.
 
 The current ASM backends are useful engineering artifacts. They do not mean
 that every compound operation is lowered to bare machine instructions without
-runtime support. The backend contract is documented explicitly so that future
-work can deepen the lowering without changing the user-facing source profile.
+runtime support. The DOS COM emitter stays inside the `.COM` memory model as a
+bootstrap and bytecode container. Full DOS execution is represented by
+`PLANKACD.EXE`, built from the PlankaC API runner target.
 The current executable x86-64 ASM runner targets the Windows/MinGW ABI; Linux
 CI validates ASM emission structurally and uses generated C/native C for the
 linked portable native path.
@@ -119,7 +124,8 @@ clarity.
 PlankaC ist eine substanzielle ausfuehrbare Plankalkuel-Profil-Implementierung
 in C. Das Projekt enthaelt Parser, Interpreter, eine Statement-/Expression-
 AST-Grenze, typed IR, Text-Bytecode, generiertes C, generiertes x86-64-ASM,
-8086/DOS-nahes ASM, Einbettungs-API, Host-APIs fuer `.plk`-Anwendungen und
+8086/DOS-nahes ASM, einen eingebauten DOS-COM-Bootstrap, einen
+PlankaC-DOS-Runner, Einbettungs-API, Host-APIs fuer `.plk`-Anwendungen und
 einen Conformance-Corpus.
 
 Das Projekt behauptet nicht, eine vollstaendige historische Rekonstruktion des
@@ -147,7 +153,7 @@ Analyzer, Values, IR, Backends, Models, Targets und Graphics. Der wichtige
 Pfad ist:
 
 ```text
-.plk-Quelle -> Parser/Analyzer -> Prozedurtabelle -> AST -> typed IR/Bytecode -> C/ASM/native runner
+.plk-Quelle -> Parser/Analyzer -> Prozedurtabelle -> AST -> typed IR/Bytecode -> C/ASM/DOS-Artefakte
 ```
 
 ### Profil
@@ -165,8 +171,9 @@ Dokumentation und Conformance-Abdeckung haben.
 
 ### Backends und Pruefung
 
-PlankaC erzeugt AST, Bytecode, typed IR, Lowering-Reports, C, x86-64-ASM und
-8086/DOS-nahes ASM. Windows und Linux werden in CI gebaut. Die lokalen
+PlankaC erzeugt AST, Bytecode, typed IR, Lowering-Reports, C, x86-64-ASM,
+8086/DOS-nahes ASM, ein direkt erzeugtes DOS-COM-Bootstrap-Image und einen
+PlankaC-DOS-Runner. Windows und Linux werden in CI gebaut. Die lokalen
 Einstiege sind `build.bat`, `make ci` und der Conformance-Runner.
 
 ### Release-Disziplin

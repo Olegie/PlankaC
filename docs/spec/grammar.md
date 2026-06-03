@@ -34,16 +34,23 @@ ensure         = "ENSURE" , guard ;
 stopif         = "STOPIF" , guard ;
 
 predicate-statement
-               = ("SELECT" | "COUNT" | "EXISTS" | "FORALL"
+               = predicate , "=>" , target-list ;
+
+predicate      = predicate-core
+               | "NOT" , predicate ;
+predicate-core = ("SELECT" | "COUNT" | "EXISTS" | "FORALL"
                  | "SETSELECT" | "SETCOUNT" | "SETEXISTS" | "SETFORALL"
                  | "DOMAINSELECT" | "DOMAINCOUNT"
                  | "DOMAINEXISTS" | "DOMAINFORALL"
                  | "RANGESELECT" | "RANGECOUNT"
                  | "RANGEEXISTS" | "RANGEFORALL") ,
-                 expression , predicate-op , expression , "=>" , target-list ;
+                 expression , predicate-op , expression ;
 
 page           = "PAGE" , { page-row } , "ENDPAGE" ;
-page-row       = expr-row | index-row | type-row | separator-row | blank-row ;
+page-row       = [ page-coord ] ,
+                 ( expr-row | index-row | type-row | separator-row )
+               | blank-row ;
+page-coord     = "[" , number , "," , number , "]" ;
 expr-row       = "|" , spatial-expression ;
 index-row      = "V|" , spatial-index-cells ;
 type-row       = "S|" , spatial-type-cells ;
@@ -98,7 +105,21 @@ S|32.16 32.16 32.16
 ENDPAGE
 ```
 
-Each single-letter symbol in the expression row is bound to the nearest index
-cell and type cell by column position. Symbols before `=>` map to `Z` unless
-the symbol is already `V`, `Z`, or `R`. Symbols after `=>` map to `R` unless
-the symbol is already an explicit bank symbol.
+Rows may also start with an explicit page coordinate. This lets a fixture or
+source generator describe a logical page position without relying on physical
+file indentation:
+
+```text
+PAGE
+[10,20] V|1       2       0
+[11,20] S|32.16   32.16   32.16
+[12,20] |A + B => R
+ENDPAGE
+```
+
+The loader first builds a page model with row/column cells, then expands the
+expression row through that model. Each single-letter symbol in the expression
+row is bound to the nearest index cell and type cell by logical column
+position. Symbols before `=>` map to `Z` unless the symbol is already `V`,
+`Z`, or `R`. Symbols after `=>` map to `R` unless the symbol is already an
+explicit bank symbol.

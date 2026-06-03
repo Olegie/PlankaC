@@ -2,8 +2,9 @@
 
 PlankaC is a substantial executable Plankalkuel-profile implementation in C:
 parser, interpreter, typed IR, bytecode, generated C, generated x86-64 ASM,
-8086/DOS-oriented ASM emission, embedding API, and host applications for
-`.plk` profiles.
+8086/DOS-oriented ASM emission, built-in DOS COM bootstrap emission,
+PlankaC DOS runner route,
+embedding API, and host applications for `.plk` profiles.
 
 ## Included Assets
 

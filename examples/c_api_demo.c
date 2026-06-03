@@ -61,7 +61,7 @@ int main(void)
         plankac_destroy(ctx);
         return 1;
     }
-    printf("typed divide status -> tag=%d raw=%ld type=%s\n",
+    printf("typed divide status -> tag=%d raw=%lld type=%s\n",
         typed_result.value[1].tag, typed_result.value[1].raw,
         typed_result.value[1].type_text);
 
@@ -102,6 +102,14 @@ int main(void)
         return 1;
     }
     printf("wrote build/plankac_api_demo_runtime.S\n");
+
+    if (!plankac_context_write_doscom(ctx,
+            "build/plankac_api_demo_dos.com", err, sizeof(err))) {
+        printf("doscom backend failed: %s\n", err);
+        plankac_destroy(ctx);
+        return 1;
+    }
+    printf("wrote build/plankac_api_demo_dos.com\n");
 
     plankac_destroy(ctx);
     return 0;

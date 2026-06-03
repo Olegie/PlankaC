@@ -1,20 +1,65 @@
 #include "plankac_internal.h"
 
-static const char *plc_doc_body(const char *row, int *column)
+static const char *plc_doc_body_ex(const char *row, int *column,
+    int *explicit_row)
 {
     const char *p;
+    char *endptr;
     int col;
 
     p = row;
     col = 1;
+    if (explicit_row != 0) {
+        *explicit_row = 0;
+    }
     while (*p == ' ' || *p == '\t') {
         ++p;
         ++col;
+    }
+    if (*p == '[') {
+        int row_value;
+        int col_value;
+
+        ++p;
+        p = plc_skip_space(p);
+        if (!isdigit((unsigned char)*p)) {
+            return p - 1;
+        }
+        row_value = (int)strtol(p, &endptr, 10);
+        p = plc_skip_space(endptr);
+        if (*p != ',') {
+            return row;
+        }
+        ++p;
+        p = plc_skip_space(p);
+        if (!isdigit((unsigned char)*p)) {
+            return row;
+        }
+        col_value = (int)strtol(p, &endptr, 10);
+        p = plc_skip_space(endptr);
+        if (*p != ']') {
+            return row;
+        }
+        ++p;
+        while (*p == ' ' || *p == '\t') {
+            ++p;
+        }
+        if (row_value > 0 && col_value > 0) {
+            if (explicit_row != 0) {
+                *explicit_row = row_value;
+            }
+            col = col_value;
+        }
     }
     if (column != 0) {
         *column = col;
     }
     return p;
+}
+
+static const char *plc_doc_body(const char *row, int *column)
+{
+    return plc_doc_body_ex(row, column, 0);
 }
 
 static int plc_doc_row_kind(const char *row)
@@ -200,13 +245,14 @@ int plc_build_2d_document(char rows[][PLC_MAX_LINE], int row_count,
         const char *body;
         const char *cells;
         int row_column;
+        int explicit_row;
         int prefix;
 
-        body = plc_doc_body(rows[i], &row_column);
+        body = plc_doc_body_ex(rows[i], &row_column, &explicit_row);
         row = &document->rows[i];
         memset(row, 0, sizeof(*row));
         row->kind = plc_doc_row_kind(rows[i]);
-        row->row = i + 1;
+        row->row = explicit_row > 0 ? explicit_row : i + 1;
         row->col = row_column;
         row->block = current_block;
         if (body[0] == '\0') {

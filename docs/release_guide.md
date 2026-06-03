@@ -20,7 +20,7 @@ make ci
 ```
 
 The Linux Makefile checks generated ASM emission structurally. The executable
-x86-64 ASM smoke runner is verified by the Windows `build.bat` path because
+x86-64 ASM runner is verified by the Windows `build.bat` path because
 the current generated runner uses the Windows/MinGW x64 ABI.
 
 Before publishing, check:

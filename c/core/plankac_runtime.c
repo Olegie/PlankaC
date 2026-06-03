@@ -686,7 +686,22 @@ static int plc_execute_proc_with_heap(const PLC_PROGRAM *program,
     }
     frame->heap_owner = heap_owner;
     for (i = 0; i < argc && i < PLC_MAX_VARS; ++i) {
+        PLC_REF ref;
+
         frame->v[i] = args[i];
+        memset(&ref, 0, sizeof(ref));
+        ref.bank = 'V';
+        ref.index = i;
+        if (i < proc->argc) {
+            strncpy(ref.type_marker, proc->arg_types[i],
+                sizeof(ref.type_marker) - 1);
+            ref.type_marker[sizeof(ref.type_marker) - 1] = '\0';
+        }
+        if (!plc_frame_store_tagged(frame, &ref, args[i],
+                ref.type_marker, err, err_size)) {
+            free(frame);
+            return 0;
+        }
     }
     for (i = 0; i < proc->stmt_count; ++i) {
         if (!plc_run_statement(program, frame, proc, &proc->stmts[i],
@@ -713,7 +728,22 @@ static int plc_execute_proc_with_heap(const PLC_PROGRAM *program,
         return 0;
     }
     for (i = 0; i < out->count; ++i) {
-        out->value[i] = frame->r[i];
+        PLC_REF ref;
+        PLC_TAGGED_VALUE tagged;
+
+        memset(&ref, 0, sizeof(ref));
+        ref.bank = 'R';
+        ref.index = i;
+        if (i < proc->results) {
+            strncpy(ref.type_marker, proc->result_types[i],
+                sizeof(ref.type_marker) - 1);
+            ref.type_marker[sizeof(ref.type_marker) - 1] = '\0';
+        }
+        if (plc_frame_load_tagged(frame, &ref, &tagged)) {
+            out->value[i] = plc_tagged_to_double(&tagged);
+        } else {
+            out->value[i] = frame->r[i];
+        }
     }
     free(frame);
     return 1;
@@ -3233,6 +3263,7 @@ PLANKAC_CONTEXT *plankac_create(void)
 void plankac_destroy(PLANKAC_CONTEXT *ctx)
 {
     if (ctx != 0) {
+        plc_program_free(&ctx->program);
         free(ctx);
     }
 }
@@ -3684,6 +3715,24 @@ int plankac_context_write_asm8086_runtime(PLANKAC_CONTEXT *ctx,
     return PLANKAC_OK;
 }
 
+int plankac_context_write_doscom(PLANKAC_CONTEXT *ctx,
+    const char *path, char *err, unsigned err_size)
+{
+    if (ctx == 0 || !ctx->loaded) {
+        plc_copy_error(err, err_size, "PlankaC context is not loaded");
+        return PLANKAC_ERR;
+    }
+    if (path == 0 || path[0] == '\0') {
+        plc_copy_error(err, err_size, "missing DOS COM output path");
+        return PLANKAC_ERR;
+    }
+    if (!plc_emit_doscom(&ctx->program, path, err, err_size)) {
+        return PLANKAC_ERR;
+    }
+    plc_copy_error(err, err_size, "");
+    return PLANKAC_OK;
+}
+
 int plankac_context_write_ir(PLANKAC_CONTEXT *ctx,
     const char *path, char *err, unsigned err_size)
 {
@@ -4077,6 +4126,18 @@ int plankac_write_asm8086_runtime(const char *path,
         return PLANKAC_ERR;
     }
     if (!plc_emit_asm8086_runtime(&g_plankac_program, path, err, err_size)) {
+        return PLANKAC_ERR;
+    }
+    plc_copy_error(err, err_size, "");
+    return PLANKAC_OK;
+}
+
+int plankac_write_doscom(const char *path, char *err, unsigned err_size)
+{
+    if (!plankac_load(err, err_size)) {
+        return PLANKAC_ERR;
+    }
+    if (!plc_emit_doscom(&g_plankac_program, path, err, err_size)) {
         return PLANKAC_ERR;
     }
     plc_copy_error(err, err_size, "");

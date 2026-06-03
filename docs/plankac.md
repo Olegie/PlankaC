@@ -93,6 +93,7 @@ Lowering written: build/plankac.lowering
 C backend written: build/plankac_generated.c
 ASM runtime written: build/plankac_asm_runtime.S
 8086 ASM written: build/plankac_8086.asm
+DOS COM written: build/plankac_dos.com
 Compiler pipeline OK
 native-c: build/plankac_native_c.exe
 R0=2
@@ -102,7 +103,8 @@ R0=20
 ```
 
 `compile` is the stable compiler route. It writes bytecode/IR, reloads that
-IR, and emits generated C, x86-64 ASM, and 8086 ASM from the reloaded program.
+IR, and emits generated C, x86-64 ASM, 8086 ASM, and a DOS COM bootstrap from
+the reloaded program.
 `native-c` and `native-asm` use the same route and then link an executable
 through the external GCC/MinGW toolchain.
 
@@ -121,6 +123,11 @@ interpreter or bytecode runner.
 image, direct 8086 procedures for the arithmetic core, exported compound heap
 areas, a compound procedure table, and ABI entries for list, pair, record,
 board, and compound dispatch routines.
+
+`doscom` emits a small DOS `.COM` image directly from PlankaC. It contains an
+8086 bootstrap and an embedded bytecode image, and it does not require an
+external assembler. Full DOS execution uses `PLANKACD.EXE`, built by
+`build-dos-plankac.bat` from the PlankaC API runner target.
 
 ## Supported Profile
 

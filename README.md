@@ -11,8 +11,8 @@
 PlankaC ist eine substanzielle ausfuehrbare Plankalkuel-Profil-
 Implementierung in C: Parser, Interpreter, AST-Schicht, typed IR,
 Bytecode-Schreiber, Bytecode-Runner, C-Backend-Emitter, native ASM-Backend,
-8086-ASM-Emitter und Einbettungs-API mit typed results fuer eine lineare
-Plankalkuel-Notation. PlankaMath ist das
+8086-ASM-Emitter, DOS-COM-Bootstrap, PlankaC-DOS-Runner und Einbettungs-API
+mit typed results fuer eine lineare Plankalkuel-Notation. PlankaMath ist das
 mitgelieferte Beispielprofil: ein Taschenrechner mit weiteren `.plk`-Plaenen
 fuer indizierte Werte, geschachtelte Felder, Listen, Paare, Mengen,
 Relationen, komplexe Werte, 3D-Vektoren, 4x4-Matrizen, Rotation, Projektion,
@@ -65,7 +65,7 @@ Wichtige Dateien:
 | `c/values/` | Bit-Packing, tagged PLC values und Fixed-Point-Helfer auf Raw Values |
 | `c/ir/` | AST, typed IR und Evidence-Daten fuer Compiler- und Backend-Grenzen |
 | `c/models/` | Brettbasierte Schachlegalitaet, Legal-Move-Count, Rochadepfad, Promotion, En passant, Patt, Signaturen, Material, Capture Search und Mattpruefung |
-| `c/backends/` | Bytecode, Lowering-Report, C-Backend, x86-64-ASM und 8086/DOS-ASM |
+| `c/backends/` | Bytecode, Lowering-Report, C-Backend, x86-64-ASM, 8086/DOS-ASM und DOS-COM |
 | `c/targets/` | CLI-, DOS-, Win16- und Windows-GUI-Hosts |
 | `c/legacy/plankamath.c` | kompakte Rueckfall-Laufzeit |
 | `graphics/src/plankagui.plk` | Fenster-, Button-, Listen- und Farb-Prozeduren fuer grafische Ausgabe |
@@ -73,6 +73,7 @@ Wichtige Dateien:
 | `graphics/c/plankahost.h` | gemeinsames Host-API fuer `.plk`-Anwendungen |
 | `graphics/c/` | PlankaHost-, PlankaGUI-, PlankaCube-, Raster-, Schrift-, Export- und Render-Schicht |
 | `build-dos.bat` | Open-Watcom-Build fuer `build\dos\PMDOS.EXE` |
+| `build-dos-plankac.bat` | Open-Watcom-Build fuer `build\dos\PLANKACD.EXE`, den PlankaC-DOS-Runner |
 | `build-win16.bat` | Open-Watcom-Build fuer `build\win16\PlankaMath16.exe` |
 | `examples/c_api_demo.c` | kompaktes externes C-Programm mit PlankaC als Bibliothek |
 | `examples/c_abi_demo.c` | bidirektionales ABI-Beispiel: C registriert eine Funktion, `.plk` ruft sie auf |
@@ -93,8 +94,8 @@ Das Ausfuehrungsmodell fuer `.plk`-Anwendungen steht in
 | [`Formal Specification`](docs/spec/index.md) | Grammatik, Value Model, Typregeln, Ausfuehrungsregeln, Fehlerregeln und Backend-Kontrakt |
 | [`Language Reference`](docs/language_reference.md) | Quelldateien, Prozeduren, Speicherbaenke, Marker, Ausdruecke, Aufrufe, Guards, Schleifen, Assertions, indizierte Referenzen und ausfuehrbare zweidimensionale Zeilen |
 | [`Standard Library`](docs/standard_library.md) | gebuendeltes `.plk`-Profil: Arithmetik, Rechnersitzungen, Datenstrukturen, Relationen, komplexe Werte, Schachstrukturen, 3D-Geometrie und Anwendungsprofile |
-| [`Compiler Guide`](docs/compiler_guide.md) | `plankac.exe`-Befehle, Bytecode, generiertes C, native ASM, 8086-ASM, Build-Artefakte und Pruefbefehle |
-| [`Compiler Pipeline`](docs/compiler_pipeline.md) | stabiler Pfad `.plk -> IR/Bytecode -> Lowering -> C/ASM -> native executable` |
+| [`Compiler Guide`](docs/compiler_guide.md) | `plankac.exe`-Befehle, Bytecode, generiertes C, native ASM, 8086-ASM, DOS-COM, Build-Artefakte und Pruefbefehle |
+| [`Compiler Pipeline`](docs/compiler_pipeline.md) | stabiler Pfad `.plk -> IR/Bytecode -> Lowering -> C/ASM/DOS-Artefakte -> native executable` |
 | [`Examples`](docs/examples.md) | ausfuehrbare Quell- und Kommando-Beispiele fuer das implementierte Sprachprofil |
 | [`Porting Guide`](docs/porting_guide.md) | Einbettung, Plattformziele, Win16/DOS-Grenzen, PlankaHost-Integration und Backend-Regeln |
 | [`ABI And Embedding API`](docs/abi.md) | C-Hosts rufen PlankaC-Prozeduren auf; `.plk`-Quellen rufen registrierte C-Funktionen auf |
@@ -279,9 +280,10 @@ gcc -Wall -Wextra -std=c89 -Ic\include -Ic\internal -c c\ir\plankac_evidence.c -
 gcc -Wall -Wextra -std=c89 -Ic\include -Ic\internal -c c\backends\plankac_lowering.c -o build\plankac_lowering.o
 gcc -Wall -Wextra -std=c89 -Ic\include -Ic\internal -c c\backends\plankac_bytecode.c -o build\plankac_bytecode.o
 gcc -Wall -Wextra -std=c89 -Ic\include -Ic\internal -c c\backends\plankac_asm8086.c -o build\plankac_asm8086.o
+gcc -Wall -Wextra -std=c89 -Ic\include -Ic\internal -c c\backends\dos\plankac_doscom.c -o build\plankac_doscom.o
 gcc -Wall -Wextra -std=c89 -Ic\include -Ic\internal -c c\core\plankac_runtime.c -o build\plankac_runtime.o
 gcc -Wall -Wextra -std=c89 -Ic\include -Ic\internal -c c\backends\plankac_native_runtime.c -o build\plankac_native_runtime.o
-ar rcs build\libplankac.a build\plankac_common.o build\plankac_types.o build\plankac_2d.o build\plankac_document.o build\plankac_page.o build\plankac_analyzer.o build\plankac_schema.o build\plankac_bits.o build\plankac_value.o build\plankac_chess_model.o build\plankac_ast.o build\plankac_ir.o build\plankac_evidence.o build\plankac_lowering.o build\plankac_source.o build\plankac_expr.o build\plankac_bytecode.o build\plankac_asm8086.o build\plankac_runtime.o build\plankac_native_runtime.o
+ar rcs build\libplankac.a build\plankac_common.o build\plankac_types.o build\plankac_2d.o build\plankac_document.o build\plankac_page.o build\plankac_analyzer.o build\plankac_schema.o build\plankac_bits.o build\plankac_value.o build\plankac_chess_model.o build\plankac_ast.o build\plankac_ir.o build\plankac_evidence.o build\plankac_lowering.o build\plankac_source.o build\plankac_expr.o build\plankac_bytecode.o build\plankac_asm8086.o build\plankac_doscom.o build\plankac_runtime.o build\plankac_native_runtime.o
 gcc -Wall -Wextra -std=c89 -Ic\include examples\c_api_demo.c build\libplankac.a -o build\plankac_api_demo.exe -lm
 gcc -Wall -Wextra -std=c89 -Ic\include examples\c_abi_demo.c build\libplankac.a -o build\plankac_abi_demo.exe -lm
 gcc -Wall -Wextra -std=c89 -Ic\include tests\plankac_conformance.c build\libplankac.a -o build\plankac_conformance.exe -lm
@@ -290,7 +292,7 @@ gcc -Wall -Wextra -std=c89 -Ic\include tests\plankac_conformance.c build\libplan
 Windows-GUI bauen:
 
 ```powershell
-gcc -mwindows build\plankac_common.o build\plankac_types.o build\plankac_2d.o build\plankac_document.o build\plankac_page.o build\plankac_analyzer.o build\plankac_schema.o build\plankac_bits.o build\plankac_value.o build\plankac_chess_model.o build\plankac_ast.o build\plankac_ir.o build\plankac_evidence.o build\plankac_lowering.o build\plankac_source.o build\plankac_expr.o build\plankac_bytecode.o build\plankac_asm8086.o build\plankac_runtime.o build\plankamath.o build\windows_gui.o -o build\PlankaMath.exe -lm
+gcc -mwindows build\plankac_common.o build\plankac_types.o build\plankac_2d.o build\plankac_document.o build\plankac_page.o build\plankac_analyzer.o build\plankac_schema.o build\plankac_bits.o build\plankac_value.o build\plankac_chess_model.o build\plankac_ast.o build\plankac_ir.o build\plankac_evidence.o build\plankac_lowering.o build\plankac_source.o build\plankac_expr.o build\plankac_bytecode.o build\plankac_asm8086.o build\plankac_doscom.o build\plankac_runtime.o build\plankamath.o build\windows_gui.o -o build\PlankaMath.exe -lm
 ```
 
 Echtes Win16-GUI fuer Windows 3.x bauen:
@@ -309,10 +311,15 @@ Echten 16-bit-DOS-Runner bauen:
 
 ```bat
 build-dos.bat
+build-dos-plankac.bat
 ```
 
 Der Build erzeugt `build\dos\PMDOS.EXE`. Der kurze 8.3-Dateiname ist Absicht:
 er funktioniert auch in klassischen DOS-Umgebungen ohne lange Dateinamen.
+
+`build-dos-plankac.bat` erzeugt `build\dos\PLANKACD.EXE`. Das ist der
+PlankaC-DOS-Runner: er laedt das PlankaC-Profil, listet Prozeduren, fuehrt
+Prozeduren aus, schreibt Bytecode, laedt Bytecode neu und fuehrt Bytecode aus.
 
 Wenn `gcc` nicht gefunden wird, muss ein C-Compiler separat installiert oder
 entpackt werden. Danach muss dessen `bin`-Ordner im `PATH` stehen.
@@ -403,6 +410,12 @@ Erwartete Ausgabe:
 .\build\plankac_native_c.exe set_session
 .\build\plankac.exe native-asm build\plankac_native_asm
 .\build\plankac_native_asm.exe add 12 8
+.\build\plankacd_host.exe check
+.\build\plankacd_host.exe run add 12 8
+.\build\plankacd_host.exe tests
+.\build\plankacd_host.exe bytecode build\plankacd_host.pbc
+.\build\plankacd_host.exe checkbc build\plankacd_host.pbc
+.\build\plankacd_host.exe runbc build\plankacd_host.pbc set_session
 ```
 
 Erwartete Ausgabe:
@@ -426,12 +439,19 @@ IR written: build\max3.ir
 C backend written: build\plankac_generated.c
 ASM runtime written: build\plankac_asm_runtime.S
 8086 ASM written: build\plankac_8086.asm
+DOS COM written: build\plankac_dos.com
 Compiler pipeline OK
 native-c: build\plankac_native_c.exe
 R0=2
 Compiler pipeline OK
 native-asm: build\plankac_native_asm.exe
 R0=20
+PlankaC OK: 29 files, 150 procedures
+add -> R0=20
+all_tests -> R0=1
+bytecode written: build\plankacd_host.pbc
+PlankaC OK: 1 files, 150 procedures
+set_session -> R0=2
 R0=0 R1=1
 R0=12
 R0=2
@@ -497,6 +517,13 @@ PMDOS demo
 PMDOS tests
 PMDOS run add 12 8
 PMDOS run divide_checked 84 0
+PLANKACD check
+PLANKACD list
+PLANKACD run add 12 8
+PLANKACD tests
+PLANKACD bytecode PLANKAC.PBC
+PLANKACD checkbc PLANKAC.PBC
+PLANKACD runbc PLANKAC.PBC set_session
 ```
 
 Auf einem modernen Windows-PC kann der DOS-Runner ueber DOSBox gestartet werden:

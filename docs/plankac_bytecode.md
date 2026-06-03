@@ -69,8 +69,10 @@ API through `plankac_context_load_bytecode()`, the generated C backend runner
 emitted by `plankac cgen`, and the stable `compile <prefix>` route.
 
 `compile <prefix>` writes `.pbc`, reloads it, and emits generated C, x86-64
-ASM, and 8086 ASM from the reloaded IR program. `native-c <prefix>` and
-`native-asm <prefix>` use the same IR reload path before linking executables.
+ASM, 8086 ASM, and a DOS COM bootstrap with embedded bytecode from the
+reloaded IR program.
+`native-c <prefix>` and `native-asm <prefix>` use the same IR reload path
+before linking executables.
 `lowering <path>` records which typed IR statements are emitted through direct
 scalar paths and which ones use compound runtime entry points.
 

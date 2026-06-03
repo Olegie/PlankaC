@@ -28,6 +28,8 @@ See `docs/index.md` for the complete documentation map and
 | `c/backends/plankac_bytecode.c` | textual bytecode emission, generated C backend emission, and native x86-64 ASM backend emission |
 | `c/backends/plankac_lowering.c` | typed backend lowering report for C, x86-64 ASM, and 8086 paths |
 | `c/backends/plankac_asm8086.c` | MASM/TASM-style 8086/DOS source emission |
+| `c/backends/dos/plankac_doscom.c` | assembler-free DOS `.COM` bootstrap and embedded bytecode emission |
+| `c/targets/dos/plankac_dos_runner.c` | PlankaC API runner target for full 16-bit DOS executable builds |
 | `c/backends/plankac_native_runtime.c` | native backend helper runtime for generated ASM code |
 | `c/tools/plankac_cli.c` | command-line interface |
 | `c/tools/plankac.c` | short compatibility note for the split implementation |

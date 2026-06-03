@@ -3,7 +3,7 @@
 The compiler route has four stable layers:
 
 ```text
-.plk source -> procedure AST -> expression AST -> typed IR -> bytecode/C/ASM/8086 artifact
+.plk source -> procedure AST -> expression AST -> typed IR -> bytecode/C/ASM/8086/DOS artifact
 ```
 
 ## Procedure AST
@@ -92,12 +92,13 @@ interpreter.
 
 ## 8086 ASM
 
-The 8086 backend emits MASM/TASM-style source with:
+The 8086 backend emits MASM/TASM/Open Watcom-oriented source with:
 
 | Symbol | Role |
 | --- | --- |
+| `plankac_8086_runner_profile` | generated DOS small-model runner profile marker |
 | `plankac_8086_bytecode_image` | embedded bytecode image |
-| `plankac_8086_smoke` | DOS smoke entry called by `plankac_8086_start` |
+| `plankac_8086_smoke` | generated DOS profile entry called by `plankac_8086_start` |
 | `plankac_8086_compound_proc_table` | procedure table for compound procedures |
 | `plankac_8086_list_heap` | 16-bit list heap storage |
 | `plankac_8086_pair_heap` | 16-bit pair heap storage |
@@ -115,9 +116,44 @@ The 8086 backend emits MASM/TASM-style source with:
 | `plankac_8086_dispatch_compound` | compound dispatch ABI entry |
 
 Direct arithmetic procedures return `AX` as `R0` and `DX` as status. The
-generated source includes a DOS start procedure and a smoke runner that calls
+generated source includes a DOS start procedure and a compact profile entry that calls
 the zero-argument `type_sheet` procedure when it is present. Compound
-procedures expose a 16-bit ABI surface and an embedded bytecode image so a DOS
-runtime can dispatch the profile through a narrow, documented boundary. The
-current 8086 artifact is source plus ABI surface; building and executing a DOS
-binary still depends on a separate 16-bit toolchain route.
+procedures emit a procedure-number dispatch token through
+`plankac_8086_dispatch_compound` and expose a 16-bit ABI surface plus an
+embedded bytecode image so a DOS runtime can dispatch the profile through a
+narrow, documented boundary.
+
+`build-asm8086-dos.bat` is the practical assembly route for this generated
+backend. It asks PlankaC to emit `build\dos\PLANKAC86.ASM`, then uses MASM or
+TASM plus LINK/TLINK, or Open Watcom `wasm` plus `wlink`, when such a
+DOS-capable toolchain is available. Without that toolchain, the generated
+source remains the verified artifact.
+
+## DOS COM
+
+The DOS COM backend is a separate submodule under `c/backends/dos`. It writes a
+small 8086 `.COM` image directly, without invoking MASM, TASM, Open Watcom, or
+NASM. The image contains DOS interrupt bootstrap code, a
+`PLANKAC-DOSCOM-8086` profile marker, the loaded procedure count, and an
+embedded `PLANKAC-BYTECODE 0.1` payload.
+
+CLI and API entry points:
+
+```text
+build\plankac.exe doscom build\plankac_dos.com
+plankac_context_write_doscom(ctx, "build/plankac_api_demo_dos.com", err, sizeof(err))
+```
+
+This gives PlankaC its own assembler-free DOS binary artifact. Full DOS
+execution is handled by the PlankaC DOS runner target:
+
+```text
+build-dos-plankac.bat
+build\plankacd_host.exe check
+build\plankacd_host.exe run add 12 8
+build\plankacd_host.exe runbc build\plankacd_host.pbc set_session
+```
+
+`build-dos-plankac.bat` builds `PLANKACD.EXE` with Open Watcom. The host build
+uses the same `c/targets/dos/plankac_dos_runner.c` source to prove the API,
+bytecode, and run commands without requiring a 16-bit toolchain.

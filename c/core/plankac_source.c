@@ -579,7 +579,7 @@ int plc_load_sources(PLC_PROGRAM *program, const char *const *sources,
             native_copy[native_i] = program->natives[native_i];
         }
     }
-    memset(program, 0, sizeof(*program));
+    plc_program_free(program);
     for (native_i = 0; native_i < native_count; ++native_i) {
         program->natives[native_i] = native_copy[native_i];
     }
@@ -639,6 +639,7 @@ int plc_load_sources(PLC_PROGRAM *program, const char *const *sources,
                         sources[file_index], line_no);
                     plc_prefix_error(err, err_size, prefix);
                     fclose(fp);
+                    plc_proc_free(&proc);
                     return 0;
                 }
                 for (i = 0; i < program->proc_count; ++i) {
@@ -647,6 +648,7 @@ int plc_load_sources(PLC_PROGRAM *program, const char *const *sources,
                         sprintf(err, "%s:%d duplicate procedure: %s",
                             sources[file_index], line_no, proc.name);
                         fclose(fp);
+                        plc_proc_free(&proc);
                         return 0;
                     }
                 }
@@ -654,11 +656,13 @@ int plc_load_sources(PLC_PROGRAM *program, const char *const *sources,
                     sprintf(err, "%s:%d duplicate native/procedure: %s",
                         sources[file_index], line_no, proc.name);
                     fclose(fp);
+                    plc_proc_free(&proc);
                     return 0;
                 }
                 if (program->proc_count >= PLC_MAX_PROCS) {
                     sprintf(err, "too many procedures");
                     fclose(fp);
+                    plc_proc_free(&proc);
                     return 0;
                 }
                 program->procs[program->proc_count] = proc;
@@ -756,18 +760,17 @@ int plc_load_sources(PLC_PROGRAM *program, const char *const *sources,
                         fclose(fp);
                         return 0;
                     }
-                    if (current->stmt_count >= PLC_MAX_STMTS) {
-                        sprintf(err, "%s:%d too many statements in %s",
+                    if (!plc_proc_add_stmt(current, page_stmts[ps],
+                            page_start_line, err, err_size)) {
+                        char prefix[160];
+
+                        sprintf(prefix, "%s:%d %s: ",
                             sources[file_index], page_start_line,
                             current->name);
+                        plc_prefix_error(err, err_size, prefix);
                         fclose(fp);
                         return 0;
                     }
-                    strcpy(current->stmts[current->stmt_count].text,
-                        page_stmts[ps]);
-                    current->stmts[current->stmt_count].line_no =
-                        page_start_line;
-                    ++current->stmt_count;
                 }
                 continue;
             }
@@ -857,15 +860,16 @@ int plc_load_sources(PLC_PROGRAM *program, const char *const *sources,
                     fclose(fp);
                     return 0;
                 }
-                if (current->stmt_count >= PLC_MAX_STMTS) {
-                    sprintf(err, "%s:%d too many statements in %s",
+                if (!plc_proc_add_stmt(current, line, line_no,
+                        err, err_size)) {
+                    char prefix[160];
+
+                    sprintf(prefix, "%s:%d %s: ",
                         sources[file_index], line_no, current->name);
+                    plc_prefix_error(err, err_size, prefix);
                     fclose(fp);
                     return 0;
                 }
-                strcpy(current->stmts[current->stmt_count].text, line);
-                current->stmts[current->stmt_count].line_no = line_no;
-                ++current->stmt_count;
                 continue;
             }
             sprintf(err, "%s:%d source outside procedure: %s",
@@ -955,15 +959,7 @@ static int plc_read_bytecode_arrow(const char **pp)
 static int plc_bytecode_stmt(PLC_PROC *proc, int line_no,
     const char *text, char *err, unsigned err_size)
 {
-    if (proc->stmt_count >= PLC_MAX_STMTS) {
-        plc_set_error(err, err_size, "too many bytecode statements");
-        return 0;
-    }
-    strncpy(proc->stmts[proc->stmt_count].text, text, PLC_MAX_LINE - 1);
-    proc->stmts[proc->stmt_count].text[PLC_MAX_LINE - 1] = '\0';
-    proc->stmts[proc->stmt_count].line_no = line_no;
-    ++proc->stmt_count;
-    return 1;
+    return plc_proc_add_stmt(proc, text, line_no, err, err_size);
 }
 
 static int plc_stmt_append(char *stmt, unsigned stmt_size,
@@ -1275,7 +1271,7 @@ int plc_load_bytecode(PLC_PROGRAM *program, const char *path,
             native_copy[native_i] = program->natives[native_i];
         }
     }
-    memset(program, 0, sizeof(*program));
+    plc_program_free(program);
     for (native_i = 0; native_i < native_count; ++native_i) {
         program->natives[native_i] = native_copy[native_i];
     }
@@ -1326,7 +1322,7 @@ int plc_load_bytecode_text(PLC_PROGRAM *program, const char *text,
             native_copy[native_i] = program->natives[native_i];
         }
     }
-    memset(program, 0, sizeof(*program));
+    plc_program_free(program);
     for (native_i = 0; native_i < native_count; ++native_i) {
         program->natives[native_i] = native_copy[native_i];
     }

@@ -94,6 +94,7 @@ build\plankac_pipeline.pbc
 build\plankac_pipeline.c
 build\plankac_pipeline.S
 build\plankac_pipeline_8086.asm
+build\plankac_pipeline_dos.com
 ```
 
 Inspect the backend lowering plan:
@@ -216,10 +217,31 @@ procedures.
 build\plankac.exe asm8086 build\plankac_8086.asm
 ```
 
-This emits MASM/TASM-style 16-bit assembly source. The backend writes the full
-program image, direct arithmetic procedures, exported compound heap areas, and
-a compound procedure table for list, set, pair, record, relation and
-board-oriented procedures.
+This emits MASM/TASM/Open Watcom-oriented 16-bit assembly source. The backend
+writes the full program image, direct arithmetic procedures, exported compound
+heap areas, and a compound procedure table for list, set, pair, record,
+relation and board-oriented procedures.
+
+## DOS COM
+
+```bat
+build\plankac.exe doscom build\plankac_dos.com
+```
+
+This writes a small `.COM` binary directly from PlankaC through
+`c/backends/dos/plankac_doscom.c`. The file contains an 8086 bootstrap, a
+`PLANKAC-DOSCOM-8086` marker, procedure-count output, and an embedded bytecode
+image. It does not require MASM, TASM, Open Watcom, or NASM.
+
+Full DOS execution is a separate executable route:
+
+```bat
+build-dos-plankac.bat
+```
+
+That builds `build\dos\PLANKACD.EXE` with Open Watcom. The same target source
+is compiled as `build\plankacd_host.exe` by `build.bat` and checked with
+`check`, `run`, `tests`, `bytecode`, `checkbc`, and `runbc`.
 
 ## Conformance
 
@@ -229,8 +251,10 @@ build\plankac_conformance.exe
 
 The conformance runner checks valid edge cases, invalid source fixtures,
 runtime behavior, bytecode execution, compiler pipeline output, native C and
-native ASM executable smoke checks, extended data structures, relation helpers,
-chess examples, 3D procedures, and parser recovery cases.
+native ASM executable checks, DOS COM bootstrap emission, PlankaC DOS
+runner host checks, extended data structures, relation helpers, chess
+examples, 3D procedures, and parser
+recovery cases.
 
 ## Output Rule
 

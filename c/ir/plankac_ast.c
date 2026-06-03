@@ -98,7 +98,7 @@ static int plc_expr_is_predicate_keyword(const char *p, unsigned *len)
         "DOMAINSELECT", "DOMAINCOUNT", "DOMAINEXISTS", "DOMAINFORALL",
         "RANGESELECT", "RANGECOUNT", "RANGEEXISTS", "RANGEFORALL",
         "SETSELECT", "SETCOUNT", "SETEXISTS", "SETFORALL",
-        "SELECT", "COUNT", "EXISTS", "FORALL",
+        "SELECT", "COUNT", "EXISTS", "FORALL", "NOT",
         0
     };
     int i;
@@ -362,6 +362,14 @@ static int plc_expr_parse_predicate(PLC_EXPR_PARSER *parser, int depth)
     keyword_len = 0;
     if (!plc_expr_is_predicate_keyword(p, &keyword_len)) {
         return 0;
+    }
+    if (keyword_len == 3 && strncmp(p, "NOT", 3) == 0) {
+        parser->p = plc_skip_space(p + keyword_len);
+        if (!plc_expr_parse_predicate(parser, depth + 1)) {
+            plc_expr_ast_note(parser->summary, PLC_EXPR_AST_UNKNOWN, depth);
+        }
+        return plc_expr_ast_note(parser->summary,
+            PLC_EXPR_AST_PREDICATE, depth);
     }
     parser->p = plc_skip_space(p + keyword_len);
     (void)plc_expr_parse_expression(parser, 4, depth + 1);
@@ -637,6 +645,18 @@ static int plc_expr_tree_parse_predicate(PLC_EXPR_TREE_PARSER *parser,
         p, p + keyword_len);
     node = plc_expr_tree_add(parser->tree, PLC_EXPR_AST_PREDICATE,
         keyword, 0);
+    if (strcmp(keyword, "NOT") == 0) {
+        int child;
+
+        parser->p = plc_skip_space(p + keyword_len);
+        child = plc_expr_tree_parse_predicate(parser, depth + 1);
+        if (child < 0) {
+            child = plc_expr_tree_add(parser->tree, PLC_EXPR_AST_UNKNOWN,
+                parser->p, 0);
+        }
+        plc_expr_tree_add_child(parser->tree, node, child);
+        return node;
+    }
     parser->p = plc_skip_space(p + keyword_len);
     left = plc_expr_tree_parse_expression(parser, 4, depth + 1);
     plc_expr_tree_add_child(parser->tree, node, left);
@@ -983,17 +1003,24 @@ static void plc_ast_analyze_statement_exprs(PLC_AST_STMT *stmt)
 static void plc_ast_set_call_shape(const PLC_PROGRAM *program,
     PLC_AST_STMT *stmt)
 {
-    char args[PLC_MAX_LINE];
+    PLC_EXPR_AST_TREE tree;
+    PLC_EXPR_AST_SUMMARY summary;
     const PLC_PROC *proc;
     const PLC_NATIVE_PROC *native_proc;
+    const PLC_EXPR_AST_NODE *root;
 
-    if (!plc_is_top_call(stmt->value, stmt->callee, sizeof(stmt->callee),
-            args, sizeof(args))) {
+    if (!plc_expr_ast_build_text(stmt->value, &tree, &summary)
+            || summary.unknown_count > 0 || tree.root < 0
+            || tree.root >= tree.node_count
+            || tree.nodes[tree.root].kind != PLC_EXPR_AST_CALL) {
         stmt->callee[0] = '\0';
         stmt->argc = 0;
         return;
     }
-    stmt->argc = plc_ast_count_commas(args);
+    root = &tree.nodes[tree.root];
+    strncpy(stmt->callee, root->text, sizeof(stmt->callee) - 1);
+    stmt->callee[sizeof(stmt->callee) - 1] = '\0';
+    stmt->argc = root->child_count;
     proc = plc_find_proc(program, stmt->callee);
     if (proc != 0) {
         stmt->argc = proc->argc;

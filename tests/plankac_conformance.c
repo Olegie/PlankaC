@@ -1241,6 +1241,9 @@ int main(void)
     ok = expect_run_file_result("valid_page_block_table_document",
             "tests/conformance/valid/page_block_table_document.plk",
             "page_block_table_document", 14.0) && ok;
+    ok = expect_run_file_result("valid_page_coordinate_document",
+            "tests/conformance/valid/page_coordinate_document.plk",
+            "page_coordinate_document", 14.0) && ok;
     ok = expect_run_file_result("valid_max3_profile",
             "tests/conformance/valid/max3_profile.plk",
             "valid_max3_profile", 9.0) && ok;
@@ -1250,6 +1253,9 @@ int main(void)
     ok = expect_run_file_result("runtime_ast_execution",
             "tests/conformance/runtime/ast_execution_runtime.plk",
             "ast_execution_runtime", 22.0) && ok;
+    ok = expect_run_file_result("runtime_predicate_not",
+            "tests/conformance/runtime/predicate_not_runtime.plk",
+            "predicate_not_runtime", 1.0) && ok;
     ok = expect_run_file_result("runtime_relation_edge_cases",
             "tests/conformance/runtime/relation_edge_cases.plk",
             "relation_edge_cases", 3.0) && ok;
@@ -1301,6 +1307,9 @@ int main(void)
             "missing V| or S| row") && ok;
     ok = expect_load_fail("bad_page_detached_rows",
             "tests/conformance/invalid/bad_page_detached_rows.plk",
+            "detached index/type row") && ok;
+    ok = expect_load_fail("bad_page_coordinate_detached",
+            "tests/conformance/invalid/bad_page_coordinate_detached.plk",
             "detached index/type row") && ok;
     ok = expect_load_fail("bad_recursion",
             "tests/conformance/bad_recursion.plk",

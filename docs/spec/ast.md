@@ -22,7 +22,7 @@ operators, predicate forms, groups, and target lists. It recognizes:
 | `CALL` | procedure or native function call |
 | `UNARY` | unary `-` or `!` |
 | `BINARY` | arithmetic, comparison, or boolean binary operation |
-| `PREDICATE` | `SELECT`, `COUNT`, `EXISTS`, `FORALL`, set, domain, or range predicate form |
+| `PREDICATE` | `SELECT`, `COUNT`, `EXISTS`, `FORALL`, `NOT`, set, domain, or range predicate form |
 | `GROUP` | parenthesized expression |
 | `TARGET_LIST` | assignment target list |
 | `UNKNOWN` | accepted source fragment that is intentionally kept for later diagnostics |
@@ -44,9 +44,9 @@ typed IR, and lowering reports tied to the same parsed statement model.
 
 Scalar expression execution uses the bounded expression AST as the first route.
 Literals, `V`/`C`/`Z`/`R` references, grouping, unary and binary operators,
-procedure calls, and predicate nodes are evaluated from the tree. The older
-recursive text parser remains as a compatibility fallback for source fragments
-outside the AST execution subset.
+procedure calls, predicate nodes, and predicate negation are evaluated from the
+tree. The older recursive text parser remains as a compatibility fallback for
+source fragments outside the AST execution subset.
 
 The AST artifact remains textual and inspectable; runtime execution uses the
 same tree model instead of a separate string classifier.

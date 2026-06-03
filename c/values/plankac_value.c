@@ -54,16 +54,16 @@ void plc_tagged_from_double(PLC_TAGGED_VALUE *out, double value,
         out->tag = plc_tag_for_family(&spec);
     }
     if (out->tag == PLC_VALUE_TAG_BIT) {
-        out->raw = value != 0.0 ? 1L : 0L;
-        out->number = out->raw != 0L ? 1.0 : 0.0;
+        out->raw = value != 0.0 ? 1LL : 0LL;
+        out->number = out->raw != 0LL ? 1.0 : 0.0;
     } else if (out->tag == PLC_VALUE_TAG_FIXED) {
         out->raw = plc_fixed_raw_from_double(value, out->scale);
         out->number = plc_fixed_double_from_raw(out->raw, out->scale);
     } else if (out->tag == PLC_VALUE_TAG_HANDLE) {
         out->handle = (int)value;
-        out->raw = (long)out->handle;
+        out->raw = (long long)out->handle;
     } else {
-        out->raw = (long)value;
+        out->raw = (long long)value;
     }
 }
 
@@ -73,7 +73,7 @@ double plc_tagged_to_double(const PLC_TAGGED_VALUE *value)
         return 0.0;
     }
     if (value->tag == PLC_VALUE_TAG_BIT) {
-        return value->raw != 0L ? 1.0 : 0.0;
+        return value->raw != 0LL ? 1.0 : 0.0;
     }
     if (value->tag == PLC_VALUE_TAG_FIXED) {
         return plc_fixed_double_from_raw(value->raw, value->scale);

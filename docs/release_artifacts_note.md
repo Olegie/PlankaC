@@ -18,8 +18,9 @@ Release assets are the right place for binaries:
 - `SHA256SUMS` records checksums for every release asset.
 
 The Win16 and DOS targets are platform builds. They are produced with Open
-Watcom using `build-win16.bat` and `build-dos.bat`. When these binaries are
-attached to a release, label them explicitly as experimental platform builds:
+Watcom using `build-win16.bat`, `build-dos.bat`, and
+`build-dos-plankac.bat`. When these binaries are attached to a release, label
+them explicitly as experimental platform builds:
 
 ```text
 PlankaC-<tag>-win16-experimental.zip

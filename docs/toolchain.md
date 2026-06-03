@@ -12,9 +12,11 @@ make ci
 
 GitHub Actions runs both paths: Windows builds through `build.bat`, and Linux
 builds through `Makefile`. Both jobs generate bytecode, typed IR, generated C,
-generated x86-64 ASM, 8086 ASM, API demos, conformance, and graphics exporter
-outputs. Windows also links and runs the generated x86-64 ASM runner; Linux
-validates the generated ASM as a structural smoke test because the current ASM
+generated x86-64 ASM, 8086 ASM, DOS COM bootstrap output, PlankaC DOS runner
+host checks, API demos, conformance, and graphics exporter outputs. Windows
+also links and runs the
+generated x86-64 ASM runner; Linux
+validates the generated ASM structurally because the current ASM
 runner uses the Windows/MinGW x64 ABI.
 
 PlankaC uses this structure:
@@ -37,6 +39,10 @@ PlankaC uses this structure:
     -> real 16-bit DOS runner
 
 .plk source plans
+    -> PlankaC API
+    -> real 16-bit DOS PlankaC runner
+
+.plk source plans
     -> PlankaC bytecode
     -> bytecode runner or generated C host runner
 
@@ -44,6 +50,7 @@ PlankaC uses this structure:
     -> PlankaC bytecode / IR
     -> IR reload
     -> generated C / generated x86-64 ASM / 8086 ASM
+    -> built-in DOS COM bootstrap image
     -> native executable through external GCC
 
 .plk source plans
@@ -53,6 +60,10 @@ PlankaC uses this structure:
 .plk source plans
     -> 8086/DOS ASM source
     -> MASM/TASM-style bytecode image plus direct arithmetic procedures
+
+.plk source plans
+    -> built-in DOS COM output
+    -> direct 8086 bootstrap bytes plus embedded bytecode image
 
 .plk source plans
     -> C host runtime mirror
@@ -113,12 +124,20 @@ The DOS runner is also a separate target:
 
 ```text
 build-dos.bat
+build-dos-plankac.bat
 ```
 
 It builds `build\dos\PMDOS.EXE`, a 16-bit DOS MZ executable with an 8.3
 filename. It runs the calculator demo, self-tests, guarded division example,
 procedure listing, and named PlankaMath procedures through the compact C
 execution layer.
+
+`build-dos-plankac.bat` builds `build\dos\PLANKACD.EXE`, a 16-bit DOS MZ
+program that uses the PlankaC API. It loads the PlankaC source profile, lists
+procedures, runs procedures by name or number, writes bytecode, reloads
+bytecode, and runs bytecode. The modern build compiles the same target as
+`build\plankacd_host.exe` and verifies `check`, `run`, `tests`, `bytecode`,
+`checkbc`, and `runbc`.
 
 External C programs can use the same API:
 
@@ -141,9 +160,10 @@ gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/ir/plankac_evidence.c -
 gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/backends/plankac_lowering.c -o build/plankac_lowering.o
 gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/backends/plankac_bytecode.c -o build/plankac_bytecode.o
 gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/backends/plankac_asm8086.c -o build/plankac_asm8086.o
+gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/backends/dos/plankac_doscom.c -o build/plankac_doscom.o
 gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/core/plankac_runtime.c -o build/plankac_runtime.o
 gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/backends/plankac_native_runtime.c -o build/plankac_native_runtime.o
-ar rcs build/libplankac.a build/plankac_common.o build/plankac_types.o build/plankac_2d.o build/plankac_document.o build/plankac_page.o build/plankac_analyzer.o build/plankac_schema.o build/plankac_bits.o build/plankac_value.o build/plankac_chess_model.o build/plankac_ast.o build/plankac_ir.o build/plankac_evidence.o build/plankac_lowering.o build/plankac_source.o build/plankac_expr.o build/plankac_bytecode.o build/plankac_asm8086.o build/plankac_runtime.o build/plankac_native_runtime.o
+ar rcs build/libplankac.a build/plankac_common.o build/plankac_types.o build/plankac_2d.o build/plankac_document.o build/plankac_page.o build/plankac_analyzer.o build/plankac_schema.o build/plankac_bits.o build/plankac_value.o build/plankac_chess_model.o build/plankac_ast.o build/plankac_ir.o build/plankac_evidence.o build/plankac_lowering.o build/plankac_source.o build/plankac_expr.o build/plankac_bytecode.o build/plankac_asm8086.o build/plankac_doscom.o build/plankac_runtime.o build/plankac_native_runtime.o
 gcc -Wall -Wextra -std=c89 -Ic/include examples/c_api_demo.c build/libplankac.a -o build/plankac_api_demo.exe -lm
 gcc -Wall -Wextra -std=c89 -Ic/include examples/c_abi_demo.c build/libplankac.a -o build/plankac_abi_demo.exe -lm
 gcc -Wall -Wextra -std=c89 -Ic/include tests/plankac_conformance.c build/libplankac.a -o build/plankac_conformance.exe -lm
@@ -153,6 +173,8 @@ See `docs/plankac_api.md` and `docs/plankahost_api.md`.
 See `docs/plankac_bytecode.md` for compiler output and `docs/conformance.md`
 for parser/runtime edge tests.
 See `docs/compiler_pipeline.md` for the stable source-to-IR-to-native route.
+See `docs/dos_backend.md` for the assembler-backed 8086 route and the
+built-in DOS COM emitter.
 See `docs/release_guide.md` for tag and binary packaging rules.
 
 The current interpreter supports the executable profile used by this
@@ -180,9 +202,9 @@ extends that path into an application API: it exposes procedure metadata,
 stepping over the loaded `.plk` context. `plankac runfile extra.plk proc`
 loads the standard profile plus one external `.plk` file, so application
 procedures can also be executed from the command line without writing a C
-host. The Win16 GUI uses the compact calculator execution layer. The DOS
-runner uses the same compact layer and is intended for MS-DOS, FreeDOS,
-DOSBox, and DOS mode on Windows 9x.
+host. The Win16 GUI uses the compact calculator execution layer. `PMDOS.EXE`
+uses the same compact layer. `PLANKACD.EXE` is the PlankaC API runner for
+MS-DOS, FreeDOS, DOSBox, and DOS mode on Windows 9x.
 
 The native ASM runner is different from the interpreter path. It contains
 generated functions such as `plc_native_p10` and `plc_native_p999`, and it

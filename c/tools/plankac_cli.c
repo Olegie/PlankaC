@@ -70,6 +70,7 @@ typedef struct PLC_PIPELINE_PATHS {
     char c_source[PLC_MAX_LINE];
     char asm_source[PLC_MAX_LINE];
     char asm8086_source[PLC_MAX_LINE];
+    char doscom[PLC_MAX_LINE];
     char exe[PLC_MAX_LINE];
 } PLC_PIPELINE_PATHS;
 
@@ -101,6 +102,8 @@ static int plc_pipeline_paths(const char *prefix, PLC_PIPELINE_PATHS *paths)
             sizeof(paths->asm_source))
         && plc_make_output_path(prefix, "_8086.asm", paths->asm8086_source,
             sizeof(paths->asm8086_source))
+        && plc_make_output_path(prefix, "_dos.com", paths->doscom,
+            sizeof(paths->doscom))
         && plc_make_output_path(prefix, ".exe", paths->exe,
             sizeof(paths->exe));
 }
@@ -158,6 +161,9 @@ static int plc_compile_pipeline(const PLC_PROGRAM *source_program,
             err, err_size)) {
         return 0;
     }
+    if (!plc_emit_doscom(&ir_program, paths->doscom, err, err_size)) {
+        return 0;
+    }
     printf("Compiler pipeline OK\n");
     printf("source: %d files, %d procedures\n",
         source_program->source_count, source_program->proc_count);
@@ -166,6 +172,7 @@ static int plc_compile_pipeline(const PLC_PROGRAM *source_program,
     printf("c: %s\n", paths->c_source);
     printf("asm: %s\n", paths->asm_source);
     printf("asm8086: %s\n", paths->asm8086_source);
+    printf("doscom: %s\n", paths->doscom);
     return 1;
 }
 
@@ -251,6 +258,7 @@ static void plc_print_usage(void)
     printf("  asmgen <output.S>\n");
     printf("  asmimage <output.asm>\n");
     printf("  asm8086 <output.asm>\n");
+    printf("  doscom <output.com>\n");
     printf("  demo\n");
     printf("  tests\n");
 }
@@ -567,6 +575,19 @@ int main(int argc, char **argv)
             return 1;
         }
         printf("8086 ASM written: %s\n", argv[2]);
+        return 0;
+    }
+
+    if (strcmp(argv[1], "doscom") == 0) {
+        if (argc < 3) {
+            printf("Missing DOS COM output path.\n");
+            return 1;
+        }
+        if (!plc_emit_doscom(&program, argv[2], err, sizeof(err))) {
+            printf("DOS COM failed: %s\n", err);
+            return 1;
+        }
+        printf("DOS COM written: %s\n", argv[2]);
         return 0;
     }
 

@@ -25,6 +25,7 @@ PLANKAC_LIB_SOURCES := \
 	c/core/plankac_expr.c \
 	c/backends/plankac_bytecode.c \
 	c/backends/plankac_asm8086.c \
+	c/backends/dos/plankac_doscom.c \
 	c/core/plankac_runtime.c
 
 PLANKAC_NATIVE_SOURCE := c/backends/plankac_native_runtime.c
@@ -60,6 +61,7 @@ all: \
 	$(BUILD)/libplankac.a \
 	$(BUILD)/plankac_api_demo \
 	$(BUILD)/plankac_abi_demo \
+	$(BUILD)/plankacd_host \
 	$(BUILD)/plankac_conformance \
 	$(BUILD)/plankagui_export \
 	$(BUILD)/plankacube_export \
@@ -87,6 +89,9 @@ $(BUILD)/plankac_api_demo: examples/c_api_demo.c $(BUILD)/libplankac.a
 $(BUILD)/plankac_abi_demo: examples/c_abi_demo.c $(BUILD)/libplankac.a
 	$(CC) $(CPPFLAGS) $(CFLAGS) examples/c_abi_demo.c $(BUILD)/libplankac.a -o $@ $(LDLIBS)
 
+$(BUILD)/plankacd_host: c/targets/dos/plankac_dos_runner.c $(BUILD)/libplankac.a
+	$(CC) $(CPPFLAGS) $(CFLAGS) c/targets/dos/plankac_dos_runner.c $(BUILD)/libplankac.a -o $@ $(LDLIBS)
+
 $(BUILD)/plankac_conformance: tests/plankac_conformance.c $(BUILD)/libplankac.a
 	$(CC) $(CPPFLAGS) $(CFLAGS) tests/plankac_conformance.c $(BUILD)/libplankac.a -o $@ $(LDLIBS)
 
@@ -108,6 +113,7 @@ generated: all
 	$(BUILD)/plankac cgen $(BUILD)/plankac_generated.c
 	$(BUILD)/plankac asmgen $(BUILD)/plankac_asm_runtime.S
 	$(BUILD)/plankac asm8086 $(BUILD)/plankac_8086.asm
+	$(BUILD)/plankac doscom $(BUILD)/plankac_dos.com
 
 check: generated
 	$(BUILD)/plankamath_cli compile
@@ -116,6 +122,12 @@ check: generated
 	$(BUILD)/plankac tests
 	$(BUILD)/plankac checkbc $(BUILD)/plankamath.pbc
 	$(BUILD)/plankac runbc $(BUILD)/plankamath.pbc set_session
+	$(BUILD)/plankacd_host check
+	$(BUILD)/plankacd_host run add 12 8
+	$(BUILD)/plankacd_host tests
+	$(BUILD)/plankacd_host bytecode $(BUILD)/plankacd_host.pbc
+	$(BUILD)/plankacd_host checkbc $(BUILD)/plankacd_host.pbc
+	$(BUILD)/plankacd_host runbc $(BUILD)/plankacd_host.pbc set_session
 	$(BUILD)/plankac runfile graphics/src/plankagui.plk app_kind
 	$(BUILD)/plankac runfile graphics/src/plankacube.plk app_kind
 	$(BUILD)/plankac runfile examples/max3.plk max3_demo
@@ -144,6 +156,10 @@ check: generated
 	grep -q "plc_native_p10" $(BUILD)/plankac_asm_runtime.S
 	grep -q ".globl main" $(BUILD)/plankac_asm_runtime.S
 	test -s $(BUILD)/plankac_8086.asm
+	test -s $(BUILD)/plankac_dos.com
+	test "$$(od -An -tx1 -N7 $(BUILD)/plankac_dos.com | tr -d ' \n')" = "ba0c01b409cd21"
+	grep -q "PLANKAC-DOSCOM-8086" $(BUILD)/plankac_dos.com
+	grep -q "PLANKAC-BYTECODE 0.1" $(BUILD)/plankac_dos.com
 	$(BUILD)/plankac_api_demo
 	$(BUILD)/plankac_abi_demo
 	$(BUILD)/plankac_conformance

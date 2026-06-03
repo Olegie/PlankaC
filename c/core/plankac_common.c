@@ -173,6 +173,71 @@ int plc_count_refs(const char *first, const char *last, char bank)
     return count;
 }
 
+void plc_proc_free(PLC_PROC *proc)
+{
+    if (proc == 0) {
+        return;
+    }
+    if (proc->stmts != 0) {
+        free(proc->stmts);
+    }
+    proc->stmts = 0;
+    proc->stmt_count = 0;
+    proc->stmt_capacity = 0;
+}
+
+void plc_program_free(PLC_PROGRAM *program)
+{
+    int i;
+
+    if (program == 0) {
+        return;
+    }
+    for (i = 0; i < program->proc_count; ++i) {
+        plc_proc_free(&program->procs[i]);
+    }
+    memset(program, 0, sizeof(*program));
+}
+
+int plc_proc_add_stmt(PLC_PROC *proc, const char *text, int line_no,
+    char *err, unsigned err_size)
+{
+    PLC_STMT *next;
+    int next_capacity;
+
+    if (proc == 0 || text == 0) {
+        plc_set_error(err, err_size, "missing statement");
+        return 0;
+    }
+    if (proc->stmt_count >= PLC_IR_MAX_STMTS) {
+        plc_set_error(err, err_size, "too many statements in procedure");
+        return 0;
+    }
+    if (proc->stmt_count >= proc->stmt_capacity) {
+        next_capacity = proc->stmt_capacity == 0
+            ? 8 : proc->stmt_capacity * 2;
+        if (next_capacity <= proc->stmt_count) {
+            next_capacity = proc->stmt_count + 1;
+        }
+        if (next_capacity > PLC_IR_MAX_STMTS) {
+            next_capacity = PLC_IR_MAX_STMTS;
+        }
+        next = (PLC_STMT *)realloc(proc->stmts,
+            (size_t)next_capacity * sizeof(*next));
+        if (next == 0) {
+            plc_set_error(err, err_size, "out of memory storing procedure");
+            return 0;
+        }
+        proc->stmts = next;
+        proc->stmt_capacity = next_capacity;
+    }
+    strncpy(proc->stmts[proc->stmt_count].text, text, PLC_MAX_LINE - 1);
+    proc->stmts[proc->stmt_count].text[PLC_MAX_LINE - 1] = '\0';
+    proc->stmts[proc->stmt_count].line_no = line_no;
+    ++proc->stmt_count;
+    return 1;
+}
+
 int plc_line_starts_with(const char *text, const char *keyword)
 {
     unsigned n;

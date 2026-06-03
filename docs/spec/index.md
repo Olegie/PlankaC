@@ -14,7 +14,7 @@ write `.plk` files without reverse-engineering the C implementation.
 | `type_rules.md` | type markers, type families, structural schemas, call compatibility, and contracts |
 | `execution_rules.md` | procedure calls, frames, assignment, guards, loops, constants, PAGE expansion, and host ABI |
 | `errors.md` | parser, analyzer, runtime, conformance, and backend error classes |
-| `backend_contract.md` | AST to typed IR, bytecode, generated C, generated x86-64 ASM, and 8086 ABI surface |
+| `backend_contract.md` | AST to typed IR, bytecode, generated C, generated x86-64 ASM, 8086 ABI surface, DOS COM bootstrap, and PlankaC DOS runner route |
 
 The public language route is:
 

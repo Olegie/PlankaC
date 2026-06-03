@@ -1,8 +1,8 @@
 #include "plankac_internal.h"
 
-static long plc_fixed_scale_factor_bits(int scale)
+static long long plc_fixed_scale_factor_bits(int scale)
 {
-    long factor;
+    long long factor;
     int i;
 
     factor = 1L;
@@ -40,30 +40,30 @@ int plc_bit_get_word(unsigned long word, int index)
     return (word & (1UL << index)) != 0UL ? 1 : 0;
 }
 
-long plc_fixed_raw_from_double(double value, int scale)
+long long plc_fixed_raw_from_double(double value, int scale)
 {
     double factor;
 
     factor = (double)plc_fixed_scale_factor_bits(scale);
     if (value >= 0.0) {
-        return (long)(value * factor + 0.5);
+        return (long long)(value * factor + 0.5);
     }
-    return (long)(value * factor - 0.5);
+    return (long long)(value * factor - 0.5);
 }
 
-double plc_fixed_double_from_raw(long raw, int scale)
+double plc_fixed_double_from_raw(long long raw, int scale)
 {
     return (double)raw / (double)plc_fixed_scale_factor_bits(scale);
 }
 
-long plc_fixed_raw_add(long left, long right)
+long long plc_fixed_raw_add(long long left, long long right)
 {
     return left + right;
 }
 
-long plc_fixed_raw_mul(long left, long right, int scale)
+long long plc_fixed_raw_mul(long long left, long long right, int scale)
 {
-    long factor;
+    long long factor;
 
     factor = plc_fixed_scale_factor_bits(scale);
     if (factor == 0L) {
@@ -72,9 +72,10 @@ long plc_fixed_raw_mul(long left, long right, int scale)
     return (left * right) / factor;
 }
 
-int plc_fixed_raw_div_checked(long left, long right, int scale, long *out)
+int plc_fixed_raw_div_checked(long long left, long long right, int scale,
+    long long *out)
 {
-    long factor;
+    long long factor;
 
     if (right == 0L) {
         if (out != 0) {
@@ -97,9 +98,9 @@ double plc_fixed_quantize_bits(double value, int scale)
 
 double plc_fixed_add_bits(double left, double right, int scale)
 {
-    long left_raw;
-    long right_raw;
-    long out_raw;
+    long long left_raw;
+    long long right_raw;
+    long long out_raw;
 
     left_raw = plc_fixed_raw_from_double(left, scale);
     right_raw = plc_fixed_raw_from_double(right, scale);
@@ -109,9 +110,9 @@ double plc_fixed_add_bits(double left, double right, int scale)
 
 double plc_fixed_mul_bits(double left, double right, int scale)
 {
-    long left_raw;
-    long right_raw;
-    long out_raw;
+    long long left_raw;
+    long long right_raw;
+    long long out_raw;
 
     left_raw = plc_fixed_raw_from_double(left, scale);
     right_raw = plc_fixed_raw_from_double(right, scale);
@@ -121,9 +122,9 @@ double plc_fixed_mul_bits(double left, double right, int scale)
 
 int plc_fixed_div_bits(double left, double right, int scale, double *out)
 {
-    long left_raw;
-    long right_raw;
-    long out_raw;
+    long long left_raw;
+    long long right_raw;
+    long long out_raw;
 
     left_raw = plc_fixed_raw_from_double(left, scale);
     right_raw = plc_fixed_raw_from_double(right, scale);

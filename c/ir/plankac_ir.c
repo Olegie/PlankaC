@@ -105,6 +105,48 @@ static void plc_ir_lowering_name(const char *text, char *out,
     out[out_size - 1] = '\0';
 }
 
+static int plc_ir_family_is_compound(int family)
+{
+    return family == PLC_TYPE_FAMILY_LIST
+        || family == PLC_TYPE_FAMILY_SET
+        || family == PLC_TYPE_FAMILY_PAIR
+        || family == PLC_TYPE_FAMILY_RECORD
+        || family == PLC_TYPE_FAMILY_COMPLEX
+        || family == PLC_TYPE_FAMILY_VEC3
+        || family == PLC_TYPE_FAMILY_MAT4;
+}
+
+static void plc_ir_lowering_name_from_ast(const PLC_AST_STMT *ast,
+    const PLC_IR_STMT *stmt, char *out, unsigned out_size)
+{
+    if (ast->guard_expr.predicate_count > 0
+            || ast->value_expr.predicate_count > 0) {
+        strncpy(out, "predicate", out_size - 1);
+        out[out_size - 1] = '\0';
+        return;
+    }
+    if (stmt->callee[0] != '\0') {
+        plc_ir_lowering_name(stmt->callee, out, out_size);
+        if (strcmp(out, "scalar") == 0) {
+            strncpy(out, "call", out_size - 1);
+            out[out_size - 1] = '\0';
+        }
+        return;
+    }
+    if (plc_ir_family_is_compound(stmt->value_family)
+            || plc_ir_family_is_compound(stmt->target_family)) {
+        strncpy(out, "compound", out_size - 1);
+        out[out_size - 1] = '\0';
+        return;
+    }
+    if (ast->value_expr.call_count > 0) {
+        plc_ir_lowering_name(stmt->value, out, out_size);
+        return;
+    }
+    strncpy(out, "scalar", out_size - 1);
+    out[out_size - 1] = '\0';
+}
+
 static void plc_ir_append(char *out, unsigned out_size, const char *text)
 {
     unsigned used;
@@ -147,17 +189,14 @@ static void plc_ir_join_expr_shapes(const PLC_AST_STMT *ast,
 static void plc_ir_set_call_shape(const PLC_PROGRAM *program,
     PLC_IR_STMT *stmt)
 {
-    char args[PLC_MAX_LINE];
     const PLC_PROC *proc;
     const PLC_NATIVE_PROC *native_proc;
 
-    if (!plc_is_top_call(stmt->value, stmt->callee, sizeof(stmt->callee),
-            args, sizeof(args))) {
+    if (stmt->callee[0] == '\0') {
         stmt->callee[0] = '\0';
         stmt->argc = 0;
         return;
     }
-    stmt->argc = plc_ir_count_commas(args);
     proc = plc_find_proc(program, stmt->callee);
     if (proc != 0) {
         stmt->argc = proc->argc;
@@ -285,7 +324,7 @@ static int plc_ir_build_statement(const PLC_PROGRAM *program,
     } else if (stmt->target[0] != '\0') {
         stmt->results = plc_ir_count_commas(stmt->target);
     }
-    plc_ir_lowering_name(stmt->value, stmt->lowering,
+    plc_ir_lowering_name_from_ast(ast, stmt, stmt->lowering,
         sizeof(stmt->lowering));
     return 1;
 }

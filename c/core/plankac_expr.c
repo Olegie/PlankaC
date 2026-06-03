@@ -926,6 +926,20 @@ static int plc_eval_ast_node(const PLC_PROGRAM *program, PLC_FRAME *frame,
         int op_code;
         int status;
 
+        if (strcmp(node->text, "NOT") == 0) {
+            double child_value;
+
+            if (node->child_count != 1) {
+                return PLC_AST_EVAL_UNSUPPORTED;
+            }
+            status = plc_eval_ast_node(program, frame, depth, tree,
+                node->children[0], &child_value, err, err_size);
+            if (status != PLC_AST_EVAL_OK) {
+                return status;
+            }
+            *value = child_value == 0.0 ? 1.0 : 0.0;
+            return PLC_AST_EVAL_OK;
+        }
         if (node->child_count != 2
                 || !plc_ast_predicate_call_name(node->text, &call_name)
                 || !plc_ast_compare_code(node->op, &op_code)) {
@@ -1184,6 +1198,21 @@ static int plc_eval_predicate_text(const PLC_PROGRAM *program,
     op = 0;
     op_code = 0;
     op_len = 0;
+    if (plc_predicate_starts_with(text, "NOT", &body)) {
+        int nested;
+
+        nested = plc_eval_predicate_text(program, frame, depth, body, out,
+            err, err_size);
+        if (nested < 0) {
+            plc_set_error(err, err_size, "bad negated predicate");
+            return 0;
+        }
+        if (!nested || out->count <= 0) {
+            return nested;
+        }
+        out->value[0] = out->value[0] == 0.0 ? 1.0 : 0.0;
+        return 1;
+    }
     if (plc_predicate_starts_with(text, "SELECT", &body)) {
         call_name = "list_select_where";
     } else if (plc_predicate_starts_with(text, "FORALL", &body)) {

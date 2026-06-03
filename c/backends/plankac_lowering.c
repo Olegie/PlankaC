@@ -115,18 +115,22 @@ int plc_emit_lowering_report(const PLC_PROGRAM *program, const char *path,
             ++scalar_count;
         }
         fprintf(out,
-            "P%d %s line %d kind=%s value=%s target=%s c=%s asm=%s asm8086=%s",
+            "P%d %s line %d kind=%s value=%s target=%s c=%s asm=%s asm8086=%s expr_nodes=%d calls=%d predicates=%d",
             stmt->proc_number, stmt->proc_name, stmt->source_line,
             plc_lowering_op_kind(stmt),
             plc_type_family_name(stmt->value_family),
             plc_type_family_name(stmt->target_family),
             plc_lowering_c_path(stmt),
             plc_lowering_asm_path(stmt),
-            plc_lowering_8086_path(stmt));
+            plc_lowering_8086_path(stmt),
+            stmt->expr_nodes, stmt->expr_calls, stmt->expr_predicates);
         if (stmt->callee[0] != '\0') {
             fprintf(out, " callee=%s", stmt->callee);
         }
         fprintf(out, "\n");
+        if (stmt->expr_shape[0] != '\0') {
+            fprintf(out, "  ast %s\n", stmt->expr_shape);
+        }
     }
     fprintf(out, "\nsummary scalar=%d compound=%d\n",
         scalar_count, compound_count);

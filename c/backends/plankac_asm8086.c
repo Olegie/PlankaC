@@ -210,10 +210,11 @@ static int plc_asm8086_emit_direct_proc(FILE *out, const PLC_PROC *proc)
 static void plc_asm8086_emit_stub(FILE *out, const PLC_PROC *proc)
 {
     plc_asm8086_emit_proc_header(out, proc);
-    fprintf(out, "    ; Compound procedure entry.\n");
-    fprintf(out, "    ; The data segment exposes boxed lists, sets, pairs, records and boards.\n");
-    fprintf(out, "    xor ax, ax\n");
-    fprintf(out, "    mov dx, 1\n");
+    fprintf(out, "    ; Compound procedure entry lowered to the 16-bit dispatch ABI.\n");
+    fprintf(out, "    ; AX returns a dispatch token, DX returns non-zero until a DOS runtime handles it.\n");
+    fprintf(out, "    mov ax, %d\n", proc->number);
+    fprintf(out, "    push ax\n");
+    fprintf(out, "    call plankac_8086_dispatch_compound\n");
     plc_asm8086_emit_proc_footer(out, proc);
 }
 
@@ -387,10 +388,10 @@ static void plc_asm8086_emit_compound_api(FILE *out)
     fprintf(out, "plankac_8086_dispatch_compound PROC NEAR\n");
     fprintf(out, "    push bp\n");
     fprintf(out, "    mov bp, sp\n");
-    fprintf(out, "    xor ax, ax\n");
+    fprintf(out, "    mov ax, [bp+4]\n");
     fprintf(out, "    mov dx, 1\n");
     fprintf(out, "    pop bp\n");
-    fprintf(out, "    ret\n");
+    fprintf(out, "    ret 2\n");
     fprintf(out, "plankac_8086_dispatch_compound ENDP\n\n");
 }
 
@@ -503,6 +504,7 @@ int plc_emit_asm8086_runtime(const PLC_PROGRAM *program, const char *path,
     fprintf(out, ".MODEL SMALL\n");
     fprintf(out, ".STACK 100h\n\n");
     fprintf(out, ".DATA\n");
+    fprintf(out, "plankac_8086_runner_profile DB \"DOS-SMALL-FAR-START\",0\n");
     fprintf(out, "plankac_8086_source_count DW %d\n", program->source_count);
     fprintf(out, "plankac_8086_proc_count DW %d\n\n", program->proc_count);
     plc_asm8086_emit_compound_model(program, out);
@@ -514,6 +516,7 @@ int plc_emit_asm8086_runtime(const PLC_PROGRAM *program, const char *path,
     fprintf(out, ".CODE\n");
     fprintf(out, "PUBLIC plankac_8086_start\n");
     fprintf(out, "PUBLIC plankac_8086_smoke\n");
+    fprintf(out, "PUBLIC plankac_8086_runner_profile\n");
     fprintf(out, "PUBLIC plankac_8086_proc_count\n");
     fprintf(out, "PUBLIC plankac_8086_bytecode_image\n");
     fprintf(out, "PUBLIC plankac_8086_bytecode_image_end\n");

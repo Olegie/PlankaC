@@ -57,7 +57,10 @@ The DOS target is not a GUI host. It is a separate text-mode runner:
 
 ```text
 build-dos.bat
+build-dos-plankac.bat
 run-dos-dosbox.bat demo
 ```
 
 The output executable is `build\dos\PMDOS.EXE`, a real 16-bit DOS MZ program.
+The PlankaC API DOS runner is `build\dos\PLANKACD.EXE`, built by
+`build-dos-plankac.bat`.

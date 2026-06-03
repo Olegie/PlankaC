@@ -1,0 +1,5 @@
+P1 predicate_not_runtime () => R0[:1.1]
+list_new() => Z1[:L32.0]
+list_push(Z1[:L32.0], 5[:32.16]) => Z2[:L32.0]
+NOT EXISTS Z2[:L32.0] < 0[:32.16] => R0[:1.1]
+END

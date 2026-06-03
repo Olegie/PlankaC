@@ -29,7 +29,7 @@ separate layers.
 | Values | `c/values` | Bit packing, tagged PLC value storage, and raw fixed-point value helpers |
 | Models | `c/models` | Board-level chess legality, legal move counts, castling paths, promotion, en passant checks, signatures, stalemate, check, mate, material, and capture search |
 | Typed IR | `c/ir` | Statement-level IR construction, validation, and readable IR emission |
-| Backends | `c/backends` | Text bytecode, lowering reports, generated C, x86-64 ASM, 8086/DOS ASM, native helper runtime |
+| Backends | `c/backends` | Text bytecode, lowering reports, generated C, x86-64 ASM, 8086/DOS ASM, DOS COM, native helper runtime |
 | Tools | `c/tools` | Command-line interface for checking, running, and emitting artifacts |
 | Targets | `c/targets` | Console, DOS, Win16, and Windows GUI launchers |
 | Compact runtime | `c/legacy` | Small PlankaMath fallback runtime for narrow platform targets |
@@ -91,6 +91,8 @@ lowering     -> backend plan for scalar and compound operations
 generated C  -> portable runner with embedded bytecode
 x86-64 ASM   -> generated native procedure dispatcher plus helper runtime
 8086 ASM     -> DOS-oriented assembly source with direct arithmetic procedures and compound tables
+DOS COM      -> direct 8086 bootstrap plus embedded bytecode emitted without an assembler
+DOS runner   -> PlankaC API runner for a real 16-bit DOS MZ executable
 native exe   -> linked generated C or linked generated x86-64 ASM
 ```
 
@@ -99,8 +101,10 @@ visible. Improving compiler output should not require editing the GUI, DOS, or
 Win16 targets.
 
 The `compile <prefix>` command is the stable compiler route: it emits
-bytecode/IR, reloads the IR, then emits generated C, x86-64 ASM, and 8086 ASM
-from that reloaded program. `lowering <path>` exposes the backend plan for
+bytecode/IR, reloads the IR, then emits generated C, x86-64 ASM, 8086 ASM,
+and a DOS COM bootstrap from that reloaded program. `build-dos-plankac.bat`
+uses the API runner target for the full DOS executable route. `lowering <path>`
+exposes the backend plan for
 inspection. `native-c <prefix>` and `native-asm <prefix>` add the external
 toolchain link step.
 
@@ -145,6 +149,7 @@ The public manual is split into five stable entry points:
 | `docs/standard_library.md` | callable procedure profile and runtime helper domains |
 | `docs/compiler_guide.md` | CLI, bytecode, generated C, ASM, and verification workflow |
 | `docs/compiler_pipeline.md` | stable source-to-IR-to-native route |
+| `docs/dos_backend.md` | DOS-oriented ASM route, built-in COM bootstrap emission, and PlankaC DOS runner |
 | `docs/examples.md` | source and command examples |
 | `docs/porting_guide.md` | embedding and platform porting notes |
 | `docs/abi.md` | bidirectional C ABI and native function registration |

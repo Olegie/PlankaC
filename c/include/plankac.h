@@ -33,7 +33,7 @@ typedef struct PLANKAC_VALUE {
     int family;
     int bits;
     int scale;
-    long raw;
+    long long raw;
     int handle;
     double number;
     char type_text[PLANKAC_MAX_TYPE_TEXT];
@@ -116,6 +116,8 @@ int plankac_context_write_asm_image(PLANKAC_CONTEXT *ctx,
     const char *path, char *err, unsigned err_size);
 int plankac_context_write_asm8086_runtime(PLANKAC_CONTEXT *ctx,
     const char *path, char *err, unsigned err_size);
+int plankac_context_write_doscom(PLANKAC_CONTEXT *ctx,
+    const char *path, char *err, unsigned err_size);
 int plankac_context_write_ast(PLANKAC_CONTEXT *ctx,
     const char *path, char *err, unsigned err_size);
 int plankac_context_write_ir(PLANKAC_CONTEXT *ctx,
@@ -151,6 +153,7 @@ int plankac_write_asm_runtime(const char *path, char *err, unsigned err_size);
 int plankac_write_asm_image(const char *path, char *err, unsigned err_size);
 int plankac_write_asm8086_runtime(const char *path,
     char *err, unsigned err_size);
+int plankac_write_doscom(const char *path, char *err, unsigned err_size);
 int plankac_write_ast(const char *path, char *err, unsigned err_size);
 int plankac_write_ir(const char *path, char *err, unsigned err_size);
 int plankac_write_evidence(const char *path, char *err, unsigned err_size);

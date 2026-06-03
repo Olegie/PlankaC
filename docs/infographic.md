@@ -11,10 +11,10 @@ come from the current tree, not from a project pitch.
 | Repository `src/*.plk` files | 25 files |
 | Graphics `.plk` profiles | 2 files |
 | Loaded procedures | 150 procedures |
-| C and graphics source/header modules | 47 files |
-| Conformance fixture files | 35 files |
+| C and graphics source/header modules | 48 files |
+| Conformance fixture files | 40 files |
 | Main host language | C89-oriented C |
-| Main compiler artifacts | AST, typed IR, bytecode, generated C, x86-64 ASM, 8086/DOS ASM |
+| Main compiler artifacts | AST, typed IR, bytecode, generated C, x86-64 ASM, 8086/DOS ASM, DOS COM |
 | 16-bit targets | Win16 GUI, DOS runner |
 
 ## Procedure Mix
@@ -42,20 +42,20 @@ and backend/conformance checks.
 ```mermaid
 pie showData
     title C implementation lines by module directory
-    "core" : 6704
-    "backends" : 3817
+    "core" : 7143
+    "backends" : 4058
     "graphics" : 3578
     "targets" : 1641
     "legacy" : 570
-    "analyzer" : 1080
+    "analyzer" : 1205
     "models" : 746
-    "tools" : 542
-    "notation" : 607
-    "ir" : 970
-    "internal" : 450
-    "values" : 319
+    "tools" : 615
+    "notation" : 856
+    "ir" : 2189
+    "internal" : 523
+    "values" : 376
     "types" : 224
-    "include" : 240
+    "include" : 246
 ```
 
 The dominant implementation mass is concentrated in the expected subsystems:
@@ -69,6 +69,8 @@ pie showData
     title Coverage matrix status count
     "supported" : 24
     "supported profile" : 12
+    "supported bootstrap profile" : 1
+    "supported target route" : 1
     "supported extension" : 2
 ```
 
@@ -93,6 +95,7 @@ flowchart LR
     Table --> CGen["Generated C"]
     Table --> ASM64["x86-64 ASM"]
     Table --> ASM86["8086/DOS ASM"]
+    Table --> DOSCOM["DOS COM"]
     Table --> API["C API"]
     Table --> Host["PlankaHost app context"]
 
@@ -110,11 +113,13 @@ flowchart LR
 | AST/Typed IR | `plankac ir out.ir` | readable `.ir` | statement-level compiler contract built through the AST layer |
 | Lowering report | `plankac lowering out.txt` | readable `.lowering` | backend plan for scalar and compound statements |
 | Bytecode | `plankac bytecode out.pbc` | readable `.pbc` | compiler artifact, reloadable by PlankaC |
-| Compiler pipeline | `plankac compile build/out` | `.pbc`, `.c`, `.S`, `_8086.asm` | source-to-IR-to-backends route |
+| Compiler pipeline | `plankac compile build/out` | `.pbc`, `.c`, `.S`, `_8086.asm`, `_dos.com` | source-to-IR-to-backends route |
 | Generated C | `plankac cgen out.c` | C runner with embedded bytecode | portable host runner |
 | x86-64 ASM | `plankac asmgen out.S` | native ASM runner | generated procedures plus helper runtime |
 | Native C/ASM executables | `plankac native-c build/out`, `plankac native-asm build/out` | linked `.exe` | generated artifact linked by external GCC |
 | 8086/DOS ASM | `plankac asm8086 out.asm` | MASM/TASM-style source | direct arithmetic procedures, bytecode image, compound heaps, and compound table |
+| DOS COM | `plankac doscom out.com` | 8086 `.COM` image | direct bootstrap plus embedded bytecode emitted without an external assembler |
+| PlankaC DOS runner | `build-dos-plankac.bat` | `PLANKACD.EXE` | full DOS runner route through the PlankaC API |
 
 ## Backend Maturity
 
@@ -129,6 +134,8 @@ Lower values are useful, but intentionally narrower.
 | Generated C | 5 | 5 | 4 | 2 | `################` |
 | x86-64 ASM | 4 | 4 | 4 | 2 | `##############` |
 | 8086/DOS ASM | 3 | 2 | 4 | 5 | `##############` |
+| DOS COM bootstrap | 3 | 2 | 5 | 5 | `#############` |
+| PlankaC DOS runner | 5 | 5 | 4 | 5 | `##################` |
 | Win16/DOS compact hosts | 1 | 1 | 4 | 5 | `###########` |
 
 ## Execution Surfaces
@@ -147,7 +154,9 @@ flowchart TB
     subgraph SixteenBit["16-bit path"]
         G["Open Watcom"] --> H["Win16 GUI"]
         G --> I["DOS runner"]
+        G --> R["PlankaC DOS runner"]
         A --> J["8086 ASM source"]
+        A --> Q["DOS COM image"]
     end
 
     subgraph Library["Library path"]
@@ -169,6 +178,8 @@ flowchart TB
 | Chess examples | board and move modeling domain | executable board, legality, promotion, en passant, castling-path, stalemate, signature and attack-map procedures |
 | 3D geometry | outside the documented core profile | explicit PlankaC extension |
 | 8086 output | 16-bit execution target | separate DOS-oriented backend artifact |
+| DOS COM output | 16-bit binary target | direct bootstrap plus embedded bytecode from `c/backends/dos` |
+| PlankaC DOS runner | 16-bit execution target | Open Watcom route through `c/targets/dos/plankac_dos_runner.c` |
 
 ## Verification Route
 
@@ -189,6 +200,7 @@ build\plankac.exe lowering build\plankac.lowering
 build\plankac.exe cgen build\plankac_generated.c
 build\plankac.exe asmgen build\plankac_asm_runtime.S
 build\plankac.exe asm8086 build\plankac_8086.asm
+build\plankac.exe doscom build\plankac_dos.com
 build\plankac_conformance.exe
 ```
 
@@ -202,6 +214,7 @@ Bytecode OK: 150 procedures
 IR written: build\plankac.ir
 Lowering written: build\plankac.lowering
 8086 ASM written: build\plankac_8086.asm
+DOS COM written: build\plankac_dos.com
 CONFORMANCE OK
 ```
 

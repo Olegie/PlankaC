@@ -26,6 +26,10 @@ The internal value form is:
 tag, family, bits, scale, raw, handle, number
 ```
 
+`raw` is a wide integer storage field so fixed-point values such as `[:32.16]`
+can cross procedure boundaries without being truncated by a host platform where
+C `long` is only 32 bits.
+
 | Tag | Use |
 | --- | --- |
 | `numeric` | unscaled numeric value |
@@ -33,6 +37,11 @@ tag, family, bits, scale, raw, handle, number
 | `fixed` | raw fixed-point integer plus scale |
 | `handle` | reference to list, set, pair, record, complex, vector, matrix, or board storage |
 | `exception` | reserved for arithmetic/status values |
+
+Procedure arguments are boxed into tagged `V` slots using the header type
+contracts before statement execution begins. Result extraction reads tagged
+`R` slots first, then falls back to the numeric ABI mirror only when a result
+was never written as a tagged value.
 
 The interpreter writes the ordinary numeric bank value and a tagged `PLC_VALUE`
 entry at the same time. Scalar bank reads prefer the bank-local tagged slot;

@@ -130,6 +130,12 @@ the image, listed in the compound procedure table, and exposed through a
 documented 16-bit ABI surface for list, pair, record, board, and compound
 dispatch routines.
 
+The DOS COM backend is a narrower binary emitter under `c/backends/dos`. It
+writes a small 8086 `.COM` bootstrap directly, without an external assembler,
+and appends the generated PlankaC bytecode image. Full DOS execution is handled
+by the `PLANKACD.EXE` target built with `build-dos-plankac.bat`; the same
+source is verified by the modern `plankacd_host.exe` build.
+
 ## Honest Project Statement
 
 Use this statement when presenting the project:
@@ -146,8 +152,8 @@ PlankaMath GUI keeps the compact C runtime as a fallback.
 PlankaC 1.1.0 is a substantial executable Plankalkuel-profile implementation
 in C. It checks and runs the actual `.plk` source files, exposes a C embedding
 API, writes bytecode and typed IR, emits generated C, generated x86-64 ASM,
-DOS-oriented 8086 ASM source, and native executable builds through the compiler
-pipeline. Its implementation is split across core loading/execution, types,
+DOS-oriented 8086 ASM source, DOS COM bootstrap binaries, a PlankaC DOS runner,
+and native executable builds through the compiler pipeline. Its implementation is split across core loading/execution, types,
 notation, analyzer, values, IR, backend, target, graphics, and legacy modules.
 Its scope is the executable profile used in this repository; the coverage
 matrix records the exact feature surface and backend boundaries.

@@ -38,9 +38,10 @@ gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/ir/plankac_evidence.c -
 gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/backends/plankac_lowering.c -o build/plankac_lowering.o
 gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/backends/plankac_bytecode.c -o build/plankac_bytecode.o
 gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/backends/plankac_asm8086.c -o build/plankac_asm8086.o
+gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/backends/dos/plankac_doscom.c -o build/plankac_doscom.o
 gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/core/plankac_runtime.c -o build/plankac_runtime.o
 gcc -Wall -Wextra -std=c89 -Ic/include -Ic/internal -c c/backends/plankac_native_runtime.c -o build/plankac_native_runtime.o
-ar rcs build/libplankac.a build/plankac_common.o build/plankac_types.o build/plankac_2d.o build/plankac_document.o build/plankac_page.o build/plankac_analyzer.o build/plankac_schema.o build/plankac_bits.o build/plankac_value.o build/plankac_chess_model.o build/plankac_ast.o build/plankac_ir.o build/plankac_evidence.o build/plankac_lowering.o build/plankac_source.o build/plankac_expr.o build/plankac_bytecode.o build/plankac_asm8086.o build/plankac_runtime.o build/plankac_native_runtime.o
+ar rcs build/libplankac.a build/plankac_common.o build/plankac_types.o build/plankac_2d.o build/plankac_document.o build/plankac_page.o build/plankac_analyzer.o build/plankac_schema.o build/plankac_bits.o build/plankac_value.o build/plankac_chess_model.o build/plankac_ast.o build/plankac_ir.o build/plankac_evidence.o build/plankac_lowering.o build/plankac_source.o build/plankac_expr.o build/plankac_bytecode.o build/plankac_asm8086.o build/plankac_doscom.o build/plankac_runtime.o build/plankac_native_runtime.o
 ```
 
 Link an application:
@@ -76,6 +77,7 @@ add(12, 8) -> R0=20
 P140 complex_norm_session() -> R0=25
 three_d_pipeline_session() -> R0=120
 wrote build/plankac_api_demo_runtime.S
+wrote build/plankac_api_demo_dos.com
 ```
 
 ## Context API
@@ -117,10 +119,17 @@ int main(void)
         return 1;
     }
 
+    plankac_context_write_doscom(ctx,
+        "build/plankac_api_demo_dos.com", err, sizeof(err));
+
     plankac_destroy(ctx);
     return result.value[0] == 20.0 ? 0 : 1;
 }
 ```
+
+`plankac_context_write_doscom()` writes a DOS `.COM` bootstrap with the loaded
+program's bytecode image embedded after the banner. For full DOS execution use
+the `PLANKACD.EXE` runner built by `build-dos-plankac.bat`.
 
 Load a custom source set:
 
@@ -234,7 +243,8 @@ only ABI doubles. `plankac_context_run_typed` and `plankac_run_typed` return
 `tag`, `family`, `bits`, `scale`, `raw`, `handle`, `number`, and `type_text`
 for each result slot. Boolean `[:1.1]` results return `PLANKAC_VALUE_BIT`;
 fixed-point markers return `PLANKAC_VALUE_FIXED`; compound families return
-`PLANKAC_VALUE_HANDLE`.
+`PLANKAC_VALUE_HANDLE`. `raw` is a wide integer field; bundled MinGW/GCC
+examples print it with `%lld`.
 
 Use `plankac_context_write_ast` or `plankac_write_ast` when a host wants the
 compiler inspection artifact. The AST output includes statement operation

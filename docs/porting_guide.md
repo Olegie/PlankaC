@@ -121,10 +121,18 @@ The DOS target uses Open Watcom:
 
 ```bat
 build-dos.bat
+build-dos-plankac.bat
 ```
 
 The output is `build\dos\PMDOS.EXE`, a 16-bit DOS MZ program with an 8.3
 filename. It is a compact runner, separate from the modern PlankaC compiler.
+
+`build-dos-plankac.bat` produces `build\dos\PLANKACD.EXE`. That target uses
+the PlankaC API directly and supports source-profile checks, procedure
+listing, procedure execution, bytecode writing, bytecode loading, and bytecode
+execution. The same target source is compiled as `build\plankacd_host.exe` by
+the normal build so the command behavior is verified without a 16-bit DOS
+toolchain.
 
 ## Backend Porting
 
